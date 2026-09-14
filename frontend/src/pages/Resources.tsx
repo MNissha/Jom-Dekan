@@ -212,8 +212,8 @@ export default function Resources() {
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Academic Resources</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Academic Resources</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {total > 0 ? `${total} resources` : "Browse resources"} — filter by university, programme, subject or
             category.
           </p>

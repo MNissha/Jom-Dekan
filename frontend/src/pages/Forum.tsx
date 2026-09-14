@@ -243,8 +243,8 @@ export default function Forum() {
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Discussions</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Discussions</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Ask questions, share discussion, and help each other out.
           </p>
         </div>

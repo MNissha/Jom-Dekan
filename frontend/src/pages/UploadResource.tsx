@@ -40,7 +40,6 @@ export default function UploadResource() {
   const { data: faculties } = useFaculties(universityId || undefined);
   const { data: programmes } = useProgrammes(facultyId || undefined);
   const { data: subjects } = useSubjects(programmeId || undefined);
-  const [fileName, setFileName] = useState<string | null>(null);
 
   // "Add a subject" is a separate mode rather than a schema field: it
   // needs a programme picked (local state, not RHF) before it makes
@@ -188,7 +187,8 @@ export default function UploadResource() {
   });
 
   const category = watch("category");
-  const hasFile = Boolean(watch("file"));
+  const files = watch("files") ?? [];
+  const hasFile = files.length > 0;
 
   function startAddingSubject() {
     setValue("subjectId", "");
@@ -217,7 +217,7 @@ export default function UploadResource() {
       // upload only — the text-only post endpoint doesn't take
       // subjectCode/subjectName, so a code/name typed here would
       // otherwise be silently dropped.
-      if (!values.file) {
+      if (!values.files || values.files.length === 0) {
         setNewSubjectError(
           "Attach a file to create a new subject, or pick an existing one from the list for a text post.",
         );
@@ -245,7 +245,7 @@ export default function UploadResource() {
           isAddingSubject && newSubjectIntakeYear
             ? Number(newSubjectIntakeYear)
             : undefined,
-        file: values.file,
+        files: values.files,
         onProgress: setProgress,
       },
       {
@@ -265,10 +265,10 @@ export default function UploadResource() {
 
   return (
     <div className="mx-auto max-w-6xl px-[18px] py-[22px] motion-safe:animate-[fadeIn_300ms_ease-out]">
-      <h1 className="text-2xl font-bold text-slate-900">Upload a resource</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Choose a category and either attach a file (PDF, Word, Excel, PowerPoint, JPEG, or PNG, up to 20MB) or write the content directly as
-        text. Every file is checked by its actual content before it&apos;s accepted — not just its name or extension.
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Upload a resource</h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Choose a category and either attach one or more files (PDF, Word, Excel, PowerPoint, JPEG, or PNG, up to 20MB each) or write the
+        content directly as text. Every file is checked by its actual content before it&apos;s accepted — not just its name or extension.
       </p>
 
       {profile && (
@@ -548,56 +548,75 @@ export default function UploadResource() {
 
         <div>
           <label htmlFor="file" className="block text-sm font-bold text-slate-700">
-            File <span className="font-semibold text-slate-400">· optional</span>
+            Files <span className="font-semibold text-slate-400">· optional</span>
           </label>
           <p className="mt-0.5 text-xs text-slate-500">
-            Leave this empty to post as text instead — write the content in the description field below.
+            Leave this empty to post as text instead — write the content in the description field below. Attach
+            multiple files (e.g. several scanned pages or slide decks) and they&apos;ll all belong to this one resource.
           </p>
           <Controller
             control={control}
-            name="file"
-            render={({ field: { onChange, onBlur, ref } }) => (
-              <label
-                htmlFor="file"
-                className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[#E4E3F2] bg-[#FBFBFE] px-4 py-6 text-center transition motion-safe:duration-150 hover:border-primary-300 hover:bg-primary-50/40"
-              >
-                <UploadCloud className="h-6 w-6 text-primary-500" aria-hidden="true" />
-                <span className="text-sm font-semibold text-slate-700">
-                  {fileName ? fileName : "Click to choose a file"}
-                </span>
-                <span className="text-xs text-slate-400">PDF, Word, Excel, PowerPoint, JPEG, or PNG — up to 20MB</span>
-                <input
-                  id="file"
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                  ref={ref}
-                  onBlur={onBlur}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    onChange(f);
-                    setFileName(f?.name ?? null);
-                  }}
-                  className="sr-only"
-                />
-              </label>
+            name="files"
+            render={({ field: { onChange, onBlur, ref, value } }) => (
+              <>
+                <label
+                  htmlFor="file"
+                  className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[#E4E3F2] bg-[#FBFBFE] px-4 py-6 text-center transition motion-safe:duration-150 hover:border-primary-300 hover:bg-primary-50/40"
+                >
+                  <UploadCloud className="h-6 w-6 text-primary-500" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-slate-700">
+                    {value && value.length > 0
+                      ? `${value.length} file${value.length === 1 ? "" : "s"} selected — click to add more`
+                      : "Click to choose one or more files"}
+                  </span>
+                  <span className="text-xs text-slate-400">PDF, Word, Excel, PowerPoint, JPEG, or PNG — up to 20MB each</span>
+                  <input
+                    id="file"
+                    type="file"
+                    multiple
+                    accept="application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    ref={ref}
+                    onBlur={onBlur}
+                    onChange={(e) => {
+                      const picked = Array.from(e.target.files ?? []);
+                      const combined = [...(value ?? []), ...picked];
+                      onChange(combined.length > 0 ? combined : undefined);
+                      // Reset so picking the same file again after removing it
+                      // still fires a change event.
+                      e.target.value = "";
+                    }}
+                    className="sr-only"
+                  />
+                </label>
+                {value && value.length > 0 && (
+                  <ul className="mt-2 flex flex-col gap-1.5">
+                    {value.map((file, index) => (
+                      <li
+                        key={`${file.name}-${file.size}-${index}`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-[#E4E3F2] bg-[#FBFBFE] px-3 py-1.5 text-xs text-slate-600"
+                      >
+                        <span className="truncate">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = value.filter((_, i) => i !== index);
+                            onChange(next.length > 0 ? next : undefined);
+                          }}
+                          className="shrink-0 text-slate-400 transition hover:text-red-600"
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           />
-          {fileName && (
-            <button
-              type="button"
-              onClick={() => {
-                setValue("file", undefined);
-                setFileName(null);
-              }}
-              className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-500 transition motion-safe:duration-150 hover:text-red-600"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-              Remove file
-            </button>
-          )}
-          {errors.file && (
+          {errors.files && (
             <p className="mt-1 text-sm text-red-600">
-              {errors.file.message as string}
+              {errors.files.message as string}
             </p>
           )}
         </div>

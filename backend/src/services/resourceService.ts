@@ -118,6 +118,11 @@ async function scanStub(_buffer: Buffer): Promise<"clean" | "flagged"> {
   return "clean";
 }
 
+// Caps how many files a multi-file upload can pile onto a single
+// resource — generous enough for a real batch of scanned pages/slides,
+// small enough that it can't be used to spam unbounded rows onto one row.
+const MAX_FILES_PER_RESOURCE = 10;
+
 export const resourceService = {
   async createUploadIntent(
     input: {
@@ -132,6 +137,9 @@ export const resourceService = {
       subjectName?: string;
       subjectCurriculumYear?: number;
       subjectSemester?: number;
+      // Present for the 2nd+ file of a multi-file upload — see
+      // createUploadIntentSchema.
+      resourceId?: string;
       fileName: string;
       contentType: string;
       sizeBytes: number;
@@ -149,42 +157,60 @@ export const resourceService = {
       );
     }
 
-    await validateTaxonomy(input);
+    let resource: ResourceRow;
+    if (input.resourceId) {
+      // Attaching another file to a resource created earlier in the same
+      // multi-file upload — the taxonomy/subject fields above only apply
+      // when standing up a brand-new resource, so they're ignored here.
+      resource = await getVisibleOrThrow(input.resourceId, ctx);
+      if (!isOwnerOrAdmin(resource, ctx)) throw AppError.forbidden();
+      if (resource.status === "ARCHIVED") {
+        throw AppError.badRequest("Can't add files to an archived resource.");
+      }
+      const existingFiles = await resourceModel.files.findByResourceId(resource.id);
+      if (existingFiles.length >= MAX_FILES_PER_RESOURCE) {
+        throw AppError.badRequest(
+          `A resource can have at most ${MAX_FILES_PER_RESOURCE} files.`,
+        );
+      }
+    } else {
+      await validateTaxonomy(input);
 
-    // A student typed a subject that isn't in the catalogue yet — stand
-    // it up (or reuse a matching one) before the resource row exists, so
-    // the resource is never left pointing at a subjectId that doesn't
-    // exist yet.
-    let subjectId = input.subjectId ?? null;
-    if (!subjectId && input.subjectCode) {
-      const { subject } = await taxonomyService.subjects.findOrCreateForProgramme(
-        {
-          programmeId: input.programmeId!,
-          code: input.subjectCode,
-          name: input.subjectName!,
-          curriculumYear: input.subjectCurriculumYear,
-          recommendedSemester: input.subjectSemester,
-        },
-        {
-          actorUserId: ctx.actorUserId,
-          actorRole: ctx.actorRole,
-          requestId: ctx.requestId,
-          ipAddress: ctx.ipAddress,
-        },
-      );
-      subjectId = subject.id;
+      // A student typed a subject that isn't in the catalogue yet — stand
+      // it up (or reuse a matching one) before the resource row exists, so
+      // the resource is never left pointing at a subjectId that doesn't
+      // exist yet.
+      let subjectId = input.subjectId ?? null;
+      if (!subjectId && input.subjectCode) {
+        const { subject } = await taxonomyService.subjects.findOrCreateForProgramme(
+          {
+            programmeId: input.programmeId!,
+            code: input.subjectCode,
+            name: input.subjectName!,
+            curriculumYear: input.subjectCurriculumYear,
+            recommendedSemester: input.subjectSemester,
+          },
+          {
+            actorUserId: ctx.actorUserId,
+            actorRole: ctx.actorRole,
+            requestId: ctx.requestId,
+            ipAddress: ctx.ipAddress,
+          },
+        );
+        subjectId = subject.id;
+      }
+
+      resource = await resourceModel.create({
+        ownerId: ctx.actorUserId,
+        title: input.title,
+        description: input.description ?? null,
+        category: input.category,
+        universityId: input.universityId ?? null,
+        facultyId: input.facultyId ?? null,
+        programmeId: input.programmeId ?? null,
+        subjectId,
+      });
     }
-
-    const resource = await resourceModel.create({
-      ownerId: ctx.actorUserId,
-      title: input.title,
-      description: input.description ?? null,
-      category: input.category,
-      universityId: input.universityId ?? null,
-      facultyId: input.facultyId ?? null,
-      programmeId: input.programmeId ?? null,
-      subjectId,
-    });
 
     const storageKey = randomUUID();
     const file = await resourceModel.files.create({
@@ -203,9 +229,9 @@ export const resourceService = {
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
       actorRole: ctx.actorRole,
-      action: "RESOURCE_CREATED",
-      targetType: "resource",
-      targetId: resource.id,
+      action: input.resourceId ? "RESOURCE_FILE_ADDED" : "RESOURCE_CREATED",
+      targetType: input.resourceId ? "resource_file" : "resource",
+      targetId: input.resourceId ? file.id : resource.id,
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });

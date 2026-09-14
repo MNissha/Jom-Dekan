@@ -31,6 +31,11 @@ export const createUploadIntentSchema = z
     facultyId: z.string().uuid().optional(),
     programmeId: z.string().uuid().optional(),
     subjectId: z.string().uuid().optional(),
+    // Present when this is the 2nd+ file of a multi-file upload — attaches
+    // this file to an already-created resource instead of creating a new
+    // one. resourceService verifies ownership and ignores the taxonomy/
+    // subject fields above in that case (they only apply to a new resource).
+    resourceId: z.string().uuid().optional(),
     // Set instead of subjectId when the uploader is naming a subject
     // that isn't in the catalogue yet — resourceService resolves these
     // to a subjectId via taxonomyService.subjects.findOrCreateForProgramme

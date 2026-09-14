@@ -84,13 +84,13 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
 
       <form onSubmit={handleSearchSubmit} className="min-w-0 flex-1">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" aria-hidden="true" />
           <input
             type="search"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search resources, subjects, tutors…"
-            className="w-full rounded-full border border-[#ECEBF7] bg-[#F8F8FC] py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 transition motion-safe:duration-150 focus:border-primary-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 sm:max-w-md dark:border-[#332C63] dark:bg-[#231E4A] dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:bg-[#2A2455]"
+            className="w-full rounded-full border border-[#ECEBF7] bg-[#F8F8FC] py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-500 transition motion-safe:duration-150 focus:border-primary-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 sm:max-w-md dark:border-[#332C63] dark:bg-[#231E4A] dark:text-slate-200 dark:placeholder:text-slate-400 dark:focus:bg-[#2A2455]"
           />
         </div>
       </form>
@@ -122,10 +122,10 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                 <span className="max-w-[9rem] truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{displayName}</span>
                 {/* No programme/university field exists on the user record
                     yet — an honest placeholder instead of inventing one. */}
-                <span className="max-w-[9rem] truncate text-xs text-slate-400 dark:text-slate-500">Programme not set</span>
+                <span className="max-w-[9rem] truncate text-xs text-slate-500 dark:text-slate-400">Programme not set</span>
               </span>
               <ChevronDown
-                className={`hidden h-4 w-4 text-slate-400 transition motion-safe:duration-200 sm:inline dark:text-slate-500 ${isProfileOpen ? "rotate-180" : ""}`}
+                className={`hidden h-4 w-4 text-slate-500 transition motion-safe:duration-200 sm:inline dark:text-slate-400 ${isProfileOpen ? "rotate-180" : ""}`}
                 aria-hidden="true"
               />
             </button>
@@ -137,7 +137,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                   isMenuEntered ? "opacity-100 translate-y-0 scale-100" : "opacity-0 -translate-y-1 scale-95"
                 }`}
               >
-                <div className="px-3 py-2 text-xs text-slate-400 dark:text-slate-500">
+                <div className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
                   Signed in as
                   <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{user?.email}</p>
                 </div>

@@ -146,8 +146,8 @@ export default function AdminFaculties({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900">Faculties</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Faculties</h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Pick a university to manage its faculties. Only admins can create, edit,
         or archive.
       </p>

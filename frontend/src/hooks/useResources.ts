@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { resourceService } from "../service/resourceService";
-import type { ResourceCategory } from "../types/resource";
+import type { Resource, ResourceCategory, ResourceFile } from "../types/resource";
 
 export function useResources(params: {
   mine?: boolean;
@@ -165,22 +165,32 @@ interface UploadResourceInput {
   subjectName?: string;
   subjectSemester?: number;
   subjectCurriculumYear?: number;
-  // Optional: with no file, `description` becomes the resource's actual
+  // Optional: with no files, `description` becomes the resource's actual
   // content instead of just a caption — see createTextResourceSchema.
-  file?: File;
+  files?: File[];
   onProgress?: (percent: number) => void;
 }
 
 /**
- * With a file: chains upload-intent -> PUT file (with progress) ->
- * confirm, in one mutation. With no file: posts straight to the
- * text-only endpoint, published READY immediately (no pipeline to run).
+ * With files: creates the resource off the first file (upload-intent ->
+ * PUT -> confirm), then attaches each remaining file to that same
+ * resource the same way, passing its id back as `resourceId`. Files
+ * upload one at a time, in order, since each later file's upload-intent
+ * needs the resourceId the first call produced. With no files: posts
+ * straight to the text-only endpoint, published READY immediately (no
+ * pipeline to run).
+ *
+ * If a file partway through fails, the resource already exists with
+ * whichever earlier files succeeded — the mutation rejects (no
+ * navigation happens) but re-submitting the form would create a second,
+ * separate resource rather than resuming this one.
  */
 export function useUploadResource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: UploadResourceInput) => {
-      if (!input.file) {
+      const files = input.files ?? [];
+      if (files.length === 0) {
         return resourceService.createTextResource({
           title: input.title,
           description: input.description ?? "",
@@ -192,28 +202,34 @@ export function useUploadResource() {
         });
       }
 
-      const intent = await resourceService.createUploadIntent({
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        universityId: input.universityId,
-        facultyId: input.facultyId,
-        programmeId: input.programmeId,
-        subjectId: input.subjectId,
-        subjectCode: input.subjectCode,
-        subjectName: input.subjectName,
-        subjectSemester: input.subjectSemester,
-        subjectCurriculumYear: input.subjectCurriculumYear,
-        fileName: input.file.name,
-        contentType: input.file.type,
-        sizeBytes: input.file.size,
-      });
-      await resourceService.uploadFile(
-        intent.uploadUrl,
-        input.file,
-        input.onProgress,
-      );
-      return resourceService.confirmUpload(intent.file.id);
+      let resourceId: string | undefined;
+      let result: { resource: Resource; file: ResourceFile } | undefined;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const intent = await resourceService.createUploadIntent({
+          title: input.title,
+          description: input.description,
+          category: input.category,
+          universityId: input.universityId,
+          facultyId: input.facultyId,
+          programmeId: input.programmeId,
+          subjectId: input.subjectId,
+          subjectCode: input.subjectCode,
+          subjectName: input.subjectName,
+          subjectSemester: input.subjectSemester,
+          subjectCurriculumYear: input.subjectCurriculumYear,
+          resourceId,
+          fileName: file.name,
+          contentType: file.type,
+          sizeBytes: file.size,
+        });
+        resourceId = intent.resource.id;
+        await resourceService.uploadFile(intent.uploadUrl, file, (percent) => {
+          input.onProgress?.(Math.round(((i + percent / 100) / files.length) * 100));
+        });
+        result = await resourceService.confirmUpload(intent.file.id);
+      }
+      return result!;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resources"] });

@@ -129,8 +129,8 @@ export default function Profile() {
 
   return (
     <div className="mx-auto max-w-[1000px] px-[18px] py-[22px]">
-      <h1 className="text-2xl font-bold text-slate-900">Profile &amp; Settings</h1>
-      <p className="mt-1 text-sm text-slate-500">Your details, contribution record and notification preferences.</p>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Profile &amp; Settings</h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Your details, contribution record and notification preferences.</p>
 
       {/* Hero — same gradient family as the dashboard's hero card. Stacks
           to a column below `sm` rather than relying on flex-wrap: with

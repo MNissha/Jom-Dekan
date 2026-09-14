@@ -54,7 +54,8 @@ export default function ResourceDetail() {
       : undefined,
   });
 
-  const readyFile = data?.files.find((f) => f.status === "READY");
+  const readyFiles = data?.files.filter((f) => f.status === "READY") ?? [];
+  const readyFile = readyFiles[0];
   const isImage = readyFile?.detectedMimeType?.startsWith("image/") ?? false;
   const isPdf = readyFile?.detectedMimeType === "application/pdf";
   // Hooks must run unconditionally on every render (before the early
@@ -265,7 +266,7 @@ export default function ResourceDetail() {
             <div className="mt-6 flex flex-wrap gap-2">
               <FavoriteButton targetType="resource" targetId={resource.id} variant="pill" />
               <ReportButton targetType="resource" targetId={resource.id} />
-              {readyFile && (
+              {readyFiles.length === 1 && (
                 <button
                   type="button"
                   onClick={() => handleDownload(readyFile.id)}
@@ -311,6 +312,32 @@ export default function ResourceDetail() {
                 </>
               )}
             </div>
+
+            {readyFiles.length > 1 && (
+              <div className="mt-4 flex flex-col gap-2">
+                <p className="text-xs font-semibold text-slate-500">
+                  {readyFiles.length} files
+                </p>
+                {readyFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[#ECEBF7] bg-[#FBFBFE] px-4 py-2.5"
+                  >
+                    <span className="truncate text-sm text-slate-700">
+                      {file.originalFilename}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(file.id)}
+                      disabled={downloadUrl.isPending}
+                      className="shrink-0 rounded-full bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                    >
+                      Download
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>

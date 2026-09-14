@@ -5,7 +5,7 @@ import { ALLOWED_RESOURCE_MIME_TYPES, RESOURCE_CATEGORIES } from "../types/resou
 // The client-side file checks below are UX only; the server always
 // re-validates the actual bytes regardless of what this reports.
 //
-// The file is optional: leaving it empty posts a text-only resource
+// Files are optional: leaving them empty posts a text-only resource
 // (the description becomes the content, mirrored by
 // createTextResourceSchema on the backend), so the superRefine below
 // requires a real chunk of description whenever no file is attached —
@@ -21,17 +21,27 @@ export const uploadResourceFormSchema = z
     facultyId: z.string().uuid().optional().or(z.literal("")),
     programmeId: z.string().uuid().optional().or(z.literal("")),
     subjectId: z.string().uuid().optional().or(z.literal("")),
-    file: z
-      .instanceof(File)
+    files: z
+      .array(z.instanceof(File))
+      .max(10, "You can attach up to 10 files.")
       .refine(
-        (file) => (ALLOWED_RESOURCE_MIME_TYPES as readonly string[]).includes(file.type),
+        (files) =>
+          files.every((file) =>
+            (ALLOWED_RESOURCE_MIME_TYPES as readonly string[]).includes(file.type),
+          ),
         "Only PDF, JPEG, PNG, DOCX, XLSX, or PPTX files are allowed.",
       )
-      .refine((file) => file.size <= 20 * 1024 * 1024, "File must be 20MB or smaller.")
+      .refine(
+        (files) => files.every((file) => file.size <= 20 * 1024 * 1024),
+        "Each file must be 20MB or smaller.",
+      )
       .optional(),
   })
   .superRefine((values, ctx) => {
-    if (!values.file && (!values.description || values.description.length < 20)) {
+    if (
+      (!values.files || values.files.length === 0) &&
+      (!values.description || values.description.length < 20)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["description"],

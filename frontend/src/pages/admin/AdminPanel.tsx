@@ -28,13 +28,13 @@ export default function AdminPanel() {
   <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-400">
           Admin panel
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
           Taxonomy management
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Manage universities, faculties, programmes, and subjects.
         </p>
       </div>

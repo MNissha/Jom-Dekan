@@ -52,9 +52,9 @@ export default function Notifications() {
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Your updates</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Notifications</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">Your updates</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Notifications</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {unread.length} unread · announcements, report decisions, and activity updates.
           </p>
         </div>

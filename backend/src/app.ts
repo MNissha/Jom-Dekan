@@ -23,6 +23,7 @@ import adminUserRoutes from "./routes/adminUserRoutes";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
+import supportRequestRoutes from "./routes/supportRequestRoutes";
 
 export function createApp(): Express {
   const app = express();
@@ -112,6 +113,7 @@ export function createApp(): Express {
   app.use("/api/v1/admin", adminAnalyticsRoutes);
   app.use("/api/v1/reports", reportRoutes);
   app.use("/api/v1", auditLogRoutes);
+  app.use("/api/v1/support-requests", supportRequestRoutes);
   // Also expose /health and /version unversioned for simple infra probes.
   app.use(healthRoutes);
 

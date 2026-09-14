@@ -1,15 +1,20 @@
 import { Router } from "express";
+import multer from "multer";
 import {
   getOpportunities,
+  getMyOpportunities,
   createOpportunity,
   applyToOpportunity,
+  getApplicationsForOpportunity,
+  updateApplicationStatus,
+  getApplicationFile,
   getAllOpportunitiesForAdmin,
   updateOpportunityStatus,
   adminCreateOpportunity,
   adminUpdateOpportunity,
   adminDeleteOpportunity,
 } from "../controllers/opportunityController";
-import { authenticate } from "../config/middleware/authMiddleware";
+import { authenticate, optionalAuthenticate } from "../config/middleware/authMiddleware";
 import { authorize } from "../config/middleware/authorizeMiddleware";
 import { validate } from "../config/middleware/validateMiddleware";
 import {
@@ -19,9 +24,29 @@ import {
   adminCreateOpportunitySchema,
   adminUpdateOpportunitySchema,
   opportunityIdParamSchema,
+  applicationStatusSchema,
+  applicationIdParamSchema,
+  applicationFileParamSchema,
 } from "../validators/opportunityValidators";
 
 const router = Router();
+
+const applicationUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    callback(
+      null,
+      [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+      ].includes(file.mimetype),
+    );
+  },
+});
 
 router.post("/admin", authenticate, authorize("ADMIN"), validate({ body: adminCreateOpportunitySchema }), adminCreateOpportunity);
 router.patch("/admin/:id", authenticate, authorize("ADMIN"), validate({ params: opportunityIdParamSchema, body: adminUpdateOpportunitySchema }), adminUpdateOpportunity);
@@ -104,13 +129,26 @@ router.patch(
  *       201:
  *         description: Opportunity created successfully
  */
-router.get("/", getOpportunities);
+router.get("/", optionalAuthenticate, getOpportunities);
 router.post(
   "/",
   authenticate,
   validate({ body: createOpportunitySchema }),
   createOpportunity,
 );
+
+/**
+ * @openapi
+ * /api/v1/opportunities/mine:
+ *   get:
+ *     summary: List every listing you've posted, any status
+ *     tags: [Opportunities]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200: { description: List of your listings }
+ */
+router.get("/mine", authenticate, getMyOpportunities);
 
 /**
  * @openapi
@@ -132,8 +170,90 @@ router.post(
 router.post(
   "/:id/applications",
   authenticate,
-  validate({ body: applyOpportunitySchema }),
+  applicationUpload.fields([
+    { name: "cv", maxCount: 1 },
+    { name: "portfolio", maxCount: 1 },
+  ]),
+  validate({ params: opportunityIdParamSchema, body: applyOpportunitySchema }),
   applyToOpportunity,
+);
+
+/**
+ * @openapi
+ * /api/v1/opportunities/{id}/applications:
+ *   get:
+ *     summary: List applications for a listing you own (or ADMIN)
+ *     tags: [Opportunities]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: List of applications }
+ *       403: { description: Not the listing owner }
+ */
+router.get(
+  "/:id/applications",
+  authenticate,
+  validate({ params: opportunityIdParamSchema }),
+  getApplicationsForOpportunity,
+);
+
+/**
+ * @openapi
+ * /api/v1/opportunities/applications/{applicationId}/status:
+ *   patch:
+ *     summary: Accept or decline an application (listing owner or ADMIN)
+ *     tags: [Opportunities]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Application updated }
+ *       403: { description: Not the listing owner }
+ *       404: { description: Application not found }
+ */
+router.patch(
+  "/applications/:applicationId/status",
+  authenticate,
+  validate({ params: applicationIdParamSchema, body: applicationStatusSchema }),
+  updateApplicationStatus,
+);
+
+/**
+ * @openapi
+ * /api/v1/opportunities/applications/{applicationId}/files/{kind}:
+ *   get:
+ *     summary: Download an applicant's CV or portfolio file (listing owner, the applicant, or ADMIN)
+ *     tags: [Opportunities]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: kind
+ *         required: true
+ *         schema: { type: string, enum: [cv, portfolio] }
+ *     responses:
+ *       200: { description: File stream }
+ *       403: { description: Not authorized }
+ *       404: { description: File not found }
+ */
+router.get(
+  "/applications/:applicationId/files/:kind",
+  authenticate,
+  validate({ params: applicationFileParamSchema }),
+  getApplicationFile,
 );
 
 export default router;

@@ -71,13 +71,13 @@ export default function AdminNotifications() {
   return (
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">
           Admin communications
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
           Notifications
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Send announcements and review notifications submitted by users.
         </p>
       </div>
