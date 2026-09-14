@@ -20,6 +20,9 @@ export interface ProfileStats {
   resourceCount: number;
   forumPostCount: number;
   forumCommentCount: number;
+  tutorListingCount: number;
+  freelanceListingCount: number;
+  favoriteCount: number;
 }
 
 export type ActivityType =

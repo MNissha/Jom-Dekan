@@ -117,12 +117,16 @@ export default function Profile() {
       <h1 className="text-2xl font-bold text-slate-900">Profile &amp; Settings</h1>
       <p className="mt-1 text-sm text-slate-500">Your details, contribution record and notification preferences.</p>
 
-      {/* Hero — same gradient family as the dashboard's hero card. */}
+      {/* Hero — same gradient family as the dashboard's hero card. Stacks
+          to a column below `sm` rather than relying on flex-wrap: with
+          five stat tiles the wrapped grid's own minimum width no longer
+          reliably loses the fight to the avatar block on narrow screens,
+          which used to leave the two visually overlapping. */}
       <div
-        className="mt-6 flex flex-wrap items-center justify-between gap-5 rounded-[22px] p-[22px] text-white"
+        className="mt-6 flex flex-col items-stretch gap-5 rounded-[22px] p-[22px] text-white sm:flex-row sm:items-center sm:justify-between"
         style={{ background: 'radial-gradient(120% 140% at 85% 10%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)' }}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-[#F5C21A] text-xl font-extrabold text-[#231C57]">
             {profile.email[0]?.toUpperCase() ?? '?'}
           </div>
@@ -134,19 +138,17 @@ export default function Profile() {
           </div>
         </div>
 
-        <div
-          className="grid flex-1 grid-cols-2 gap-0 overflow-hidden rounded-2xl border border-white/[.16] bg-white/[.09] sm:grid-cols-4"
-          style={{ minWidth: 260 }}
-        >
+        <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-2xl border border-white/[.16] bg-white/[.09] sm:min-w-[300px] sm:flex-1 sm:grid-cols-5">
           {[
             { label: 'Uploads', value: stats?.resourceCount ?? '—' },
-            { label: 'Rating', value: '—' },
-            { label: 'Downloads', value: '—' },
+            { label: 'Tutor', value: stats?.tutorListingCount ?? '—' },
+            { label: 'Freelance', value: stats?.freelanceListingCount ?? '—' },
+            { label: 'Fav', value: stats?.favoriteCount ?? '—' },
             { label: 'Threads', value: stats?.forumPostCount ?? '—' },
           ].map(({ label, value }, i) => (
             <div
               key={label}
-              className={`flex flex-col items-center gap-1 px-2 py-4 ${i > 0 ? 'border-l border-white/[.12]' : ''}`}
+              className={`flex flex-col items-center gap-1 px-2 py-4 ${i % 2 === 1 ? 'border-l border-white/[.12]' : ''} ${i >= 2 ? 'border-t border-white/[.12]' : ''} sm:border-t-0 ${i > 0 ? 'sm:border-l sm:border-white/[.12]' : 'sm:border-l-0'}`}
             >
               <span className="text-xl font-extrabold leading-none">{value}</span>
               <span className="text-[11px] font-bold uppercase tracking-wide text-[#B9B4E4]">{label}</span>

@@ -62,12 +62,14 @@ export function useLogout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  // `reason` (e.g. "idle") is only ever used to annotate the redirect
+  // below — it never changes what the logout call itself does.
+  return useMutation<void, unknown, "idle" | undefined>({
     mutationFn: () => authService.logout(),
-    onSettled: () => {
+    onSettled: (_data, _error, reason) => {
       clearSession();
       queryClient.clear();
-      navigate("/login");
+      navigate(reason ? `/login?reason=${reason}` : "/login");
     },
   });
 }
