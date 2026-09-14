@@ -100,7 +100,7 @@ export const forumModel = {
       const result = await pool.query<ForumPostListRow>(
         `SELECT p.*,
                 COALESCE(up.display_name, 'Student') AS author_name,
-                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
+                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $2), 0) AS my_vote,
                 (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
          FROM forum_posts p
@@ -175,7 +175,7 @@ export const forumModel = {
       const rowsResult = await pool.query<ForumPostListRow>(
         `SELECT p.*,
                 COALESCE(up.display_name, 'Student') AS author_name,
-                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
+                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $${myVoteParamIndex}), 0) AS my_vote,
                 (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
          FROM forum_posts p
@@ -239,7 +239,7 @@ export const forumModel = {
       const result = await pool.query<ForumCommentListRow>(
         `SELECT c.*,
                 COALESCE(up.display_name, 'Student') AS author_name,
-                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id AND value = 1) AS vote_score,
+                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id), 0) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id AND user_id = $2), 0) AS my_vote
          FROM forum_comments c
          LEFT JOIN user_profiles up ON up.user_id = c.author_id
