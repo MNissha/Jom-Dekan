@@ -190,6 +190,34 @@ export const taxonomyController = {
       next(err);
     }
   },
+  // Any authenticated user (not just ADMIN) — this is the student-facing
+  // "type a subject that isn't in the list yet" path.
+  async findOrCreateSubject(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id: programmeId } = req.params as { id: string };
+      const { code, name, curriculumYear, recommendedSemester } =
+        req.body as {
+          code: string;
+          name: string;
+          curriculumYear?: number;
+          recommendedSemester?: number;
+        };
+      const { subject, created } =
+        await taxonomyService.subjects.findOrCreateForProgramme(
+          { programmeId, code, name, curriculumYear, recommendedSemester },
+          ctxFrom(req),
+        );
+      res.status(created ? 201 : 200).json({
+        message: created
+          ? "Subject added and linked to this programme."
+          : "Matched an existing subject.",
+        data: subject,
+        created,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
   async updateSubject(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params as { id: string };
@@ -252,6 +280,38 @@ export const taxonomyController = {
       res
         .status(200)
         .json({ message: "Subject unlinked from programme.", data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ---- Taxonomy requests ----
+  async createTaxonomyRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const data = await taxonomyService.requests.create(
+        req.body,
+        ctxFrom(req),
+      );
+      res.status(201).json({
+        message: "Request submitted. An admin will review it shortly.",
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  async listMyTaxonomyRequests(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const data = await taxonomyService.requests.listMine(ctxFrom(req));
+      res.status(200).json({ data });
     } catch (err) {
       next(err);
     }

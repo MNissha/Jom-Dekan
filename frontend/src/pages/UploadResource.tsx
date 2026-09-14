@@ -14,6 +14,7 @@ import {
   useFaculties,
   useProgrammes,
   useSubjects,
+  useCreateTaxonomyRequest,
 } from "../hooks/useTaxonomy";
 import { useMyProfile } from "../hooks/useProfile";
 import { SearchableSelect } from "../components/common/SearchableSelect";
@@ -41,6 +42,140 @@ export default function UploadResource() {
   const { data: subjects } = useSubjects(programmeId || undefined);
   const [fileName, setFileName] = useState<string | null>(null);
 
+  // "Add a subject" is a separate mode rather than a schema field: it
+  // needs a programme picked (local state, not RHF) before it makes
+  // sense, and it replaces subjectId rather than adding to it.
+  const [isAddingSubject, setIsAddingSubject] = useState(false);
+  const [newSubjectCode, setNewSubjectCode] = useState("");
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [newSubjectSemester, setNewSubjectSemester] = useState("");
+  const [newSubjectIntakeYear, setNewSubjectIntakeYear] = useState("");
+  const [newSubjectError, setNewSubjectError] = useState<string | null>(null);
+
+  // Unlike subjects, universities/faculties/programmes have no
+  // self-service creation — this just files a request for an admin to
+  // review, so it never creates the picker option on the spot. Each of
+  // University/Faculty/Programme gets its own inline request link right
+  // under its own box; only one can be open at a time, tracked by level.
+  const createTaxonomyRequest = useCreateTaxonomyRequest();
+  const [requestingLevel, setRequestingLevel] =
+    useState<"university" | "faculty" | "programme" | null>(null);
+  const [requestName, setRequestName] = useState("");
+  const [requestNote, setRequestNote] = useState("");
+  const [submittedLevel, setSubmittedLevel] =
+    useState<"university" | "faculty" | "programme" | null>(null);
+
+  function startRequestingTaxonomy(level: "university" | "faculty" | "programme") {
+    setRequestingLevel(level);
+    setRequestName("");
+    setRequestNote("");
+    setSubmittedLevel(null);
+  }
+
+  function cancelRequestingTaxonomy() {
+    setRequestingLevel(null);
+    setRequestName("");
+    setRequestNote("");
+  }
+
+  function submitTaxonomyRequest() {
+    if (!requestingLevel || requestName.trim().length < 2) return;
+    createTaxonomyRequest.mutate(
+      {
+        universityId: universityId || undefined,
+        facultyId: facultyId || undefined,
+        requestedUniversityName: requestingLevel === "university" ? requestName.trim() : undefined,
+        requestedFacultyName: requestingLevel === "faculty" ? requestName.trim() : undefined,
+        requestedProgrammeName: requestingLevel === "programme" ? requestName.trim() : undefined,
+        note: requestNote.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setSubmittedLevel(requestingLevel);
+          setRequestingLevel(null);
+          setRequestName("");
+          setRequestNote("");
+        },
+      },
+    );
+  }
+
+  // Rendered under each of the University/Faculty/Programme boxes —
+  // collapses to a text link, expands into a small inline form when that
+  // box's link is clicked, and shows a confirmation after submitting.
+  function renderTaxonomyRequestLink(
+    level: "university" | "faculty" | "programme",
+    label: string,
+    placeholder: string,
+  ) {
+    if (requestingLevel === level) {
+      return (
+        <div className="mt-2 space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-600">
+              {label} name<span className="text-red-500"> *</span>
+            </label>
+            <input
+              autoFocus
+              value={requestName}
+              onChange={(e) => setRequestName(e.target.value)}
+              placeholder={placeholder}
+              className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600">
+              Note <span className="font-semibold text-slate-400">· optional</span>
+            </label>
+            <textarea
+              rows={2}
+              value={requestNote}
+              onChange={(e) => setRequestNote(e.target.value)}
+              placeholder="Anything that helps an admin add it correctly (campus, official site, etc.)"
+              className="mt-1 w-full resize-y rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          {createTaxonomyRequest.isError && (
+            <p className="text-xs text-red-600">Couldn&apos;t submit that request. Please try again.</p>
+          )}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={cancelRequestingTaxonomy}
+              className="text-xs font-bold text-slate-500 hover:text-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={requestName.trim().length < 2 || createTaxonomyRequest.isPending}
+              onClick={submitTaxonomyRequest}
+              className="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {createTaxonomyRequest.isPending ? "Submitting…" : "Submit request"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+    if (submittedLevel === level) {
+      return (
+        <p className="mt-1 text-xs font-bold text-emerald-600">
+          Request submitted — an admin will review it shortly.
+        </p>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => startRequestingTaxonomy(level)}
+        className="mt-1 text-xs font-bold text-primary-600 hover:text-primary-700"
+      >
+        Can&apos;t find your {label.toLowerCase()}? Request it
+      </button>
+    );
+  }
+
   const {
     register,
     handleSubmit,
@@ -55,7 +190,41 @@ export default function UploadResource() {
   const category = watch("category");
   const hasFile = Boolean(watch("file"));
 
+  function startAddingSubject() {
+    setValue("subjectId", "");
+    setNewSubjectError(null);
+    setIsAddingSubject(true);
+  }
+
+  function cancelAddingSubject() {
+    setNewSubjectCode("");
+    setNewSubjectName("");
+    setNewSubjectSemester("");
+    setNewSubjectIntakeYear("");
+    setNewSubjectError(null);
+    setIsAddingSubject(false);
+  }
+
   const onSubmit = (values: UploadResourceFormValues) => {
+    if (isAddingSubject) {
+      if (newSubjectCode.trim().length < 2 || newSubjectName.trim().length < 2) {
+        setNewSubjectError(
+          "Enter both a subject code and a subject name (at least 2 characters each).",
+        );
+        return;
+      }
+      // Standing up a brand-new subject happens inline with a file
+      // upload only — the text-only post endpoint doesn't take
+      // subjectCode/subjectName, so a code/name typed here would
+      // otherwise be silently dropped.
+      if (!values.file) {
+        setNewSubjectError(
+          "Attach a file to create a new subject, or pick an existing one from the list for a text post.",
+        );
+        return;
+      }
+    }
+    setNewSubjectError(null);
     setProgress(0);
     uploadResource.mutate(
       {
@@ -65,7 +234,17 @@ export default function UploadResource() {
         universityId,
         facultyId,
         programmeId,
-        subjectId: values.subjectId,
+        subjectId: isAddingSubject ? undefined : values.subjectId,
+        subjectCode: isAddingSubject ? newSubjectCode : undefined,
+        subjectName: isAddingSubject ? newSubjectName : undefined,
+        subjectSemester:
+          isAddingSubject && newSubjectSemester
+            ? Number(newSubjectSemester)
+            : undefined,
+        subjectCurriculumYear:
+          isAddingSubject && newSubjectIntakeYear
+            ? Number(newSubjectIntakeYear)
+            : undefined,
         file: values.file,
         onProgress: setProgress,
       },
@@ -186,9 +365,13 @@ export default function UploadResource() {
                 setValue("facultyId", "");
                 setValue("programmeId", "");
                 setValue("subjectId", "");
+                cancelAddingSubject();
+                cancelRequestingTaxonomy();
+                setSubmittedLevel(null);
               }}
               placeholder="Search for a university…"
             />
+            {!universityId && renderTaxonomyRequestLink("university", "University", "e.g. Universiti Contoh Malaysia")}
           </div>
           <div>
             <label htmlFor="facultyId" className="block text-sm font-bold text-slate-700">
@@ -205,10 +388,15 @@ export default function UploadResource() {
                 setProgrammeId("");
                 setValue("programmeId", "");
                 setValue("subjectId", "");
+                cancelAddingSubject();
+                cancelRequestingTaxonomy();
+                setSubmittedLevel(null);
               }}
               disabled={!universityId}
               placeholder={universityId ? "Search for a faculty…" : "Select a university first"}
             />
+            {universityId && !facultyId &&
+              renderTaxonomyRequestLink("faculty", "Faculty", "e.g. Faculty of Applied Sciences")}
           </div>
           <div>
             <label htmlFor="programmeId" className="block text-sm font-bold text-slate-700">
@@ -223,36 +411,137 @@ export default function UploadResource() {
               onChange={(value) => {
                 setProgrammeId(value);
                 setValue("subjectId", "");
+                cancelAddingSubject();
+                cancelRequestingTaxonomy();
+                setSubmittedLevel(null);
               }}
               disabled={!facultyId}
               placeholder={facultyId ? "Search for a programme…" : "Select a faculty first"}
             />
+            {facultyId && !programmeId &&
+              renderTaxonomyRequestLink("programme", "Programme", "e.g. Bachelor of Data Science (Hons)")}
           </div>
           <div>
             <label htmlFor="subjectId" className="block text-sm font-bold text-slate-700">
               Subject
             </label>
-            <Controller
-              control={control}
-              name="subjectId"
-              render={({ field }) => (
-                <SearchableSelect
-                  id="subjectId"
-                  options={(subjects ?? [])
-                    .filter((item) => item.isActive)
-                    .map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  disabled={!programmeId}
-                  placeholder={programmeId ? "Search for a subject…" : "Select a programme first"}
+            {isAddingSubject ? (
+              <div className="mt-1.5 space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="newSubjectCode" className="block text-xs font-bold text-slate-600">
+                      Subject code<span className="text-red-500"> *</span>
+                    </label>
+                    <input
+                      id="newSubjectCode"
+                      value={newSubjectCode}
+                      onChange={(e) => setNewSubjectCode(e.target.value)}
+                      placeholder="e.g. CSC577"
+                      className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="newSubjectName" className="block text-xs font-bold text-slate-600">
+                      Subject name<span className="text-red-500"> *</span>
+                    </label>
+                    <input
+                      id="newSubjectName"
+                      value={newSubjectName}
+                      onChange={(e) => setNewSubjectName(e.target.value)}
+                      placeholder="e.g. Software Engineering"
+                      className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="newSubjectSemester" className="block text-xs font-bold text-slate-600">
+                      Semester
+                    </label>
+                    <select
+                      id="newSubjectSemester"
+                      value={newSubjectSemester}
+                      onChange={(e) => setNewSubjectSemester(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Not sure</option>
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((s) => (
+                        <option key={s} value={s}>
+                          Semester {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="newSubjectIntakeYear" className="block text-xs font-bold text-slate-600">
+                      Intake / curriculum year
+                    </label>
+                    <input
+                      id="newSubjectIntakeYear"
+                      type="number"
+                      inputMode="numeric"
+                      value={newSubjectIntakeYear}
+                      onChange={(e) => setNewSubjectIntakeYear(e.target.value)}
+                      placeholder={String(new Date().getFullYear())}
+                      className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                </div>
+                {newSubjectError && (
+                  <p className="text-xs text-red-600">{newSubjectError}</p>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">
+                    Not in the catalogue yet — this adds it as a community-submitted
+                    subject that&apos;s ready to use right away. An admin will verify it later.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={cancelAddingSubject}
+                    className="shrink-0 text-xs font-bold text-slate-500 hover:text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Controller
+                  control={control}
+                  name="subjectId"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="subjectId"
+                      options={(subjects ?? [])
+                        .filter((item) => item.isActive)
+                        .map((item) => ({
+                          value: item.id,
+                          label: `${item.code} · ${item.name}${
+                            item.verificationStatus === "COMMUNITY_SUBMITTED"
+                              ? " (community)"
+                              : ""
+                          }`,
+                        }))}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      disabled={!programmeId}
+                      placeholder={programmeId ? "Search for a subject…" : "Select a programme first"}
+                    />
+                  )}
                 />
-              )}
-            />
-            {programmeId && subjects && subjects.length === 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                No subjects are linked to this programme yet.
-              </p>
+                {programmeId && subjects && subjects.length === 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    No subjects are linked to this programme yet.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={!programmeId}
+                  onClick={startAddingSubject}
+                  className="mt-1 text-xs font-bold text-primary-600 hover:text-primary-700 disabled:cursor-not-allowed disabled:text-slate-400"
+                >
+                  Can&apos;t find it? Add a new subject
+                </button>
+              </>
             )}
           </div>
         </div>

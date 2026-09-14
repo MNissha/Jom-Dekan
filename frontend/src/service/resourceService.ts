@@ -36,6 +36,14 @@ interface UploadIntentInput {
   facultyId?: string;
   programmeId?: string;
   subjectId?: string;
+  // Set instead of subjectId when the uploader typed a subject that
+  // isn't in the catalogue yet — the backend resolves/creates it as
+  // part of this same request. See UploadResource's "add a new subject"
+  // toggle.
+  subjectCode?: string;
+  subjectName?: string;
+  subjectSemester?: number;
+  subjectCurriculumYear?: number;
   fileName: string;
   contentType: string;
   sizeBytes: number;
@@ -82,6 +90,10 @@ export const resourceService = {
         facultyId: optionalId(data.facultyId),
         programmeId: optionalId(data.programmeId),
         subjectId: optionalId(data.subjectId),
+        subjectCode: data.subjectCode || undefined,
+        subjectName: data.subjectName || undefined,
+        subjectSemester: data.subjectSemester,
+        subjectCurriculumYear: data.subjectCurriculumYear,
       },
     );
     return res.data.data;

@@ -153,7 +153,10 @@ export default function Resources() {
   const { data: universities } = useUniversities();
   const { data: faculties } = useFaculties(universityId);
   const { data: programmes } = useProgrammes(facultyId);
-  const { data: subjects } = useSubjects();
+  // Scoped to the selected programme, same as Upload Resource — when no
+  // programme is picked this falls back to the full catalogue, which is
+  // also correct for resolving badges on cards that span programmes.
+  const { data: subjects } = useSubjects(programmeId);
 
   const { data, isLoading, isError } = useResources({
     mine,
@@ -175,17 +178,20 @@ export default function Resources() {
     setUniversityId(value || undefined);
     setFacultyId(undefined);
     setProgrammeId(undefined);
+    setSubjectId(undefined);
     setPage(1);
   }
 
   function handleFacultyChange(value: string) {
     setFacultyId(value || undefined);
     setProgrammeId(undefined);
+    setSubjectId(undefined);
     setPage(1);
   }
 
   function handleProgrammeChange(value: string) {
     setProgrammeId(value || undefined);
+    setSubjectId(undefined);
     setPage(1);
   }
 
@@ -322,7 +328,8 @@ export default function Resources() {
                 ]}
                 value={subjectId ?? ""}
                 onChange={handleSubjectChange}
-                placeholder="Search subjects…"
+                disabled={!programmeId}
+                placeholder={programmeId ? "Search subjects…" : "Select a programme first"}
               />
             </div>
           </div>
