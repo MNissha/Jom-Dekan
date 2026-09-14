@@ -17,6 +17,15 @@ const BCRYPT_COST = 12;
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Per-account brute-force lockout (independent of the IP-based rate
+// limiter — see rateLimitMiddleware.ts for why both exist).
+const MAX_LOGIN_ATTEMPTS = 10;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+// Only start warning the user once they're a few wrong guesses in — two
+// generic "invalid email or password" tries first, so the message
+// doesn't confirm the account exists on the very first typo.
+const ATTEMPTS_WARNING_THRESHOLD = 3;
+
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -42,6 +51,7 @@ async function issueTokenPair(user: UserRow, ctx: { userAgent?: string; ipAddres
   const refreshToken = signRefreshToken({ sub: user.id, sid: sessionId });
 
   await sessionModel.create({
+    id: sessionId,
     userId: user.id,
     refreshTokenHash: hashToken(refreshToken),
     userAgent: ctx.userAgent,
@@ -164,17 +174,60 @@ export const authService = {
 
   async login(params: { email: string; password: string; requestId?: string; ipAddress?: string; userAgent?: string }) {
     const user = await userModel.findByEmail(params.email);
+
+    if (user?.lockout_until) {
+      if (user.lockout_until.getTime() > Date.now()) {
+        throw AppError.locked(user.lockout_until);
+      }
+      // Lockout window has passed — clear it lazily so the next check
+      // (and the attempt counter) start fresh.
+      await userModel.resetLoginAttempts(user.id);
+      user.failed_login_attempts = 0;
+      user.lockout_until = null;
+    }
+
     // Constant-shape response whether the email exists or the password
     // is wrong — never let a caller distinguish "no such account" from
     // "wrong password".
     const passwordMatches = user ? await bcrypt.compare(params.password, user.password_hash) : await bcrypt.compare(params.password, '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidin');
 
     if (!user || !passwordMatches) {
+      if (user) {
+        const attempts = await userModel.incrementFailedLoginAttempts(user.id);
+
+        if (attempts >= MAX_LOGIN_ATTEMPTS) {
+          const lockoutUntil = new Date(Date.now() + LOGIN_LOCKOUT_MS);
+          await userModel.setLockout(user.id, lockoutUntil);
+          await auditLogModel.record({
+            actorUserId: user.id,
+            action: 'ACCOUNT_LOCKED',
+            targetType: 'user',
+            targetId: user.id,
+            requestId: params.requestId,
+            ipAddress: params.ipAddress,
+          });
+          logger.warn({ userId: user.id }, 'Account locked after too many failed login attempts');
+          throw AppError.locked(lockoutUntil);
+        }
+
+        if (attempts >= ATTEMPTS_WARNING_THRESHOLD) {
+          const remaining = MAX_LOGIN_ATTEMPTS - attempts;
+          throw AppError.unauthorized(
+            `Invalid email or password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before your account is temporarily locked.`,
+            { attemptsRemaining: remaining },
+          );
+        }
+      }
+
       throw AppError.unauthorized('Invalid email or password.');
     }
 
     if (user.status !== 'ACTIVE') {
       throw AppError.forbidden('This account is not active. Contact support if you believe this is an error.');
+    }
+
+    if (user.failed_login_attempts > 0) {
+      await userModel.resetLoginAttempts(user.id);
     }
 
     const tokens = await issueTokenPair(user, { userAgent: params.userAgent, ipAddress: params.ipAddress });
@@ -227,6 +280,7 @@ export const authService = {
     const newSessionId = randomUUID();
     const newRefreshToken = signRefreshToken({ sub: user.id, sid: newSessionId });
     const newSession = await sessionModel.create({
+      id: newSessionId,
       userId: user.id,
       refreshTokenHash: hashToken(newRefreshToken),
       userAgent: params.userAgent,

@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { DashboardSidebar } from "../components/dashboard/DashboardSidebar";
 import { Footer } from "../components/common/Footer";
+import { IdleTimeoutGuard } from "../components/common/IdleTimeoutGuard";
 
 const DESKTOP_BREAKPOINT = "(min-width: 1024px)";
 
@@ -49,6 +50,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-dvh-with-fallback flex w-full flex-col overflow-hidden bg-[#F6F6FB] transition-colors motion-safe:duration-200 dark:bg-[#15132B]">
+      <IdleTimeoutGuard />
       <DashboardHeader onMenuClick={handleMenuClick} />
 
       {/* `min-h-0` overrides Flexbox's default `min-height: auto` on this

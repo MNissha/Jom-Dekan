@@ -10,6 +10,8 @@ export interface UserRow {
   email_verified_at: Date | null;
   terms_accepted_at: Date | null;
   deleted_at: Date | null;
+  failed_login_attempts: number;
+  lockout_until: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -110,6 +112,24 @@ export const userModel = {
 
   async updatePassword(id: string, passwordHash: string): Promise<void> {
     await pool.query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [id, passwordHash]);
+  },
+
+  /** Atomically records one more failed login attempt and returns the new count. */
+  async incrementFailedLoginAttempts(id: string): Promise<number> {
+    const result = await pool.query<{ failed_login_attempts: number }>(
+      `UPDATE users SET failed_login_attempts = failed_login_attempts + 1 WHERE id = $1 RETURNING failed_login_attempts`,
+      [id],
+    );
+    return result.rows[0].failed_login_attempts;
+  },
+
+  async setLockout(id: string, lockoutUntil: Date): Promise<void> {
+    await pool.query(`UPDATE users SET lockout_until = $2 WHERE id = $1`, [id, lockoutUntil]);
+  },
+
+  /** Called on successful login, or lazily when a past lockout has expired. */
+  async resetLoginAttempts(id: string): Promise<void> {
+    await pool.query(`UPDATE users SET failed_login_attempts = 0, lockout_until = NULL WHERE id = $1`, [id]);
   },
 };
 

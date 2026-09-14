@@ -4,6 +4,7 @@ import type {
   Faculty,
   Programme,
   Subject,
+  TaxonomyRequest,
 } from "../types/taxonomy";
 
 export const taxonomyService = {
@@ -169,6 +170,30 @@ export const taxonomyService = {
   ): Promise<Subject[]> => {
     const res = await axiosInstance.delete<{ data: Subject[] }>(
       `/taxonomy/programmes/${programmeId}/subjects/${subjectId}`,
+    );
+    return res.data.data;
+  },
+
+  createTaxonomyRequest: async (data: {
+    universityId?: string;
+    requestedUniversityName?: string;
+    facultyId?: string;
+    requestedFacultyName?: string;
+    programmeId?: string;
+    requestedProgrammeName?: string;
+    requestedSubjectCode?: string;
+    requestedSubjectName?: string;
+    note?: string;
+  }): Promise<TaxonomyRequest> => {
+    const res = await axiosInstance.post<{ data: TaxonomyRequest }>(
+      "/taxonomy/requests",
+      data,
+    );
+    return res.data.data;
+  },
+  listMyTaxonomyRequests: async (): Promise<TaxonomyRequest[]> => {
+    const res = await axiosInstance.get<{ data: TaxonomyRequest[] }>(
+      "/taxonomy/requests/mine",
     );
     return res.data.data;
   },

@@ -33,6 +33,9 @@ export interface SubjectRow {
   code: string;
   name: string;
   is_active: boolean;
+  source: "ADMIN" | "COMMUNITY";
+  verification_status: "COMMUNITY_SUBMITTED" | "ADMIN_VERIFIED";
+  created_by: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -194,6 +197,15 @@ export const taxonomyModel = {
       );
       return result.rows[0] ?? null;
     },
+    // `code` is stored already normalized (see normalizeSubjectCode), so
+    // this is a plain equality lookup, not a case-insensitive search.
+    async findByCode(code: string): Promise<SubjectRow | null> {
+      const result = await pool.query<SubjectRow>(
+        `SELECT * FROM subjects WHERE code = $1`,
+        [code],
+      );
+      return result.rows[0] ?? null;
+    },
     async list(): Promise<SubjectRow[]> {
       const result = await pool.query<SubjectRow>(
         `SELECT * FROM subjects ORDER BY is_active DESC, name ASC`,
@@ -210,10 +222,23 @@ export const taxonomyModel = {
       );
       return result.rows;
     },
-    async create(params: { code: string; name: string }): Promise<SubjectRow> {
+    async create(params: {
+      code: string;
+      name: string;
+      source?: "ADMIN" | "COMMUNITY";
+      verificationStatus?: "COMMUNITY_SUBMITTED" | "ADMIN_VERIFIED";
+      createdBy?: string | null;
+    }): Promise<SubjectRow> {
       const result = await pool.query<SubjectRow>(
-        `INSERT INTO subjects (code, name) VALUES ($1, $2) RETURNING *`,
-        [params.code, params.name],
+        `INSERT INTO subjects (code, name, source, verification_status, created_by)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [
+          params.code,
+          params.name,
+          params.source ?? "ADMIN",
+          params.verificationStatus ?? "ADMIN_VERIFIED",
+          params.createdBy ?? null,
+        ],
       );
       return result.rows[0];
     },
@@ -313,6 +338,8 @@ export function toApiSubject(row: SubjectRow) {
     code: row.code,
     name: row.name,
     isActive: row.is_active,
+    source: row.source,
+    verificationStatus: row.verification_status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

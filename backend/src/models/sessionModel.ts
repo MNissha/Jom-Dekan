@@ -13,7 +13,15 @@ export interface SessionRow {
 }
 
 export const sessionModel = {
+  /**
+   * `id` is required (not DB-generated) because the caller signs the
+   * refresh JWT's `sid` claim with this same id *before* the row exists
+   * — refresh() later rejects the token unless session.id === payload.sid,
+   * so the two must be the exact same value, not two independently
+   * generated UUIDs.
+   */
   async create(params: {
+    id: string;
     userId: string;
     refreshTokenHash: string;
     userAgent?: string;
@@ -21,10 +29,10 @@ export const sessionModel = {
     expiresAt: Date;
   }): Promise<SessionRow> {
     const result = await pool.query<SessionRow>(
-      `INSERT INTO user_sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO user_sessions (id, user_id, refresh_token_hash, user_agent, ip_address, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [params.userId, params.refreshTokenHash, params.userAgent ?? null, params.ipAddress ?? null, params.expiresAt],
+      [params.id, params.userId, params.refreshTokenHash, params.userAgent ?? null, params.ipAddress ?? null, params.expiresAt],
     );
     return result.rows[0];
   },

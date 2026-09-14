@@ -195,3 +195,20 @@ export function useUnlinkSubjectFromProgramme() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
   });
 }
+
+// ---- Taxonomy requests ("can't find your university/programme?") ----
+export function useCreateTaxonomyRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.createTaxonomyRequest,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["taxonomyRequests", "mine"] }),
+  });
+}
+
+export function useMyTaxonomyRequests() {
+  return useQuery({
+    queryKey: ["taxonomyRequests", "mine"],
+    queryFn: taxonomyService.listMyTaxonomyRequests,
+  });
+}

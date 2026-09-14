@@ -1,7 +1,10 @@
 import request from "supertest";
 import { createApp } from "../../src/app";
 import { pool } from "../../src/config/config/db";
-import { seededTaxonomy, baseRegisterPayload } from "../helpers/registerPayload";
+import {
+  seededTaxonomy,
+  baseRegisterPayload,
+} from "../helpers/registerPayload";
 
 const app = createApp();
 
@@ -19,14 +22,18 @@ async function dbReachable(): Promise<boolean> {
 async function registerUser(label: string) {
   const taxonomy = await seededTaxonomy();
   if (!taxonomy) {
-    throw new Error("Run `npm run seed` against the test database before running this suite.");
+    throw new Error(
+      "Run `npm run seed` against the test database before running this suite.",
+    );
   }
   const email = `favorites-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
   const res = await request(app)
     .post("/api/v1/auth/register")
     .send(baseRegisterPayload(taxonomy, { email, displayName: label }));
   if (!res.body.accessToken) {
-    throw new Error(`registerUser("${label}") failed: ${JSON.stringify(res.body)}`);
+    throw new Error(
+      `registerUser("${label}") failed: ${JSON.stringify(res.body)}`,
+    );
   }
   return {
     email,
@@ -47,6 +54,7 @@ async function createReadyResource(
       fileName: "notes.pdf",
       contentType: "application/pdf",
       sizeBytes: PDF_BUFFER.length,
+      category: "NOTES",
       ...overrides,
     });
   const { uploadUrl } = intentRes.body.data;
@@ -98,12 +106,12 @@ describe("Favorites API", () => {
     const addRes = await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId });
+      .send({ targetType: "resource", targetId: resourceId });
     expect(addRes.status).toBe(200);
-    expect(addRes.body.data.resourceId).toBe(resourceId);
+    expect(addRes.body.data.targetId).toBe(resourceId);
 
     const statusRes = await request(app)
-      .get(`/api/v1/favorites/${resourceId}`)
+      .get(`/api/v1/favorites/resource/${resourceId}`)
       .set("Authorization", `Bearer ${userToken}`);
     expect(statusRes.status).toBe(200);
     expect(statusRes.body.data.isFavorited).toBe(true);
@@ -114,7 +122,7 @@ describe("Favorites API", () => {
     const resourceId = await createReadyResource(ownerToken);
 
     const statusRes = await request(app)
-      .get(`/api/v1/favorites/${resourceId}`)
+      .get(`/api/v1/favorites/resource/${resourceId}`)
       .set("Authorization", `Bearer ${userToken}`);
     expect(statusRes.status).toBe(200);
     expect(statusRes.body.data.isFavorited).toBe(false);
@@ -127,15 +135,15 @@ describe("Favorites API", () => {
     const first = await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId });
+      .send({ targetType: "resource", targetId: resourceId });
     const second = await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId });
+      .send({ targetType: "resource", targetId: resourceId });
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
-    expect(second.body.data.resourceId).toBe(resourceId);
+    expect(second.body.data.targetId).toBe(resourceId);
   });
 
   it("never creates more than one row when the same favorite is requested concurrently (double-click / replay)", async () => {
@@ -148,18 +156,18 @@ describe("Favorites API", () => {
       request(app)
         .post("/api/v1/favorites")
         .set("Authorization", `Bearer ${userToken}`)
-        .send({ resourceId }),
+        .send({ targetType: "resource", targetId: resourceId }),
       request(app)
         .post("/api/v1/favorites")
         .set("Authorization", `Bearer ${userToken}`)
-        .send({ resourceId }),
+        .send({ targetType: "resource", targetId: resourceId }),
     ]);
 
     expect(resA.status).toBe(200);
     expect(resB.status).toBe(200);
 
     const countRes = await pool.query(
-      "SELECT COUNT(*) FROM favorites WHERE resource_id = $1",
+      "SELECT COUNT(*) FROM favorites WHERE target_type = 'resource' AND target_id = $1",
       [resourceId],
     );
     // The UNIQUE(user_id, resource_id) constraint from migration 005 is
@@ -173,7 +181,7 @@ describe("Favorites API", () => {
     await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId });
+      .send({ targetType: "resource", targetId: resourceId });
 
     const listRes = await request(app)
       .get("/api/v1/favorites")
@@ -191,20 +199,20 @@ describe("Favorites API", () => {
     await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId });
+      .send({ targetType: "resource", targetId: resourceId });
 
     const removeRes = await request(app)
-      .delete(`/api/v1/favorites/${resourceId}`)
+      .delete(`/api/v1/favorites/resource/${resourceId}`)
       .set("Authorization", `Bearer ${userToken}`);
     expect(removeRes.status).toBe(200);
 
     const statusRes = await request(app)
-      .get(`/api/v1/favorites/${resourceId}`)
+      .get(`/api/v1/favorites/resource/${resourceId}`)
       .set("Authorization", `Bearer ${userToken}`);
     expect(statusRes.body.data.isFavorited).toBe(false);
 
     const secondRemoveRes = await request(app)
-      .delete(`/api/v1/favorites/${resourceId}`)
+      .delete(`/api/v1/favorites/resource/${resourceId}`)
       .set("Authorization", `Bearer ${userToken}`);
     expect(secondRemoveRes.status).toBe(200);
   });
@@ -219,13 +227,14 @@ describe("Favorites API", () => {
         fileName: "notes.pdf",
         contentType: "application/pdf",
         sizeBytes: PDF_BUFFER.length,
+        category: "NOTES",
       });
     const pendingResourceId = intentRes.body.data.resource.id;
 
     const addRes = await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId: pendingResourceId });
+      .send({ targetType: "resource", targetId: pendingResourceId });
     expect(addRes.status).toBe(404);
   });
 
@@ -235,7 +244,11 @@ describe("Favorites API", () => {
     const res = await request(app)
       .post("/api/v1/favorites")
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ resourceId, note: "should not be allowed" });
+      .send({
+        targetType: "resource",
+        targetId: resourceId,
+        note: "should not be allowed",
+      });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });

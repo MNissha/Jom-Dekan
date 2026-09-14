@@ -23,6 +23,9 @@ export interface ProfileStats {
   resource_count: number;
   forum_post_count: number;
   forum_comment_count: number;
+  tutor_listing_count: number;
+  freelance_listing_count: number;
+  favorite_count: number;
 }
 
 export type ActivityType =
@@ -144,7 +147,10 @@ export const profileModel = {
       `SELECT
          (SELECT COUNT(*) FROM resources WHERE owner_id = $1)::int AS resource_count,
          (SELECT COUNT(*) FROM forum_posts WHERE author_id = $1 AND deleted_at IS NULL)::int AS forum_post_count,
-         (SELECT COUNT(*) FROM forum_comments WHERE author_id = $1 AND deleted_at IS NULL)::int AS forum_comment_count`,
+         (SELECT COUNT(*) FROM forum_comments WHERE author_id = $1 AND deleted_at IS NULL)::int AS forum_comment_count,
+         (SELECT COUNT(*) FROM opportunities WHERE owner_id = $1 AND listing_type = 'TUTORING')::int AS tutor_listing_count,
+         (SELECT COUNT(*) FROM opportunities WHERE owner_id = $1 AND listing_type != 'TUTORING')::int AS freelance_listing_count,
+         (SELECT COUNT(*) FROM favorites WHERE user_id = $1)::int AS favorite_count`,
       [userId],
     );
     return result.rows[0];
@@ -186,5 +192,8 @@ export function toApiStats(stats: ProfileStats) {
     resourceCount: stats.resource_count,
     forumPostCount: stats.forum_post_count,
     forumCommentCount: stats.forum_comment_count,
+    tutorListingCount: stats.tutor_listing_count,
+    freelanceListingCount: stats.freelance_listing_count,
+    favoriteCount: stats.favorite_count,
   };
 }

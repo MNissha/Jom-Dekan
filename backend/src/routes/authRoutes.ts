@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authController } from '../controllers/authController';
 import { validate } from '../config/middleware/validateMiddleware';
 import { authenticate } from '../config/middleware/authMiddleware';
-import { authRateLimiter } from '../config/middleware/rateLimitMiddleware';
+import { authRateLimiter, loginRateLimiter, refreshRateLimiter } from '../config/middleware/rateLimitMiddleware';
 import {
   registerSchema,
   loginSchema,
@@ -56,8 +56,9 @@ router.post('/register', authRateLimiter, validate({ body: registerSchema }), au
  *     responses:
  *       200: { description: Login successful }
  *       401: { description: Invalid credentials }
+ *       423: { description: Account temporarily locked after too many failed attempts }
  */
-router.post('/login', authRateLimiter, validate({ body: loginSchema }), authController.login);
+router.post('/login', loginRateLimiter, validate({ body: loginSchema }), authController.login);
 
 /**
  * @openapi
@@ -69,7 +70,7 @@ router.post('/login', authRateLimiter, validate({ body: loginSchema }), authCont
  *       200: { description: New access token issued }
  *       401: { description: Invalid or expired refresh token }
  */
-router.post('/refresh', authRateLimiter, authController.refresh);
+router.post('/refresh', refreshRateLimiter, authController.refresh);
 
 /**
  * @openapi

@@ -2,13 +2,20 @@ import request from "supertest";
 import { createApp } from "../../src/app";
 import { pool } from "../../src/config/config/db";
 import { userModel } from "../../src/models/userModel";
-import { seededTaxonomy, baseRegisterPayload } from "../helpers/registerPayload";
+import {
+  seededTaxonomy,
+  baseRegisterPayload,
+} from "../helpers/registerPayload";
 
 const app = createApp();
 
 const PDF_BUFFER = Buffer.from("%PDF-1.4\nfake pdf content for tests\n%%EOF");
-const PNG_BUFFER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01, 0x02, 0x03]);
-const NOT_A_REAL_FILE_BUFFER = Buffer.from("just plain text, not a pdf/png/jpeg at all");
+const PNG_BUFFER = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01, 0x02, 0x03,
+]);
+const NOT_A_REAL_FILE_BUFFER = Buffer.from(
+  "just plain text, not a pdf/png/jpeg at all",
+);
 
 async function dbReachable(): Promise<boolean> {
   try {
@@ -22,19 +29,30 @@ async function dbReachable(): Promise<boolean> {
 async function registerUser(label: string) {
   const taxonomy = await seededTaxonomy();
   if (!taxonomy) {
-    throw new Error("Run `npm run seed` against the test database before running this suite.");
+    throw new Error(
+      "Run `npm run seed` against the test database before running this suite.",
+    );
   }
   const email = `resources-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
   const res = await request(app)
     .post("/api/v1/auth/register")
     .send(baseRegisterPayload(taxonomy, { email, displayName: label }));
   if (!res.body.accessToken) {
-    throw new Error(`registerUser("${label}") failed: ${JSON.stringify(res.body)}`);
+    throw new Error(
+      `registerUser("${label}") failed: ${JSON.stringify(res.body)}`,
+    );
   }
-  return { email, token: res.body.accessToken as string, id: res.body.user.id as string };
+  return {
+    email,
+    token: res.body.accessToken as string,
+    id: res.body.user.id as string,
+  };
 }
 
-async function createUploadIntent(token: string, overrides: Partial<Record<string, unknown>> = {}) {
+async function createUploadIntent(
+  token: string,
+  overrides: Partial<Record<string, unknown>> = {},
+) {
   return request(app)
     .post("/api/v1/resources/upload-intent")
     .set("Authorization", `Bearer ${token}`)
@@ -43,6 +61,7 @@ async function createUploadIntent(token: string, overrides: Partial<Record<strin
       fileName: "notes.pdf",
       contentType: "application/pdf",
       sizeBytes: PDF_BUFFER.length,
+      category: "NOTES", // ← ADD THIS LINE
       ...overrides,
     });
 }
@@ -52,7 +71,10 @@ async function uploadAndConfirm(
   buffer: Buffer = PDF_BUFFER,
   overrides: Partial<Record<string, unknown>> = {},
 ) {
-  const intentRes = await createUploadIntent(token, { sizeBytes: buffer.length, ...overrides });
+  const intentRes = await createUploadIntent(token, {
+    sizeBytes: buffer.length,
+    ...overrides,
+  });
   const { uploadUrl } = intentRes.body.data;
   const fileId = intentRes.body.data.file.id;
   const resourceId = intentRes.body.data.resource.id;
@@ -105,7 +127,8 @@ describe("Resources API", () => {
 
   it("runs the full upload-intent -> upload -> confirm -> ready flow", async () => {
     if (skip) return;
-    const { intentRes, uploadRes, confirmRes } = await uploadAndConfirm(ownerAToken);
+    const { intentRes, uploadRes, confirmRes } =
+      await uploadAndConfirm(ownerAToken);
 
     expect(intentRes.status).toBe(201);
     expect(intentRes.body.data.resource.status).toBe("PENDING");
@@ -119,7 +142,9 @@ describe("Resources API", () => {
 
   it("rejects a file whose content does not match any allowed type", async () => {
     if (skip) return;
-    const intentRes = await createUploadIntent(ownerAToken, { sizeBytes: NOT_A_REAL_FILE_BUFFER.length });
+    const intentRes = await createUploadIntent(ownerAToken, {
+      sizeBytes: NOT_A_REAL_FILE_BUFFER.length,
+    });
     const uploadRes = await request(app)
       .put(intentRes.body.data.uploadUrl)
       .set("Authorization", `Bearer ${ownerAToken}`)
@@ -132,7 +157,9 @@ describe("Resources API", () => {
     if (skip) return;
     // Declares PDF but the bytes are actually a PNG — magic-byte check
     // must catch this even though the declared Content-Type "lied".
-    const intentRes = await createUploadIntent(ownerAToken, { sizeBytes: PNG_BUFFER.length });
+    const intentRes = await createUploadIntent(ownerAToken, {
+      sizeBytes: PNG_BUFFER.length,
+    });
     const uploadRes = await request(app)
       .put(intentRes.body.data.uploadUrl)
       .set("Authorization", `Bearer ${ownerAToken}`)
@@ -143,7 +170,9 @@ describe("Resources API", () => {
 
   it("rejects an oversized declared file size at upload-intent time", async () => {
     if (skip) return;
-    const res = await createUploadIntent(ownerAToken, { sizeBytes: 999_999_999_999 });
+    const res = await createUploadIntent(ownerAToken, {
+      sizeBytes: 999_999_999_999,
+    });
     expect(res.status).toBe(400);
   });
 
@@ -160,8 +189,13 @@ describe("Resources API", () => {
   it("rejects an upload token used against the download route (wrong purpose)", async () => {
     if (skip) return;
     const intentRes = await createUploadIntent(ownerAToken);
-    const uploadToken = new URL(intentRes.body.data.uploadUrl, "http://localhost").searchParams.get("token");
-    const res = await request(app).get(`/api/v1/resources/files/download?token=${uploadToken}`);
+    const uploadToken = new URL(
+      intentRes.body.data.uploadUrl,
+      "http://localhost",
+    ).searchParams.get("token");
+    const res = await request(app).get(
+      `/api/v1/resources/files/download?token=${uploadToken}`,
+    );
     expect(res.status).toBe(401);
   });
 
@@ -173,7 +207,9 @@ describe("Resources API", () => {
       .attach("file", PDF_BUFFER, "notes.pdf");
     expect(uploadRes.status).toBe(401);
 
-    const downloadRes = await request(app).get("/api/v1/resources/files/download?token=not-a-real-token");
+    const downloadRes = await request(app).get(
+      "/api/v1/resources/files/download?token=not-a-real-token",
+    );
     expect(downloadRes.status).toBe(401);
   });
 
@@ -291,7 +327,9 @@ describe("Resources API", () => {
   it("finds resources by keyword search across title and description, ranking title matches first", async () => {
     if (skip) return;
     const unique = Date.now();
-    await uploadAndConfirm(ownerAToken, PDF_BUFFER, { title: `Quantum Mechanics Notes ${unique}` });
+    await uploadAndConfirm(ownerAToken, PDF_BUFFER, {
+      title: `Quantum Mechanics Notes ${unique}`,
+    });
     await uploadAndConfirm(ownerAToken, PDF_BUFFER, {
       title: `Unrelated Resource ${unique}`,
       description: `Some notes that mention quantum mechanics in passing, ${unique}`,
@@ -311,7 +349,9 @@ describe("Resources API", () => {
     if (skip) return;
     const unique = Date.now();
     // Both query terms hit in the title (weight A+A) -> higher rank.
-    await uploadAndConfirm(ownerAToken, PDF_BUFFER, { title: `Zeta Quantum Notes ${unique}` });
+    await uploadAndConfirm(ownerAToken, PDF_BUFFER, {
+      title: `Zeta Quantum Notes ${unique}`,
+    });
     // "unique" hits the title but "quantum" only hits the description
     // (weight A+B) -> lower rank than the resource above.
     await uploadAndConfirm(ownerAToken, PDF_BUFFER, {
@@ -330,7 +370,10 @@ describe("Resources API", () => {
 
     expect(res.status).toBe(200);
     const titles = res.body.data.map((r: { title: string }) => r.title);
-    expect(titles).toEqual([`Zeta Quantum Notes ${unique}`, `Aardvark Resource ${unique}`]);
+    expect(titles).toEqual([
+      `Zeta Quantum Notes ${unique}`,
+      `Aardvark Resource ${unique}`,
+    ]);
   });
 
   it("rejects an unknown sortBy value", async () => {
