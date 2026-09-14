@@ -1,10 +1,10 @@
 import axiosInstance from "../api/axiosInstance";
-import type { ReportResolutionPayload } from "../types/moderation";
+import type { Notification, ReportResolutionPayload } from "../types/moderation";
 
 export const moderationService = {
   async getNotifications() {
     const { data } = await axiosInstance.get("/notifications");
-    return data.data;
+    return data.data as Notification[];
   },
   async markNotificationAsRead(id: string) {
     const { data } = await axiosInstance.patch(`/notifications/${id}/read`);

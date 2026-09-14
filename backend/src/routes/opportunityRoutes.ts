@@ -5,6 +5,9 @@ import {
   applyToOpportunity,
   getAllOpportunitiesForAdmin,
   updateOpportunityStatus,
+  adminCreateOpportunity,
+  adminUpdateOpportunity,
+  adminDeleteOpportunity,
 } from "../controllers/opportunityController";
 import { authenticate } from "../config/middleware/authMiddleware";
 import { authorize } from "../config/middleware/authorizeMiddleware";
@@ -13,9 +16,16 @@ import {
   createOpportunitySchema,
   applyOpportunitySchema,
   updateOpportunityStatusSchema,
+  adminCreateOpportunitySchema,
+  adminUpdateOpportunitySchema,
+  opportunityIdParamSchema,
 } from "../validators/opportunityValidators";
 
 const router = Router();
+
+router.post("/admin", authenticate, authorize("ADMIN"), validate({ body: adminCreateOpportunitySchema }), adminCreateOpportunity);
+router.patch("/admin/:id", authenticate, authorize("ADMIN"), validate({ params: opportunityIdParamSchema, body: adminUpdateOpportunitySchema }), adminUpdateOpportunity);
+router.delete("/admin/:id", authenticate, authorize("ADMIN"), validate({ params: opportunityIdParamSchema }), adminDeleteOpportunity);
 
 /**
  * @openapi

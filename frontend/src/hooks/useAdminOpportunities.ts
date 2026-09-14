@@ -18,9 +18,17 @@ export function useAdminOpportunities() {
     },
   });
 
+  const createMutation = useMutation({ mutationFn: opportunityService.adminCreateOpportunity, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["adminOpportunities"] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, input }: { id: string; input: { title: string; description: string; mode: string } }) => opportunityService.adminUpdateOpportunity(id, input), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["adminOpportunities"] }) });
+  const deleteMutation = useMutation({ mutationFn: opportunityService.adminDeleteOpportunity, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["adminOpportunities"] }) });
+
   return {
     opportunities: opportunitiesQuery.data || [],
     isLoading: opportunitiesQuery.isLoading,
     updateStatus: updateStatusMutation.mutateAsync,
+    createOpportunity: createMutation,
+    updateOpportunity: updateMutation,
+    deleteOpportunity: deleteMutation,
+    isError: opportunitiesQuery.isError,
   };
 }

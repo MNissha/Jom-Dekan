@@ -9,10 +9,11 @@ import { FreelanceView } from "../components/marketplace/FreelanceView";
 export function Marketplace() {
   const [searchParams] = useSearchParams();
   const type = searchParams.get("type") ?? "";
+  const listingId = searchParams.get("listing");
 
   return (
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
-      {type === "TUTORING" ? <TutoringView /> : <FreelanceView />}
+      {type === "TUTORING" ? <TutoringView initialDetailId={listingId} /> : <FreelanceView initialDetailId={listingId} />}
     </div>
   );
 }

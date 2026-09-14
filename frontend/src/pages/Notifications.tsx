@@ -2,6 +2,7 @@ import { Bell, CheckCheck, Megaphone, ShieldCheck } from "lucide-react";
 import { useModeration } from "../hooks/useModeration";
 import { EmptyState } from "../components/common/EmptyState";
 import type { Notification } from "../types/moderation";
+import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 function notificationStyle(type: string) {
   if (type === "ANNOUNCEMENT") {
@@ -40,6 +41,7 @@ function fallbackTitle(type: string) {
 
 export default function Notifications() {
   const { notifications, isLoadingNotifications, markAsRead } = useModeration();
+  const showSkeleton = useMinimumLoading(isLoadingNotifications, 2000);
   const unread = notifications.filter((notification: Notification) => !notification.read_at);
 
   function handleMarkAllRead() {
@@ -64,8 +66,8 @@ export default function Notifications() {
         )}
       </div>
 
-      <div className="mt-6" aria-busy={isLoadingNotifications}>
-        {isLoadingNotifications ? (
+      <div className="mt-6" aria-busy={showSkeleton}>
+        {showSkeleton ? (
           <div className="space-y-3" aria-hidden="true">
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="flex items-start gap-4 rounded-[22px] border border-[#ECEBF7] bg-white px-5 py-5">

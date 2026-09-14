@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { DashboardSidebar } from "../components/dashboard/DashboardSidebar";
 import { Footer } from "../components/common/Footer";
 import { IdleTimeoutGuard } from "../components/common/IdleTimeoutGuard";
+import { moderationService } from "../service/moderationService";
+import type { Notification } from "../types/moderation";
+import { useCurrentUser } from "../hooks/useAuth";
+import { useDemoLoading } from "../hooks/useDemoLoading";
+import { AdminSectionSkeleton } from "../components/admin/AdminSectionSkeleton";
 
 const DESKTOP_BREAKPOINT = "(min-width: 1024px)";
 
@@ -24,8 +30,47 @@ const DESKTOP_BREAKPOINT = "(min-width: 1024px)";
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [isMobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
+  const currentUser = useCurrentUser();
+  const adminSection = new URLSearchParams(location.search).get("section") ?? "";
+  const adminDiscussionSection = new URLSearchParams(location.search).get("discussion") ?? "";
+  const adminPageLoading = useDemoLoading(2000, `${pathname}:${adminSection}:${adminDiscussionSection}`);
+  const isAdminPage = pathname.startsWith("/admin") || (pathname === "/dashboard" && currentUser?.role === "ADMIN");
+  const queryClient = useQueryClient();
   const mainRef = useRef<HTMLElement>(null);
+  const processedNotificationIds = useRef(new Set<string>());
+
+  // Notification links carry the unread notification ID in router state.
+  // This effect runs after the destination has rendered, so updating badges
+  // and sending the read receipt cannot hold up the route transition.
+  useEffect(() => {
+    const notificationId = (location.state as { notificationIdToMarkRead?: unknown } | null)
+      ?.notificationIdToMarkRead;
+    if (
+      typeof notificationId !== "string" ||
+      processedNotificationIds.current.has(notificationId)
+    ) return;
+
+    processedNotificationIds.current.add(notificationId);
+    const previousNotifications = queryClient.getQueryData<Notification[]>(["notifications"]);
+    queryClient.setQueryData<Notification[]>(["notifications"], (current = []) =>
+      current.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, read_at: notification.read_at ?? new Date().toISOString() }
+          : notification,
+      ),
+    );
+
+    // Call the API directly instead of using a mutation hook in the app shell.
+    // This avoids mutation-state rerenders while the destination is mounting.
+    void moderationService.markNotificationAsRead(notificationId).catch((error: unknown) => {
+      if (previousNotifications) {
+        queryClient.setQueryData(["notifications"], previousNotifications);
+      }
+      console.error("Failed to mark notification as read", error);
+    });
+  }, [location.key, location.state, queryClient]);
 
   // Scroll the actual content panel back to its top on navigation
   // (never `window.scrollTo` — the window/document isn't the scroll
@@ -75,7 +120,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             ref={mainRef}
             className="min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-color:#4338CA_transparent] [scrollbar-width:thin]"
           >
-            {children}
+            {isAdminPage && adminPageLoading ? <AdminSectionSkeleton /> : children}
           </main>
           <Footer />
         </div>

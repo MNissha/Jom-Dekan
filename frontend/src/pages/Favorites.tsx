@@ -10,9 +10,9 @@ import {
 import { EmptyState } from "../components/common/EmptyState";
 import { ResourceCardSkeleton } from "../components/common/ResourceCardSkeleton";
 import type { FavoriteTargetType } from "../types/favorite";
+import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 type TabKey = "resources" | "discussions" | "tutors" | "opportunities";
-
 const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
   { key: "resources", label: "Resources", icon: FileText },
   { key: "discussions", label: "Discussions", icon: MessageSquare },
@@ -43,11 +43,11 @@ function SavedItemCard({
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-[#ECEBF7] bg-white shadow-sm transition motion-safe:duration-150 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md">
-      <Link to={viewHref} className="flex aspect-video w-full items-center justify-center bg-slate-100">
+      <Link to={viewHref} className="flex aspect-video w-full items-center justify-center bg-slate-100 transition hover:bg-primary-50" aria-label={`View ${title}`}>
         <Icon className="h-10 w-10 text-slate-300" aria-hidden="true" />
       </Link>
       <div className="flex flex-1 flex-col p-5">
-        <Link to={viewHref} className="font-semibold text-slate-800 transition motion-safe:duration-150 hover:text-primary-700">
+        <Link to={viewHref} className="text-left font-semibold text-slate-800 transition motion-safe:duration-150 hover:text-primary-700">
           {title}
         </Link>
         {subtitle && <p className="mt-0.5 text-xs font-semibold text-primary-600">{subtitle}</p>}
@@ -132,6 +132,7 @@ export default function Favorites() {
     opportunities: opportunitiesQuery,
   }[activeTab];
   const activeList = { resources, discussions, tutors, opportunities }[activeTab];
+  const showSkeleton = useMinimumLoading(activeQuery.isLoading, 2000);
   // Unfiltered count for this tab — decides "nothing saved" vs "no
   // matches for this search", independent of what's currently typed.
   const unfilteredCount = { resources: allResources, discussions: allDiscussions, tutors: allTutors, opportunities: allOpportunities }[
@@ -177,7 +178,7 @@ export default function Favorites() {
       </div>
 
       <div className="mt-6 motion-safe:animate-[fadeIn_200ms_ease-out]" key={activeTab}>
-        {activeQuery.isLoading ? (
+        {showSkeleton ? (
           <CardGridSkeleton />
         ) : activeQuery.isError ? (
           <EmptyState
@@ -247,7 +248,7 @@ export default function Favorites() {
                   subtitle={f.opportunity.subject_name ?? undefined}
                   excerpt={f.opportunity.description}
                   savedAt={f.favoritedAt}
-                  viewHref="/marketplace?type=TUTORING"
+                  viewHref={`/marketplace?type=TUTORING&listing=${f.opportunity.id}`}
                   targetType="opportunity"
                   targetId={f.opportunity.id}
                 />
@@ -261,7 +262,7 @@ export default function Favorites() {
                   subtitle={f.opportunity.subject_name ?? undefined}
                   excerpt={f.opportunity.description}
                   savedAt={f.favoritedAt}
-                  viewHref="/marketplace"
+                  viewHref={`/marketplace?type=FREELANCE&listing=${f.opportunity.id}`}
                   targetType="opportunity"
                   targetId={f.opportunity.id}
                 />

@@ -32,4 +32,15 @@ export const opportunityService = {
     });
     return data.data;
   },
+  async adminCreateOpportunity(payload: { title: string; description: string; mode: string; listingType: string }) {
+    const { data } = await axiosInstance.post("/opportunities/admin", payload);
+    return data.data;
+  },
+  async adminUpdateOpportunity(id: string, payload: { title: string; description: string; mode: string }) {
+    const { data } = await axiosInstance.patch(`/opportunities/admin/${id}`, payload);
+    return data.data;
+  },
+  async adminDeleteOpportunity(id: string) {
+    await axiosInstance.delete(`/opportunities/admin/${id}`);
+  },
 };

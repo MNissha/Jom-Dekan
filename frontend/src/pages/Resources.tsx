@@ -12,6 +12,7 @@ import { ResourcesPageSkeleton } from "../components/common/ResourcesPageSkeleto
 import { RESOURCE_CATEGORIES, RESOURCE_CATEGORY_LABELS, type ResourceCategory, type ResourceListItem } from "../types/resource";
 import type { University } from "../types/taxonomy";
 import { fileTypeBadge } from "../utils/fileTypeBadge";
+import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 const PAGE_SIZE = 12;
 type SortBy = "newest" | "oldest" | "title";
@@ -170,6 +171,7 @@ export default function Resources() {
     page,
     pageSize: PAGE_SIZE,
   });
+  const showSkeleton = useMinimumLoading(isLoading, 2000);
   const resources = data?.data ?? [];
   const total = data?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -377,7 +379,7 @@ export default function Resources() {
       </div>
 
       <div className="mt-6">
-        {isLoading ? (
+        {showSkeleton ? (
           <ResourcesPageSkeleton count={PAGE_SIZE} />
         ) : isError ? (
           <p className="rounded-2xl border border-[#ECEBF7] bg-white p-4 text-sm text-red-600">

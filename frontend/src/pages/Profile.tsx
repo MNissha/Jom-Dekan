@@ -8,16 +8,29 @@ import { useForgotPassword } from '../hooks/useAuth';
 import { useUniversities } from '../hooks/useTaxonomy';
 import { FIELDS_OF_STUDY } from '../constants/fieldsOfStudy';
 import { SearchableSelect } from '../components/common/SearchableSelect';
+import { useMinimumLoading } from '../hooks/useMinimumLoading';
 
 const CURRENT_SEMESTER_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
 
+function ProfileSkeleton() {
+  return (
+    <div className="mx-auto max-w-[1000px] animate-pulse px-[18px] py-[22px]" aria-label="Loading profile and settings">
+      <div className="h-7 w-52 rounded bg-violet-100" />
+      <div className="mt-2 h-4 w-80 max-w-full rounded bg-slate-100" />
+      <div className="mt-6 flex items-center gap-4 rounded-[22px] bg-[#332475] p-6"><div className="h-16 w-16 rounded-[20px] bg-white/20" /><div className="flex-1 space-y-3"><div className="h-5 w-40 rounded bg-white/20" /><div className="h-4 w-28 rounded bg-white/10" /></div></div>
+      <div className="mt-6 space-y-4 rounded-[22px] border border-[#ECEBF7] bg-white p-6 shadow-sm"><div className="h-6 w-36 rounded bg-violet-100" /><div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-11 rounded-xl bg-slate-100" />)}</div></div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { data: profile, isLoading } = useMyProfile();
-  const { data: stats } = useMyStats();
+  const { data: stats, isLoading: statsLoading } = useMyStats();
   const updateProfile = useUpdateProfile();
   const forgotPassword = useForgotPassword();
   const [resetSent, setResetSent] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const showSkeleton = useMinimumLoading(isLoading || statsLoading, 2000);
 
   const {
     register,
@@ -107,6 +120,8 @@ export default function Profile() {
   // Suppressed here when it's the email-conflict case — that one renders
   // under the email field instead (see onError above).
   const serverError = rawServerError && !rawServerError.toLowerCase().includes('email') ? rawServerError : null;
+
+  if (showSkeleton) return <ProfileSkeleton />;
 
   if (isLoading || !profile) {
     return <div className="mx-auto max-w-[1000px] px-[18px] py-[22px] text-sm text-slate-500">Loading profile…</div>;
