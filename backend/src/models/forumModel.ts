@@ -97,7 +97,7 @@ export const forumModel = {
     ): Promise<ForumPostListRow | null> {
       const result = await pool.query<ForumPostListRow>(
         `SELECT p.*,
-                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
+                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $2), 0) AS my_vote,
                 (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
          FROM forum_posts p
@@ -170,7 +170,7 @@ export const forumModel = {
       ];
       const rowsResult = await pool.query<ForumPostListRow>(
         `SELECT p.*,
-                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
+                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $${myVoteParamIndex}), 0) AS my_vote,
                 (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
          FROM forum_posts p
@@ -232,10 +232,10 @@ export const forumModel = {
     ): Promise<ForumCommentListRow[]> {
       const result = await pool.query<ForumCommentListRow>(
         `SELECT c.*,
-                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id), 0) AS vote_score,
+                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id AND value = 1) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id AND user_id = $2), 0) AS my_vote
          FROM forum_comments c
-         WHERE c.post_id = $1 AND c.deleted_at IS NULL
+         WHERE c.post_id = $1 AND c.deleted_at IS NULL AND c.moderation_status = 'visible'
          ORDER BY c.created_at ASC`,
         [postId, currentUserId],
       );

@@ -77,7 +77,10 @@ function ForumVoteBox({
 
   const handleVote = (value: 1 | -1) => {
     const nextMyVote = displayMyVote === value ? 0 : value;
-    setOptimistic({ voteScore: displayScore + (nextMyVote - displayMyVote), myVote: nextMyVote });
+    setOptimistic({
+      voteScore: Math.max(0, displayScore + (nextMyVote === 1 ? 1 : 0) - (displayMyVote === 1 ? 1 : 0)),
+      myVote: nextMyVote,
+    });
 
     if (nextMyVote === 0) {
       removeVote.mutate({ targetType: "forum_post", targetId }, { onError: () => setOptimistic(null) });
@@ -108,7 +111,7 @@ function ForumVoteBox({
       <span className={`text-xl font-extrabold leading-none ${displayScore > 0 ? "text-primary-700" : "text-slate-800"}`}>
         {displayScore}
       </span>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Votes</span>
+      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Likes</span>
       <button
         type="button"
         onClick={() => handleVote(-1)}
@@ -221,7 +224,7 @@ export default function Forum() {
     unanswered: activeTab === "unanswered" ? true : undefined,
     solved: activeTab === "solved" ? true : undefined,
   });
-  const showSkeleton = useMinDuration(isLoading, 1000);
+  const showSkeleton = useMinDuration(isLoading, 2000);
   const createPost = useCreatePost();
   const allPosts = data?.data ?? EMPTY_POSTS;
   const total = data?.meta.total ?? 0;

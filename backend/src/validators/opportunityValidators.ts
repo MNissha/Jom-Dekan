@@ -12,6 +12,33 @@ export const createOpportunitySchema = z.object({
   subjectId: z.string().uuid().optional(),
   listingType: z.enum(["TUTORING", "STUDY_GROUP", "PROJECT_MENTORSHIP"]),
   mode: z.enum(["ONLINE", "PHYSICAL", "HYBRID"]),
+}).superRefine((value, ctx) => {
+  const phone = value.description.match(/^Contact:\s*([^\s]+)/m)?.[1];
+  if (phone && !/^\d+$/.test(phone)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["description"], message: "Contact number must contain numbers only." });
+  }
+
+  if (value.listingType === "TUTORING") {
+    const rate = value.description.match(/^Rate:\s*RM\s*([^/\s]+)/m)?.[1];
+    const year = value.description.match(/^Year\/Level:\s*(\S+)/m)?.[1];
+    if (!rate || !/^\d+(\.\d{1,2})?$/.test(rate) || Number(rate) <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["description"], message: "Tutoring rate must be a number above 0." });
+    }
+    if (!year || !/^\d+$/.test(year) || Number(year) <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["description"], message: "Tutoring year must be a positive whole number." });
+    }
+  }
+
+  if (value.listingType === "PROJECT_MENTORSHIP" && /^Budget:/m.test(value.description)) {
+    const budget = value.description.match(/^Budget:\s*RM\s*(\S+)/m)?.[1];
+    const closes = value.description.match(/^Applications close:\s*(\S+)/m)?.[1];
+    if (!budget || !/^\d+(\.\d{1,2})?$/.test(budget) || Number(budget) <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["description"], message: "Budget must be a number above 0." });
+    }
+    if (!closes || !/^\d{4}-\d{2}-\d{2}$/.test(closes) || Number.isNaN(Date.parse(`${closes}T00:00:00Z`))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["description"], message: "Application closing date must use YYYY-MM-DD format." });
+    }
+  }
 });
 
 export const applyOpportunitySchema = z.object({

@@ -206,14 +206,17 @@ export function FreelanceView() {
   }
 
   const emailOk = /.+@.+\..+/.test(form.email);
+  const budgetOk = /^\d+(\.\d{1,2})?$/.test(form.budget) && Number(form.budget) > 0;
+  const closeDateOk = /^\d{4}-\d{2}-\d{2}$/.test(form.closes) && !Number.isNaN(Date.parse(`${form.closes}T00:00:00`));
+  const phoneOk = /^\d+$/.test(form.phone);
   const step1Ready =
     form.title.trim() &&
     form.org.trim() &&
-    form.budget.trim() &&
+    budgetOk &&
     form.paymentType.trim() &&
-    form.closes.trim() &&
+    closeDateOk &&
     form.scope.trim().length >= 20 &&
-    form.phone.trim() &&
+    phoneOk &&
     emailOk &&
     form.brief.trim();
   const termsReady = Object.values(terms).every(Boolean);
@@ -456,7 +459,7 @@ export function FreelanceView() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Job title" required hint="e.g. Poster design for MPP Week" value={form.title} onChange={(v) => updateForm("title", v)} />
                     <Field label="Organisation / client" required hint="e.g. UiTM Student Council" value={form.org} onChange={(v) => updateForm("org", v)} />
-                    <Field label="Budget (RM)" required hint="e.g. 250" value={form.budget} onChange={(v) => updateForm("budget", v)} />
+                    <Field label="Budget (RM)" required hint="e.g. 250" type="number" inputMode="decimal" min="0.01" step="0.01" invalid={!!form.budget && !budgetOk} value={form.budget} onChange={(v) => /^\d*(\.\d{0,2})?$/.test(v) && updateForm("budget", v)} />
                     <Field label="Payment type" required hint="Fixed, hourly or milestone" value={form.paymentType} onChange={(v) => updateForm("paymentType", v)} />
                     <label className="flex flex-col gap-1.5">
                       <span className="text-xs font-bold text-slate-500">
@@ -474,7 +477,7 @@ export function FreelanceView() {
                         ))}
                       </select>
                     </label>
-                    <Field label="Applications close" required hint="e.g. 22 Sep 2026" value={form.closes} onChange={(v) => updateForm("closes", v)} />
+                    <Field label="Applications close" required hint="YYYY-MM-DD" type="date" invalid={!!form.closes && !closeDateOk} value={form.closes} onChange={(v) => updateForm("closes", v)} />
                   </div>
                   <label className="flex flex-col gap-1.5">
                     <span className="text-xs font-bold text-slate-500">
@@ -495,7 +498,7 @@ export function FreelanceView() {
                     CONTACT DETAILS <span className="font-semibold text-slate-400">· all required</span>
                   </h3>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Phone number" required hint="+60 12-345 6789" note="WhatsApp-capable number" value={form.phone} onChange={(v) => updateForm("phone", v)} />
+                    <Field label="Phone number" required hint="e.g. 60123456789" note="Numbers only · WhatsApp-capable number" inputMode="numeric" invalid={!!form.phone && !phoneOk} value={form.phone} onChange={(v) => /^\d*$/.test(v) && updateForm("phone", v)} />
                     <Field
                       label="Email address"
                       required
@@ -784,6 +787,10 @@ function Field({
   invalid,
   value,
   onChange,
+  type = "text",
+  inputMode,
+  min,
+  step,
 }: {
   label: string;
   hint: string;
@@ -792,6 +799,10 @@ function Field({
   invalid?: boolean;
   value: string;
   onChange: (v: string) => void;
+  type?: React.HTMLInputTypeAttribute;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  min?: string;
+  step?: string;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -800,7 +811,10 @@ function Field({
         {required && <span className="text-red-500"> *</span>}
       </span>
       <input
-        type="text"
+        type={type}
+        inputMode={inputMode}
+        min={min}
+        step={step}
         placeholder={hint}
         value={value}
         onChange={(e) => onChange(e.target.value)}

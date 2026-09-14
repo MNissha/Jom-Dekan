@@ -309,7 +309,7 @@ export function AdminAnalyticsPanel() {
           value={data.totals.users}
           note={`${data.totals.activeUsers.toLocaleString()} active accounts`}
           icon={Users}
-          to="/dashboard?section=users"
+          to="/admin/users"
         />
         <MetricCard
           label="Resources"
@@ -319,18 +319,18 @@ export function AdminAnalyticsPanel() {
           to="/resources"
         />
         <MetricCard
-          label="Marketplace activity"
+          label="Freelance activity"
           value={data.totals.applications}
           note={`${data.totals.opportunities.toLocaleString()} listings`}
           icon={Users}
-          to="/dashboard?section=opportunities"
+          to="/admin/opportunities"
         />
         <MetricCard
           label="Needs attention"
           value={data.totals.pendingModeration}
           note="Items in moderation queue"
           icon={ShieldAlert}
-          to="/dashboard?section=moderation"
+          to="/admin/moderation"
         />
       </div>
 
@@ -362,7 +362,7 @@ export function AdminAnalyticsPanel() {
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-5 font-semibold text-slate-900">
-            Marketplace listings
+            Freelance listings
           </h2>
           <StatusBars items={data.opportunityStatuses} color="#0f766e" />
         </section>

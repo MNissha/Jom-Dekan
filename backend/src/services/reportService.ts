@@ -41,21 +41,42 @@ export const reportService = {
       reporterPhone: string;
       reporterEmail: string;
       description: string;
+      parentId?: string;
+      evidence?: { filename: string; mimeType: string; data: Buffer };
     },
     ctx: ActorContext,
   ) {
-    await assertTargetExists(input.targetType, input.targetId, ctx);
+    if (input.targetType === "forum_comment") {
+      const comment = await forumModel.comments.findById(input.targetId);
+      if (!comment || comment.deleted_at) throw AppError.notFound("Comment not found.");
+      if (comment.post_id !== input.parentId) throw AppError.badRequest("Comment does not belong to this discussion.");
+      if (comment.author_id === ctx.actorUserId) throw AppError.badRequest("You cannot report your own comment.");
+    } else {
+      await assertTargetExists(input.targetType, input.targetId, ctx);
+    }
 
-    const report = await reportModel.create({
-      entityType: input.targetType,
-      entityId: input.targetId,
-      reporterId: ctx.actorUserId,
-      category: input.category,
-      reporterName: input.reporterName,
-      reporterPhone: input.reporterPhone,
-      reporterEmail: input.reporterEmail,
-      description: input.description,
-    });
+    let report;
+    try {
+      report = await reportModel.create({
+        entityType: input.targetType,
+        entityId: input.targetId,
+        reporterId: ctx.actorUserId,
+        category: input.category,
+        reporterName: input.reporterName,
+        reporterPhone: input.reporterPhone,
+        reporterEmail: input.reporterEmail,
+        description: input.description,
+        evidence: input.evidence,
+        parentId: input.parentId,
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === "23505") {
+        throw AppError.conflict(
+          "You have already reported this comment. Our moderation team will review your existing report.",
+        );
+      }
+      throw error;
+    }
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,

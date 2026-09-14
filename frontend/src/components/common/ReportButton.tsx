@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Flag, X, Check } from "lucide-react";
+import { Flag, X, Check, ImagePlus } from "lucide-react";
 import { useCreateReport } from "../../hooks/useReports";
 import { useMyProfile } from "../../hooks/useProfile";
 import { REPORT_CATEGORIES, REPORT_CATEGORY_LABELS, type ReportCategory, type ReportTargetType } from "../../types/report";
@@ -12,6 +12,7 @@ interface ReportForm {
   reporterPhone: string;
   reporterEmail: string;
   description: string;
+  screenshot: File | null;
 }
 
 const EMPTY_FORM: ReportForm = {
@@ -20,6 +21,7 @@ const EMPTY_FORM: ReportForm = {
   reporterPhone: "",
   reporterEmail: "",
   description: "",
+  screenshot: null,
 };
 
 /**
@@ -63,15 +65,24 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
     form.reporterPhone.trim().length >= 5 &&
     emailOk &&
     form.description.trim().length >= 20;
+  const screenshotOk = !form.screenshot || form.screenshot.size <= 5 * 1024 * 1024;
 
   const serverError =
     createReport.isError && axios.isAxiosError(createReport.error)
-      ? (createReport.error.response?.data as { error?: { message?: string } })?.error?.message
+      ? (() => {
+          const error = createReport.error.response?.data as {
+            error?: {
+              message?: string;
+              details?: Array<{ field?: string; message: string }>;
+            };
+          };
+          return error.error?.details?.[0]?.message ?? error.error?.message;
+        })()
       : null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ready || !form.category) return;
+    if (!ready || !screenshotOk || !form.category) return;
     createReport.mutate(
       {
         targetType,
@@ -81,6 +92,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
         reporterPhone: form.reporterPhone.trim(),
         reporterEmail: form.reporterEmail.trim(),
         description: form.description.trim(),
+        screenshot: form.screenshot,
       },
       { onSuccess: () => setSubmitted(true) },
     );
@@ -238,6 +250,29 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                   />
                 </label>
 
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#D8D4EC] bg-[#FBFBFE] p-4 transition hover:border-red-300 hover:bg-red-50/40">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EFEEFB] text-[#4338CA]">
+                    <ImagePlus className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-slate-700">Add screenshot evidence <span className="font-medium text-slate-400">(optional)</span></span>
+                    <span className={`mt-0.5 block truncate text-xs ${screenshotOk ? "text-slate-400" : "text-red-600"}`}>
+                      {form.screenshot ? form.screenshot.name : "PNG, JPG, or WebP · maximum 5 MB"}
+                    </span>
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="sr-only"
+                    onChange={(event) => updateForm("screenshot", event.target.files?.[0] ?? null)}
+                  />
+                  {form.screenshot && (
+                    <button type="button" onClick={(event) => { event.preventDefault(); updateForm("screenshot", null); }} aria-label="Remove screenshot" className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-600">
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  )}
+                </label>
+
                 <div className="flex flex-wrap justify-end gap-3 border-t border-[#F1F0FA] pt-4">
                   <button
                     type="button"
@@ -248,10 +283,10 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                   </button>
                   <button
                     type="submit"
-                    disabled={!ready || createReport.isPending}
+                    disabled={!ready || !screenshotOk || createReport.isPending}
                     title={ready ? undefined : "Fill in every required field, including a valid email"}
                     className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
-                      ready && !createReport.isPending
+                      ready && screenshotOk && !createReport.isPending
                         ? "cursor-pointer bg-red-600 text-white hover:bg-red-700"
                         : "cursor-not-allowed bg-slate-200 text-slate-400"
                     }`}

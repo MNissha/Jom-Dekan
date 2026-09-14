@@ -138,7 +138,7 @@ export const favoriteModel = {
       ForumPostListRow & { favorite_id: string; favorited_at: Date }
     >(
       `SELECT f.id AS favorite_id, f.created_at AS favorited_at, p.*,
-              COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
+              (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
               COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $1), 0) AS my_vote,
               (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
        FROM favorites f

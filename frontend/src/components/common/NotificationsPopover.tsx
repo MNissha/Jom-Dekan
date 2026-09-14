@@ -1,21 +1,77 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Bell, Megaphone, ShieldCheck } from "lucide-react";
 import { useModeration } from "../../hooks/useModeration";
+import { useCurrentUser } from "../../hooks/useAuth";
 import type { Notification } from "../../types/moderation";
 
+const RECENT_NOTIFICATION_LIMIT = 3;
+
+function popoverStyle(type: string) {
+  if (type === "ANNOUNCEMENT") {
+    return { icon: Megaphone, iconClass: "bg-amber-50 text-amber-700", label: "Announcement" };
+  }
+  if (type === "REPORT_REVIEWED") {
+    return { icon: ShieldCheck, iconClass: "bg-emerald-50 text-emerald-700", label: "Report update" };
+  }
+  return { icon: Bell, iconClass: "bg-[#EFEEFB] text-[#4338CA]", label: "Update" };
+}
+
+function fallbackTitle(type: string) {
+  return type
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 export function NotificationsPopover() {
+  const navigate = useNavigate();
+  const user = useCurrentUser();
   const { notifications, isLoadingNotifications, markAsRead } = useModeration();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n: Notification) => !n.read_at).length;
+  const recentNotifications = [...(notifications as Notification[])]
+    .sort(
+      (left, right) =>
+        new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+    )
+    .slice(0, RECENT_NOTIFICATION_LIMIT);
 
   const handleMarkRead = async (id: string) => {
     try {
       await markAsRead(id);
     } catch (err) {
       console.error("Failed to mark notification as read", err);
+    }
+  };
+
+  const openNotification = (notification: Notification) => {
+    // Do not block navigation on the read-status request. Waiting here can make
+    // the popover feel frozen when the API or its query refresh is slow.
+    if (!notification.read_at) void handleMarkRead(notification.id);
+    const reportId = notification.payload.reportId;
+    const entityType = notification.payload.entityType;
+    if (user?.role !== "ADMIN") {
+      setIsOpen(false);
+      navigate("/notifications");
+      return;
+    }
+    if (
+      notification.type === "REPORT_SUBMITTED"
+    ) {
+      setIsOpen(false);
+      if (entityType === "forum_comment") {
+        navigate("/admin/moderation?section=discussions&discussion=comments");
+        return;
+      }
+      if (entityType === "forum_post") {
+        navigate("/admin/moderation?section=discussions&discussion=threads");
+        return;
+      }
+      if (typeof reportId !== "string") return;
+      navigate(`/admin/moderation?report=${encodeURIComponent(reportId)}`);
     }
   };
 
@@ -47,7 +103,9 @@ export function NotificationsPopover() {
       >
         <Bell className="h-5 w-5" aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#E8543F]" aria-hidden="true" />
+          <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E8543F] px-1 text-[10px] font-bold text-white shadow-sm" aria-label={`${unreadCount} unread notifications`}>
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
         )}
       </button>
 
@@ -64,33 +122,52 @@ export function NotificationsPopover() {
             ) : notifications.length === 0 ? (
               <p className="p-4 text-center text-xs text-slate-400 dark:text-slate-500">No notifications yet.</p>
             ) : (
-              notifications.slice(0, 6).map((n: Notification) => (
-                <div
-                  key={n.id}
-                  className={`flex items-start justify-between gap-2 px-4 py-3 text-xs ${n.read_at ? "text-slate-500 dark:text-slate-400" : "bg-primary-50/60 font-medium text-slate-800 dark:bg-primary-400/10 dark:text-slate-100"}`}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate">{n.payload?.message || n.type}</p>
-                    <span className="mt-0.5 block text-[10px] text-slate-400 dark:text-slate-500">
-                      {new Date(n.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              recentNotifications.map((notification) => {
+                const style = popoverStyle(notification.type);
+                const Icon = style.icon;
+                const title =
+                  typeof notification.payload?.title === "string" &&
+                  notification.payload.title.trim()
+                    ? notification.payload.title
+                    : fallbackTitle(notification.type);
+                const description =
+                  typeof notification.payload?.message === "string"
+                    ? notification.payload.message
+                    : "You have a new JomDekan update.";
+
+                return (
+                  <div
+                    key={notification.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openNotification(notification)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") openNotification(notification);
+                    }}
+                    className={`group flex cursor-pointer items-start gap-3 px-4 py-3 transition motion-safe:duration-150 hover:bg-[#F8F8FD] dark:hover:bg-[#231E4A] ${notification.read_at ? "text-slate-500 dark:text-slate-400" : "bg-primary-50/40 text-slate-800 dark:bg-primary-400/10 dark:text-slate-100"}`}
+                  >
+                    <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition group-hover:scale-110 ${style.iconClass}`}>
+                      <Icon className="h-4 w-4" aria-hidden="true" />
                     </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{style.label}</span>
+                      <p className={`truncate text-xs ${notification.read_at ? "font-semibold" : "font-bold text-slate-900 dark:text-white"}`}>{title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{description}</p>
+                      <span className="mt-1 block text-[10px] text-slate-400 dark:text-slate-500">
+                        {new Date(notification.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                      </span>
+                    </div>
+                    {!notification.read_at && (
+                      <button type="button" onClick={(event) => { event.stopPropagation(); void handleMarkRead(notification.id); }} className="shrink-0 text-[10px] font-semibold text-primary-600 hover:underline dark:text-primary-400">Mark read</button>
+                    )}
                   </div>
-                  {!n.read_at && (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkRead(n.id)}
-                      className="shrink-0 text-[10px] font-semibold text-primary-600 hover:underline dark:text-primary-400"
-                    >
-                      Mark read
-                    </button>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
           <Link
-            to="/notifications"
+            to={user?.role === "ADMIN" ? "/admin/notifications?section=received" : "/notifications"}
             onClick={() => setIsOpen(false)}
             className="block border-t border-[#F1F0FA] px-4 py-2.5 text-center text-xs font-semibold text-primary-600 hover:bg-primary-50 dark:border-[#332C63] dark:text-primary-400 dark:hover:bg-[#231E4A]"
           >

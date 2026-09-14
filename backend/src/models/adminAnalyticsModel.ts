@@ -57,7 +57,7 @@ export const adminAnalyticsModel = {
           (SELECT COUNT(*)::int FROM opportunities) AS opportunities,
           (SELECT COUNT(*)::int FROM opportunity_applications) AS applications,
           (SELECT COUNT(*)::int FROM resources WHERE moderation_status = 'pending_moderation')
-            + (SELECT COUNT(*)::int FROM reports WHERE status = 'pending') AS "pendingModeration"
+            + (SELECT COUNT(*)::int FROM reports WHERE UPPER(status) = 'PENDING') AS "pendingModeration"
         FROM users
         WHERE deleted_at IS NULL`),
         pool.query<CountRow>(`SELECT role AS label, COUNT(*)::int AS value

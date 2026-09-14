@@ -13,7 +13,6 @@ import { RecommendedResources } from "../components/dashboard/RecommendedResourc
 import { QuickActions } from "../components/dashboard/QuickActions";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { AdminAnalyticsPanel } from "./admin/AdminAnalytics";
-import { AdminDashboardPanel } from "../components/dashboard/AdminDashboardPanel";
 
 export default function Dashboard() {
   const user = useCurrentUser();
@@ -42,9 +41,6 @@ export default function Dashboard() {
     return (
       <div className="mx-auto max-w-[1440px] px-[18px] pt-[22px] pb-[28px]">
         <AdminAnalyticsPanel />
-        <div className="mt-8">
-          <AdminDashboardPanel />
-        </div>
       </div>
     );
   }

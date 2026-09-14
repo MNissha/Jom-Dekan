@@ -38,7 +38,7 @@ export function AdminOpportunities({
     <AdminPageShell embedded={embedded}>
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-stone-800 mb-6">
-          Marketplace Listings
+          Freelance Listings
         </h1>
         <div className="bg-white rounded-xl shadow border overflow-hidden">
           {opportunities.length === 0 ? (

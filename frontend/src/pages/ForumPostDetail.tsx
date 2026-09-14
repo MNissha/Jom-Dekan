@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   usePost,
@@ -11,13 +11,46 @@ import {
 } from "../hooks/useForum";
 import { useCurrentUser } from "../hooks/useAuth";
 import { VoteButtons } from "../components/common/VoteButtons";
+import { CommentReportButton } from "../components/common/CommentReportButton";
+
+function useMinDuration(isLoading: boolean, minMs = 2000) {
+  const [show, setShow] = useState(isLoading);
+  const startedAt = useRef<number | null>(isLoading ? Date.now() : null);
+  useEffect(() => {
+    if (isLoading) {
+      startedAt.current = Date.now();
+      setShow(true);
+      return;
+    }
+    const elapsed = startedAt.current ? Date.now() - startedAt.current : minMs;
+    const timer = window.setTimeout(() => setShow(false), Math.max(0, minMs - elapsed));
+    return () => window.clearTimeout(timer);
+  }, [isLoading, minMs]);
+  return show;
+}
+
+function DiscussionDetailSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl animate-pulse px-[18px] py-[22px]" aria-label="Loading discussion">
+      <div className="h-4 w-36 rounded bg-violet-100" />
+      <div className="mt-5 rounded-[24px] border border-violet-100 bg-white p-6 shadow-sm">
+        <div className="h-7 w-3/4 rounded bg-violet-100" />
+        <div className="mt-5 h-4 w-full rounded bg-slate-100" />
+        <div className="mt-2 h-4 w-5/6 rounded bg-slate-100" />
+      </div>
+      <div className="mt-7 h-6 w-28 rounded bg-violet-100" />
+      <div className="mt-3 h-24 rounded-2xl bg-white shadow-sm" />
+      {[0, 1].map((item) => <div key={item} className="mt-4 h-20 rounded-2xl border border-violet-100 bg-white shadow-sm" />)}
+    </div>
+  );
+}
 
 export default function ForumPostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useCurrentUser();
   const { data: post, isLoading, isError } = usePost(id);
-  const { data: comments } = useComments(id);
+  const { data: comments, isLoading: commentsLoading } = useComments(id);
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
   const createComment = useCreateComment();
@@ -30,6 +63,10 @@ export default function ForumPostDetail() {
   const [commentBody, setCommentBody] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState("");
+  const [commentVisibility, setCommentVisibility] = useState<Record<string, boolean>>({});
+  const showSkeleton = useMinDuration(isLoading || commentsLoading, 2000);
+
+  if (showSkeleton) return <DiscussionDetailSkeleton />;
 
   if (isLoading)
     return (
@@ -102,13 +139,23 @@ export default function ForumPostDetail() {
     deleteComment.mutate(commentId);
   };
 
+  const hideComment = (commentId: string) => {
+    setCommentVisibility((current) => ({ ...current, [commentId]: true }));
+  };
+
+  const showComment = (commentId: string) => {
+    setCommentVisibility((current) => ({ ...current, [commentId]: false }));
+  };
+
   return (
-    <div className="mx-auto max-w-3xl px-[18px] py-[22px]">
+    <div className="relative mx-auto max-w-3xl px-[18px] py-[22px] motion-safe:animate-[fadeIn_300ms_ease-out]">
+      <div className="pointer-events-none absolute -right-10 top-16 -z-10 h-44 w-44 rounded-full bg-violet-200/30 blur-3xl" aria-hidden="true" />
       <Link to="/forum" className="text-sm text-primary-700 hover:underline">
         ← Back to discussions
       </Link>
 
-      <div className="mt-4 rounded-2xl border border-[#ECEBF7] bg-white p-6">
+      <div className="group mt-4 overflow-hidden rounded-[24px] border border-[#E4E0FA] bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-xl">
+        <div className="-mx-6 -mt-6 mb-5 h-1.5 bg-gradient-to-r from-[#4338CA] via-violet-500 to-[#F5C21A]" aria-hidden="true" />
         {isEditing ? (
           <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
             <div>
@@ -221,21 +268,30 @@ export default function ForumPostDetail() {
         </form>
 
         <div className="mt-6 flex flex-col gap-3">
-          {(comments ?? []).map((comment) => {
+          {(comments ?? []).map((comment, index) => {
             const commentCanManage =
               user?.id === comment.authorId || user?.role === "ADMIN";
+            const commentIsHidden = commentVisibility[comment.id] ?? comment.myVote === -1;
             return (
               <div
                 key={comment.id}
-                className="flex gap-3 rounded-2xl border border-[#ECEBF7] bg-white p-4"
+                style={{ animationDelay: `${index * 70}ms` }}
+                className="group/comment relative flex gap-3 overflow-hidden rounded-2xl border border-[#ECEBF7] bg-white p-4 shadow-sm transition duration-200 motion-safe:animate-[notificationRise_320ms_ease-out_both] hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md"
               >
+                <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#6D5CE7] to-[#4338CA] opacity-0 transition group-hover/comment:opacity-100" aria-hidden="true" />
                 <VoteButtons
                   targetType="forum_comment"
                   targetId={comment.id}
                   voteScore={comment.voteScore}
                   myVote={comment.myVote}
+                  onDislike={() => hideComment(comment.id)}
+                  onUndoDislike={() => showComment(comment.id)}
                 />
-                <div className="flex-1">
+                {commentIsHidden ? (
+                  <div className="flex min-h-8 flex-1 items-center">
+                    <p className="text-sm italic text-slate-400">Comment hidden. Click dislike again to show it.</p>
+                  </div>
+                ) : <div className="flex-1">
                   {editingCommentId === comment.id ? (
                     <form
                       onSubmit={handleSaveComment}
@@ -291,7 +347,14 @@ export default function ForumPostDetail() {
                       )}
                     </>
                   )}
-                </div>
+                </div>}
+                {!commentIsHidden && user && user.id !== comment.authorId && (
+                  <CommentReportButton
+                    commentId={comment.id}
+                    postId={post.id}
+                    commentText={comment.body}
+                  />
+                )}
               </div>
             );
           })}
@@ -302,6 +365,7 @@ export default function ForumPostDetail() {
           )}
         </div>
       </div>
+
     </div>
   );
 }

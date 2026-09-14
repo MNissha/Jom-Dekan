@@ -24,6 +24,11 @@ import NotFound from "./pages/NotFound";
 import "./App.css";
 import Marketplace from "./pages/Marketplace";
 import AdminPanel from "./pages/admin/AdminPanel";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
+import AdminModerationQueue from "./pages/admin/AdminModerationQueue";
+import AdminOpportunities from "./pages/admin/AdminOpportunities";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 
 function App() {
   useSessionBootstrap();
@@ -241,7 +246,9 @@ function App() {
           path="/admin/moderation"
           element={
             <ProtectedRoute requireAdmin>
-              <Navigate to="/dashboard?section=moderation" replace />
+              <DashboardLayout>
+                <AdminModerationQueue embedded />
+              </DashboardLayout>
             </ProtectedRoute>
           }
         />
@@ -249,7 +256,9 @@ function App() {
           path="/admin/opportunities"
           element={
             <ProtectedRoute requireAdmin>
-              <Navigate to="/dashboard?section=opportunities" replace />
+              <DashboardLayout>
+                <AdminOpportunities embedded />
+              </DashboardLayout>
             </ProtectedRoute>
           }
         />
@@ -257,7 +266,9 @@ function App() {
           path="/admin/users"
           element={
             <ProtectedRoute requireAdmin>
-              <Navigate to="/dashboard?section=users" replace />
+              <DashboardLayout>
+                <AdminUsers embedded />
+              </DashboardLayout>
             </ProtectedRoute>
           }
         />
@@ -265,7 +276,19 @@ function App() {
           path="/admin/users/:id"
           element={
             <ProtectedRoute requireAdmin>
-              <Navigate to="/dashboard?section=users" replace />
+              <DashboardLayout>
+                <AdminUserDetail embedded />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute requireAdmin>
+              <DashboardLayout>
+                <AdminNotifications />
+              </DashboardLayout>
             </ProtectedRoute>
           }
         />

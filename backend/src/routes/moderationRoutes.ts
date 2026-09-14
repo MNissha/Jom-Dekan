@@ -4,11 +4,16 @@ import {
   markNotificationRead,
   getModerationQueue,
   handleModerationAction,
+  sendAnnouncement,
 } from "../controllers/moderationController";
 
 import { authenticate } from "../config/middleware/authMiddleware";
+import { authorize } from "../config/middleware/authorizeMiddleware";
 import { validate } from "../config/middleware/validateMiddleware";
-import { moderationActionSchema } from "../validators/moderationValidators";
+import {
+  moderationActionSchema,
+  sendAnnouncementSchema,
+} from "../validators/moderationValidators";
 
 const router = Router();
 
@@ -48,6 +53,14 @@ router.get("/notifications", authenticate, getNotifications);
 
 router.patch("/notifications/:id/read", authenticate, markNotificationRead);
 
+router.post(
+  "/admin/notifications",
+  authenticate,
+  authorize("ADMIN"),
+  validate({ body: sendAnnouncementSchema }),
+  sendAnnouncement,
+);
+
 /**
  * @openapi
  * /api/v1/admin/moderation/queue:
@@ -61,7 +74,12 @@ router.patch("/notifications/:id/read", authenticate, markNotificationRead);
  *         description: Pending moderation items
  */
 
-router.get("/admin/moderation/queue", authenticate, getModerationQueue);
+router.get(
+  "/admin/moderation/queue",
+  authenticate,
+  authorize("ADMIN"),
+  getModerationQueue,
+);
 
 /**
  * @openapi
@@ -102,6 +120,7 @@ router.get("/admin/moderation/queue", authenticate, getModerationQueue);
 router.patch(
   "/admin/:targetType/:id/status",
   authenticate,
+  authorize("ADMIN"),
   validate({ body: moderationActionSchema }),
   handleModerationAction,
 );

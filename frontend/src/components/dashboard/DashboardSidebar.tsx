@@ -8,6 +8,7 @@ import {
   Briefcase,
   Heart,
   Bell,
+  ShieldCheck,
   UserCog,
   LogOut,
   X,
@@ -24,6 +25,21 @@ const links = [
   { to: "/marketplace?type=TUTORING", label: "Tutoring", icon: Users },
   { to: "/marketplace", label: "Freelance Opportunities", icon: Briefcase },
   { to: "/favorites", label: "Favourites", icon: Heart },
+];
+
+const adminToolLinks = [
+  { to: "/admin/users", label: "Users", icon: Users },
+  {
+    to: "/admin/opportunities",
+    label: "Freelance Listings",
+    icon: Briefcase,
+  },
+  {
+    to: "/admin/moderation",
+    label: "Moderation",
+    icon: ShieldCheck,
+  },
+  { to: "/admin/notifications", label: "Notifications", icon: Bell },
 ];
 
 // Reference sidebar: active row = translucent white fill + inset gold bar
@@ -55,6 +71,7 @@ function NavRows({
   const location = useLocation();
   const onMarketplace = location.pathname === "/marketplace";
   const marketplaceType = new URLSearchParams(location.search).get("type");
+  const dashboardSection = new URLSearchParams(location.search).get("section");
 
   return (
     <>
@@ -72,6 +89,10 @@ function NavRows({
                 ? marketplaceType === "TUTORING"
                 : marketplaceType !== "TUTORING")
             : null;
+        const dashboardActive =
+          to === "/dashboard"
+            ? location.pathname === "/dashboard" && !dashboardSection
+            : null;
 
         return (
           <NavLink
@@ -81,9 +102,11 @@ function NavRows({
             onClick={onClose}
             title={collapsed ? label : undefined}
             className={
-              marketplaceActive !== null
-                ? rowClass(marketplaceActive, collapsed)
-                : ({ isActive }) => rowClass(isActive, collapsed)
+              dashboardActive !== null
+                ? rowClass(dashboardActive, collapsed)
+                : marketplaceActive !== null
+                  ? rowClass(marketplaceActive, collapsed)
+                  : ({ isActive }) => rowClass(isActive, collapsed)
             }
           >
             <Icon
@@ -94,6 +117,44 @@ function NavRows({
           </NavLink>
         );
       })}
+    </>
+  );
+}
+
+function AdminToolNavRows({
+  collapsed,
+  onClose,
+}: {
+  collapsed: boolean;
+  onClose: () => void;
+}) {
+  const location = useLocation();
+  const { notifications } = useModeration();
+  const unreadCount = (notifications as Notification[]).filter(
+    (notification) => !notification.read_at,
+  ).length;
+  return (
+    <>
+      {adminToolLinks.map(({ to, label, icon: Icon }) => (
+        <NavLink
+          key={to}
+          to={to}
+          onClick={onClose}
+          title={collapsed ? label : undefined}
+          className={`relative ${rowClass(
+            location.pathname === to || location.pathname.startsWith(`${to}/`),
+            collapsed,
+          )}`}
+        >
+          <Icon className="h-[19px] w-[19px] shrink-0" aria-hidden="true" />
+          {!collapsed && <span className="flex-1">{label}</span>}
+          {to === "/admin/notifications" && unreadCount > 0 && (
+            <span className={collapsed ? "absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold text-[#231C57]" : "flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold text-[#231C57]"}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </NavLink>
+      ))}
     </>
   );
 }
@@ -199,8 +260,13 @@ export function DashboardSidebar({
             <NavRows
               onClose={onClose}
               collapsed={collapsed}
-              items={isAdmin ? links.filter((l) => l.to === "/dashboard") : links}
+              items={
+                isAdmin ? links.filter((l) => l.to === "/dashboard") : links
+              }
             />
+            {isAdmin && (
+              <AdminToolNavRows collapsed={collapsed} onClose={onClose} />
+            )}
             {!isAdmin && (
               <>
                 <NotificationsNavLink collapsed={collapsed} onClose={onClose} />
@@ -221,6 +287,7 @@ export function DashboardSidebar({
             {isAdmin && (
               <NavLink
                 to="/admin"
+                end
                 onClick={onClose}
                 title={collapsed ? "Admin panel" : undefined}
                 className={({ isActive }) =>
@@ -294,8 +361,13 @@ export function DashboardSidebar({
                 <NavRows
                   onClose={onClose}
                   collapsed={false}
-                  items={isAdmin ? links.filter((l) => l.to === "/dashboard") : links}
+                  items={
+                    isAdmin ? links.filter((l) => l.to === "/dashboard") : links
+                  }
                 />
+                {isAdmin && (
+                  <AdminToolNavRows collapsed={false} onClose={onClose} />
+                )}
                 {!isAdmin && (
                   <>
                     <NotificationsNavLink collapsed={false} onClose={onClose} />
@@ -315,6 +387,7 @@ export function DashboardSidebar({
                 {isAdmin && (
                   <NavLink
                     to="/admin"
+                    end
                     onClick={onClose}
                     className={({ isActive }) =>
                       `mt-2 flex items-center gap-3 rounded-xl border-t border-white/10 px-3 py-2.5 pt-4 text-[14.5px] font-semibold transition motion-safe:duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${

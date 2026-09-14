@@ -1,10 +1,26 @@
 import { Router } from "express";
+import multer from "multer";
 import { reportController } from "../controllers/reportController";
 import { validate } from "../config/middleware/validateMiddleware";
 import { authenticate } from "../config/middleware/authMiddleware";
 import { createReportSchema } from "../validators/reportValidators";
+import { authorize } from "../config/middleware/authorizeMiddleware";
 
 const router = Router();
+const screenshotUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    callback(null, ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype));
+  },
+});
+
+router.get(
+  "/:id/evidence",
+  authenticate,
+  authorize("ADMIN"),
+  reportController.evidence,
+);
 
 /**
  * @openapi
@@ -23,6 +39,7 @@ const router = Router();
 router.post(
   "/",
   authenticate,
+  screenshotUpload.single("screenshot"),
   validate({ body: createReportSchema }),
   reportController.create,
 );

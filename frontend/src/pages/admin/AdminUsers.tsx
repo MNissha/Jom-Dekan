@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { useAdminUsersList } from "../../hooks/useAdminUsers";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -12,6 +13,7 @@ export function AdminUsers({
   embedded?: boolean;
   onSelectUser?: (userId: string) => void;
 }) {
+  const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
   const search = useDebounce(searchInput, 300);
@@ -67,16 +69,19 @@ export function AdminUsers({
                 {users.map((u) => (
                   <tr
                     key={u.id}
-                    onClick={() => onSelectUser?.(u.id)}
-                    role={onSelectUser ? "button" : undefined}
-                    tabIndex={onSelectUser ? 0 : undefined}
+                    onClick={() =>
+                      onSelectUser
+                        ? onSelectUser(u.id)
+                        : navigate(`/admin/users/${u.id}`)
+                    }
+                    role="button"
+                    tabIndex={0}
                     onKeyDown={(event) => {
-                      if (
-                        onSelectUser &&
-                        (event.key === "Enter" || event.key === " ")
-                      ) {
+                      if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        onSelectUser(u.id);
+                        onSelectUser
+                          ? onSelectUser(u.id)
+                          : navigate(`/admin/users/${u.id}`);
                       }
                     }}
                     className="border-b hover:bg-stone-50 text-sm cursor-pointer"

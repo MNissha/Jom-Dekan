@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { moderationService } from "../service/moderationService";
+import { useCurrentUser } from "./useAuth";
+import type { ReportResolutionPayload } from "../types/moderation";
 
 export function useModeration() {
   const queryClient = useQueryClient();
+  const user = useCurrentUser();
 
   const notificationsQuery = useQuery({
     queryKey: ["notifications"],
@@ -12,6 +15,7 @@ export function useModeration() {
   const queueQuery = useQuery({
     queryKey: ["moderationQueue"],
     queryFn: moderationService.getModerationQueue,
+    enabled: user?.role === "ADMIN",
   });
 
   const markReadMutation = useMutation({
@@ -21,19 +25,31 @@ export function useModeration() {
     },
   });
 
+  const announcementMutation = useMutation({
+    mutationFn: moderationService.sendAnnouncement,
+  });
+
   const moderationActionMutation = useMutation({
     mutationFn: ({
       targetType,
       id,
       action,
       reason,
+      resolution,
     }: {
       targetType: string;
       id: string;
       action: string;
       reason: string;
+      resolution?: ReportResolutionPayload;
     }) =>
-      moderationService.handleModerationAction(targetType, id, action, reason),
+      moderationService.handleModerationAction(
+        targetType,
+        id,
+        action,
+        reason,
+        resolution,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["moderationQueue"] });
     },
@@ -45,6 +61,8 @@ export function useModeration() {
     queue: queueQuery.data || [],
     isLoadingQueue: queueQuery.isLoading,
     markAsRead: markReadMutation.mutateAsync,
+    sendAnnouncement: announcementMutation.mutateAsync,
+    isSendingAnnouncement: announcementMutation.isPending,
     handleAction: moderationActionMutation.mutateAsync,
   };
 }

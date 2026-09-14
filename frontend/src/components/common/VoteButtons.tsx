@@ -8,11 +8,15 @@ export function VoteButtons({
   targetId,
   voteScore,
   myVote,
+  onDislike,
+  onUndoDislike,
 }: {
   targetType: VoteTargetType;
   targetId: string;
   voteScore: number;
   myVote: number;
+  onDislike?: () => void;
+  onUndoDislike?: () => void;
 }) {
   const castVote = useCastVote();
   const removeVote = useRemoveVote();
@@ -34,12 +38,32 @@ export function VoteButtons({
 
   const handleVote = (value: 1 | -1) => {
     const nextMyVote = displayMyVote === value ? 0 : value;
-    setOptimistic({ voteScore: displayScore + (nextMyVote - displayMyVote), myVote: nextMyVote });
+    const nextScore = Math.max(
+      0,
+      displayScore + (nextMyVote === 1 ? 1 : 0) - (displayMyVote === 1 ? 1 : 0),
+    );
+    setOptimistic({ voteScore: nextScore, myVote: nextMyVote });
 
     if (nextMyVote === 0) {
-      removeVote.mutate({ targetType, targetId }, { onError: () => setOptimistic(null) });
+      removeVote.mutate(
+        { targetType, targetId },
+        {
+          onError: () => setOptimistic(null),
+          onSuccess: () => {
+            if (value === -1 && targetType === "forum_comment") onUndoDislike?.();
+          },
+        },
+      );
     } else {
-      castVote.mutate({ targetType, targetId, value }, { onError: () => setOptimistic(null) });
+      castVote.mutate(
+        { targetType, targetId, value },
+        {
+          onError: () => setOptimistic(null),
+          onSuccess: () => {
+            if (value === -1 && targetType === "forum_comment") onDislike?.();
+          },
+        },
+      );
     }
   };
 
@@ -63,7 +87,8 @@ export function VoteButtons({
         type="button"
         onClick={() => handleVote(-1)}
         disabled={isPending}
-        aria-label="Downvote"
+        aria-label={targetType === "forum_comment" ? "Hide this comment" : "Dislike"}
+        title={targetType === "forum_comment" ? "Hide this comment from your view" : "Dislike"}
         className={`rounded p-1 hover:bg-slate-100 disabled:opacity-60 ${
           displayMyVote === -1 ? "text-red-600" : "text-slate-400"
         }`}

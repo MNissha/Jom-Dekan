@@ -198,11 +198,14 @@ export function TutoringView() {
   }
 
   const emailOk = /.+@.+\..+/.test(form.email);
+  const rateOk = /^\d+(\.\d{1,2})?$/.test(form.rate) && Number(form.rate) > 0;
+  const levelOk = /^\d+$/.test(form.level) && Number(form.level) > 0;
+  const phoneOk = /^\d+$/.test(form.phone);
   const step1Ready =
     form.subjects.trim() &&
-    form.rate.trim() &&
-    form.level.trim() &&
-    form.phone.trim() &&
+    rateOk &&
+    levelOk &&
+    phoneOk &&
     emailOk &&
     form.portfolio.trim() &&
     form.qualification.trim() &&
@@ -498,8 +501,8 @@ export function TutoringView() {
                   <h3 className="text-xs font-bold tracking-wide text-primary-700">TEACHING DETAILS</h3>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Subjects you can teach" required hint="e.g. CSC510, CS241" value={form.subjects} onChange={(v) => updateForm("subjects", v)} />
-                    <Field label="Hourly rate (RM)" required hint="e.g. 25" value={form.rate} onChange={(v) => updateForm("rate", v)} />
-                    <Field label="Year / level" required hint="e.g. Year 3, Degree" value={form.level} onChange={(v) => updateForm("level", v)} />
+                    <Field label="Hourly rate (RM)" required hint="e.g. 25" type="number" inputMode="decimal" min="0.01" step="0.01" invalid={!!form.rate && !rateOk} value={form.rate} onChange={(v) => /^\d*(\.\d{0,2})?$/.test(v) && updateForm("rate", v)} />
+                    <Field label="Year / level" required hint="e.g. 3" type="number" inputMode="numeric" min="1" step="1" invalid={!!form.level && !levelOk} value={form.level} onChange={(v) => /^\d*$/.test(v) && updateForm("level", v)} />
                     <label className="flex flex-col gap-1.5">
                       <span className="text-xs font-bold text-slate-500">
                         Preferred mode<span className="text-red-500"> *</span>
@@ -524,7 +527,7 @@ export function TutoringView() {
                     CONTACT DETAILS <span className="font-semibold text-slate-400">· all required</span>
                   </h3>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Phone number" required hint="+60 12-345 6789" note="WhatsApp-capable number" value={form.phone} onChange={(v) => updateForm("phone", v)} />
+                    <Field label="Phone number" required hint="e.g. 60123456789" note="Numbers only · WhatsApp-capable number" inputMode="numeric" invalid={!!form.phone && !phoneOk} value={form.phone} onChange={(v) => /^\d*$/.test(v) && updateForm("phone", v)} />
                     <Field
                       label="Email address"
                       required
@@ -880,6 +883,10 @@ function Field({
   invalid,
   value,
   onChange,
+  type = "text",
+  inputMode,
+  min,
+  step,
 }: {
   label: string;
   hint: string;
@@ -888,6 +895,10 @@ function Field({
   invalid?: boolean;
   value: string;
   onChange: (v: string) => void;
+  type?: React.HTMLInputTypeAttribute;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  min?: string;
+  step?: string;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -896,7 +907,10 @@ function Field({
         {required && <span className="text-red-500"> *</span>}
       </span>
       <input
-        type="text"
+        type={type}
+        inputMode={inputMode}
+        min={min}
+        step={step}
         placeholder={hint}
         value={value}
         onChange={(e) => onChange(e.target.value)}
