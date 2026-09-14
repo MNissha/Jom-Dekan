@@ -266,11 +266,21 @@ function App() {
           }
         />
         <Route
+          path="/admin/tutoring"
+          element={
+            <ProtectedRoute requireAdmin>
+              <DashboardLayout>
+                <AdminOpportunities embedded category="tutoring" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/opportunities"
           element={
             <ProtectedRoute requireAdmin>
               <DashboardLayout>
-                <AdminOpportunities embedded />
+                <AdminOpportunities embedded category="freelance" />
               </DashboardLayout>
             </ProtectedRoute>
           }

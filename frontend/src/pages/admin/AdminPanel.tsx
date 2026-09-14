@@ -14,7 +14,7 @@ const sections: { key: TaxonomySection; label: string }[] = [
 ];
 
 export default function AdminPanel() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("section");
   const initialSection: TaxonomySection =
     requested === "faculties" ||
@@ -46,7 +46,7 @@ export default function AdminPanel() {
           <button
             key={item.key}
             type="button"
-            onClick={() => setSection(item.key)}
+            onClick={() => { setSection(item.key); setSearchParams({ section: item.key }); }}
             className={`rounded-lg px-3 py-2 text-sm font-medium ${section === item.key ? "bg-primary-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}
           >
             {item.label}

@@ -1,224 +1,59 @@
 import { useState } from "react";
+import { ArrowLeft, BookOpen, Briefcase, MessageSquare, MessagesSquare, Users } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
-import {
-  useAdminUserProfile,
-  useAdminUserResources,
-  useAdminUserForumActivity,
-  useAdminUserApplications,
-} from "../../hooks/useAdminUsers";
+import { useAdminUserForumActivity, useAdminUserOpportunities, useAdminUserProfile, useAdminUserResources } from "../../hooks/useAdminUsers";
 
 const PAGE_SIZE = 20;
-type Tab = "resources" | "forum" | "applications";
+type Tab = "resources" | "threads" | "comments" | "tutoring" | "freelance";
 
-export function AdminUserDetail({
-  embedded = false,
-  userId,
-  onBack,
-}: {
-  embedded?: boolean;
-  userId?: string;
-  onBack?: () => void;
-}) {
+export function AdminUserDetail({ embedded = false, userId, onBack }: { embedded?: boolean; userId?: string; onBack?: () => void }) {
   const routeParams = useParams<{ id: string }>();
   const id = userId ?? routeParams.id;
   const [tab, setTab] = useState<Tab>("resources");
   const [page, setPage] = useState(1);
-
-  const { data: profile, isLoading: profileLoading } = useAdminUserProfile(id);
+  const profile = useAdminUserProfile(id);
   const resources = useAdminUserResources(id, { page, pageSize: PAGE_SIZE });
-  const forum = useAdminUserForumActivity(id, { page, pageSize: PAGE_SIZE });
-  const applications = useAdminUserApplications(id, {
-    page,
-    pageSize: PAGE_SIZE,
-  });
-
-  const active =
-    tab === "resources" ? resources : tab === "forum" ? forum : applications;
+  const threads = useAdminUserForumActivity(id, { page, pageSize: PAGE_SIZE, type: "post" });
+  const comments = useAdminUserForumActivity(id, { page, pageSize: PAGE_SIZE, type: "comment" });
+  const tutoring = useAdminUserOpportunities(id, "TUTORING", { page, pageSize: PAGE_SIZE });
+  const freelance = useAdminUserOpportunities(id, "PROJECT_MENTORSHIP", { page, pageSize: PAGE_SIZE });
+  const active = { resources, threads, comments, tutoring, freelance }[tab];
   const total = active.data?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const tabs = [
+    { key: "resources" as Tab, label: "Resources", icon: BookOpen },
+    { key: "threads" as Tab, label: "Threads", icon: MessagesSquare },
+    { key: "comments" as Tab, label: "Comments", icon: MessageSquare },
+    { key: "tutoring" as Tab, label: "Tutoring", icon: Users },
+    { key: "freelance" as Tab, label: "Freelance", icon: Briefcase },
+  ];
 
-  const handleTabChange = (nextTab: Tab) => {
-    setTab(nextTab);
-    setPage(1);
-  };
+  return <AdminPageShell embedded={embedded}>
+    <div className="mx-auto max-w-6xl px-4 py-8 motion-safe:animate-[fadeIn_220ms_ease-out]">
+      {onBack ? <button onClick={onBack} className="inline-flex items-center gap-2 text-sm font-semibold text-[#4338CA] hover:underline"><ArrowLeft className="h-4 w-4" />Back to users</button> : <Link to="/admin/users" className="inline-flex items-center gap-2 text-sm font-semibold text-[#4338CA] hover:underline"><ArrowLeft className="h-4 w-4" />Back to users</Link>}
 
-  if (profileLoading) {
-    return (
-      <AdminPageShell embedded={embedded}>
-        <div className="p-8 text-center text-stone-500">Loading…</div>
-      </AdminPageShell>
-    );
-  }
+      {profile.isLoading ? <div className="mt-5 h-32 animate-pulse rounded-[24px] bg-slate-200" /> : profile.data && <header className="relative mt-5 overflow-hidden rounded-[26px] bg-gradient-to-r from-[#332475] to-[#5B4DD2] p-6 text-white shadow-lg"><div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-[#F5C21A]/20 blur-2xl" /><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#D8D3FA]">User activity</p><h1 className="mt-1 text-3xl font-bold">{profile.data.displayName}</h1><p className="mt-1 text-sm text-[#D8D3FA]">{profile.data.email}</p></div><Link to={`/users/${profile.data.id}`} className="shrink-0 rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-sm font-bold text-white hover:bg-white/20">View public profile</Link></div><div className="mt-4 flex gap-2"><span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">{profile.data.role}</span><span className={`rounded-full px-3 py-1 text-xs font-bold ${profile.data.status === "SUSPENDED" ? "bg-red-400/25 text-red-100" : "bg-emerald-400/25 text-emerald-100"}`}>{profile.data.status}</span></div></header>}
 
-  return (
-    <AdminPageShell embedded={embedded}>
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {onBack ? (
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-sm text-primary-600 hover:underline"
-          >
-            ← Back to users
-          </button>
-        ) : (
-          <Link
-            to="/admin/users"
-            className="text-sm text-primary-600 hover:underline"
-          >
-            ← Back to users
-          </Link>
-        )}
+      <nav className="mt-5 flex flex-wrap gap-1 rounded-2xl border border-[#E7E4F7] bg-white p-1.5 shadow-sm" aria-label="User activity categories">{tabs.map(({ key, label, icon: Icon }) => <button key={key} onClick={() => { setTab(key); setPage(1); }} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${tab === key ? "bg-[#4338CA] text-white shadow" : "text-slate-600 hover:bg-[#F2F0FC] hover:text-[#4338CA]"}`}><Icon className="h-4 w-4" />{label}</button>)}</nav>
 
-        {profile && (
-          <div className="mt-3 mb-6 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-stone-800">
-                {profile.displayName}
-              </h1>
-              <p className="text-sm text-stone-500">{profile.email}</p>
-              <p className="mt-1 text-xs uppercase tracking-wide text-stone-400">
-                {profile.role} · {profile.status}
-              </p>
-            </div>
-            <Link
-              to={`/users/${profile.id}`}
-              className="shrink-0 rounded-full border border-primary-600 px-4 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-50"
-            >
-              View profile
-            </Link>
-          </div>
-        )}
+      <section key={tab} className="mt-4 overflow-hidden rounded-[22px] border border-[#E8E5F7] bg-white shadow-sm motion-safe:animate-[fadeIn_180ms_ease-out]">
+        <div className="border-b bg-[#F8F7FD] px-5 py-4"><h2 className="font-bold text-slate-800">{tabs.find((item) => item.key === tab)?.label} submitted by this user</h2><p className="mt-0.5 text-xs text-slate-500">Select an item to inspect it directly.</p></div>
+        {active.isLoading ? <div className="space-y-3 p-5">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded-xl bg-slate-100" />)}</div> : active.isError ? <p className="p-8 text-center text-red-600">Could not load this activity.</p> : !active.data?.data.length ? <p className="p-8 text-center text-slate-500">No {tabs.find((item) => item.key === tab)?.label.toLowerCase()} submitted yet.</p> : <ul className="divide-y divide-[#F0EEF8]">
+          {tab === "resources" && resources.data?.data.map((item) => <ActivityItem key={item.id} to={`/resources/${item.id}`} title={item.title} meta={`${item.status} · ${new Date(item.createdAt).toLocaleDateString()}`} />)}
+          {tab === "threads" && threads.data?.data.map((item) => <ActivityItem key={item.id} to={`/forum/${item.postId}`} title={item.title ?? "Discussion thread"} description={item.body} meta={new Date(item.createdAt).toLocaleDateString()} />)}
+          {tab === "comments" && comments.data?.data.map((item) => <ActivityItem key={item.id} to={`/forum/${item.postId}`} title="Comment" description={item.body} meta={new Date(item.createdAt).toLocaleDateString()} />)}
+          {tab === "tutoring" && tutoring.data?.data.map((item) => <ActivityItem key={item.id} to={`/marketplace?type=TUTORING&listing=${item.id}`} title={item.title} meta={`${item.status} · ${new Date(item.createdAt).toLocaleDateString()}`} />)}
+          {tab === "freelance" && freelance.data?.data.map((item) => <ActivityItem key={item.id} to={`/marketplace?type=FREELANCE&listing=${item.id}`} title={item.title} meta={`${item.status} · ${new Date(item.createdAt).toLocaleDateString()}`} />)}
+        </ul>}
+      </section>
+      {total > 0 && <div className="mt-4 flex items-center justify-between text-sm text-slate-500"><span>Page {page} of {totalPages} · {total} items</span><div className="flex gap-2"><button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1} className="rounded-xl border bg-white px-4 py-2 font-bold disabled:opacity-40">Previous</button><button onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages} className="rounded-xl bg-[#4338CA] px-4 py-2 font-bold text-white disabled:opacity-40">Next</button></div></div>}
+    </div>
+  </AdminPageShell>;
+}
 
-        <div className="mb-4 flex gap-2 border-b border-stone-200">
-          {[
-            { key: "resources" as Tab, label: "Resources" },
-            { key: "forum" as Tab, label: "Forum" },
-            { key: "applications" as Tab, label: "Marketplace applications" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => handleTabChange(t.key)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                tab === t.key
-                  ? "border-primary-600 text-primary-700"
-                  : "border-transparent text-stone-500 hover:text-stone-700"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="bg-white rounded-xl shadow border overflow-hidden">
-          {active.isLoading ? (
-            <p className="p-6 text-center text-stone-500">Loading…</p>
-          ) : active.isError ? (
-            <p className="p-6 text-center text-red-600">Could not load data.</p>
-          ) : tab === "resources" ? (
-            resources.data?.data.length ? (
-              <ul className="divide-y">
-                {resources.data.data.map((r) => (
-                  <li key={r.id} className="p-4 hover:bg-stone-50">
-                    <Link
-                      to={`/resources/${r.id}`}
-                      className="font-medium text-stone-800 hover:text-primary-700"
-                    >
-                      {r.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-stone-400">
-                      {r.status} · {new Date(r.createdAt).toLocaleDateString()}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="p-6 text-center text-stone-500">
-                No resources uploaded yet.
-              </p>
-            )
-          ) : tab === "forum" ? (
-            forum.data?.data.length ? (
-              <ul className="divide-y">
-                {forum.data.data.map((item) => (
-                  <li
-                    key={`${item.type}-${item.id}`}
-                    className="p-4 hover:bg-stone-50"
-                  >
-                    <Link
-                      to={`/forum/${item.postId}`}
-                      className="font-medium text-stone-800 hover:text-primary-700"
-                    >
-                      {item.type === "post" ? item.title : "Comment"}
-                    </Link>
-                    <p className="mt-1 line-clamp-2 text-sm text-stone-600">
-                      {item.body}
-                    </p>
-                    <p className="mt-1 text-xs text-stone-400">
-                      {item.type === "post" ? "Post" : "Comment"} ·{" "}
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="p-6 text-center text-stone-500">
-                No forum activity yet.
-              </p>
-            )
-          ) : applications.data?.data.length ? (
-            <ul className="divide-y">
-              {applications.data.data.map((a) => (
-                <li key={a.id} className="p-4 hover:bg-stone-50">
-                  <Link
-                    to="/marketplace"
-                    className="font-medium text-stone-800 hover:text-primary-700"
-                  >
-                    {a.opportunityTitle}
-                  </Link>
-                  <p className="mt-1 text-xs text-stone-400">
-                    {a.status} · {new Date(a.createdAt).toLocaleDateString()}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="p-6 text-center text-stone-500">
-              No marketplace applications yet.
-            </p>
-          )}
-        </div>
-
-        {total > 0 && (
-          <div className="mt-4 flex items-center justify-between text-sm text-stone-500">
-            <span>
-              Page {page} of {totalPages} ({total} item{total === 1 ? "" : "s"})
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded-full bg-stone-100 px-4 py-1.5 font-medium text-stone-600 hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="rounded-full bg-stone-100 px-4 py-1.5 font-medium text-stone-600 hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </AdminPageShell>
-  );
+function ActivityItem({ to, title, description, meta }: { to: string; title: string; description?: string; meta: string }) {
+  return <li className="p-5 transition hover:bg-[#FAF9FF]"><Link to={to} className="group block"><span className="font-bold text-slate-800 group-hover:text-[#4338CA] group-hover:underline">{title}</span>{description && <span className="mt-1 block line-clamp-2 text-sm leading-6 text-slate-600">{description}</span>}<span className="mt-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">{meta}</span></Link></li>;
 }
 
 export default AdminUserDetail;

@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 // entirely separate from real react-query `isLoading` flags — this timer
 // never gates a real request, and should be deleted (not repurposed) once
 // every surface it's used on has its own real loading state to show off.
-export function useDemoLoading(durationMs = 2000): boolean {
-  const [isLoading, setIsLoading] = useState(true);
+export function useDemoLoading(durationMs = 2000, resetKey: unknown = null): boolean {
+  const [loading, setLoading] = useState({ key: resetKey, active: true });
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), durationMs);
+    setLoading({ key: resetKey, active: true });
+    const timer = setTimeout(() => setLoading({ key: resetKey, active: false }), durationMs);
     return () => clearTimeout(timer);
-  }, [durationMs]);
+  }, [durationMs, resetKey]);
 
-  return isLoading;
+  return loading.key !== resetKey || loading.active;
 }

@@ -22,7 +22,7 @@ export function useLogin() {
     onSuccess: (data) => {
       setSession(data.accessToken, data.user);
       queryClient.invalidateQueries();
-      navigate(data.user.role === "ADMIN" ? "/admin" : "/dashboard");
+      navigate("/dashboard");
     },
   });
 }

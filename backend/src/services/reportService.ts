@@ -42,15 +42,15 @@ interface ActorContext {
 // Same existence gate as favoriteService's assertTargetExists — a
 // report can't be filed against something that doesn't exist or (for a
 // resource) isn't visible to this user.
-async function assertTargetExists(targetType: ReportTargetType, targetId: string, ctx: ActorContext) {
+async function assertTargetExists(targetType: ReportTargetType, targetId: string, ctx: ActorContext): Promise<string | undefined> {
   if (targetType === "resource") {
     await resourceService.getById(targetId, ctx);
-    return;
+    return undefined;
   }
   if (targetType === "forum_post") {
     const post = await forumModel.posts.findById(targetId);
     if (!post || post.deleted_at) throw AppError.notFound("Post not found.");
-    return;
+    return undefined;
   }
   if (targetType === "user") {
     const target = await userModel.findById(targetId);
@@ -59,6 +59,7 @@ async function assertTargetExists(targetType: ReportTargetType, targetId: string
   }
   const opportunity = await OpportunityModel.findById(targetId);
   if (!opportunity) throw AppError.notFound("Listing not found.");
+  return opportunity.listing_type;
 }
 
 export const reportService = {
@@ -76,6 +77,7 @@ export const reportService = {
     },
     ctx: ActorContext,
   ) {
+    let listingType: string | undefined;
     if (input.targetType === "forum_comment") {
       const comment = await forumModel.comments.findById(input.targetId);
       if (!comment || comment.deleted_at) throw AppError.notFound("Comment not found.");
@@ -85,7 +87,7 @@ export const reportService = {
       if (input.targetType === "user" && input.targetId === ctx.actorUserId) {
         throw AppError.badRequest("You cannot report your own account.");
       }
-      await assertTargetExists(input.targetType, input.targetId, ctx);
+      listingType = await assertTargetExists(input.targetType, input.targetId, ctx);
     }
 
     let report;
@@ -124,7 +126,7 @@ export const reportService = {
     const admins = await reportModel.listAdmins();
     await reportModel.notifyAdmins(
       admins.map((a) => a.id),
-      { reportId: report.id, entityType: input.targetType, entityId: input.targetId, category: input.category },
+      { reportId: report.id, entityType: input.targetType, entityId: input.targetId, category: input.category, listingType },
     );
 
     // Best-effort: a report is already recorded and admins already have

@@ -385,6 +385,33 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                 </section>
               )}
 
+              {selected.target_type === "forum_post" && (
+                <section className="rounded-2xl border border-[#E4E0FA] bg-gradient-to-br from-white to-[#F8F7FF] p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">Reported discussion thread</p>
+                  <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Discussion unavailable"}</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Thread content unavailable."}</p>
+                  <Link to={`/forum/${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-[#EFEEFB] px-3 py-2 text-sm font-bold text-[#4338CA] transition hover:bg-[#E2DFFC]">View full discussion</Link>
+                </section>
+              )}
+
+              {selected.target_type === "resource" && (
+                <section className="rounded-2xl border border-[#DDE9F8] bg-gradient-to-br from-white to-[#F2F7FF] p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Reported academic resource</p>
+                  <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Resource unavailable"}</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Resource description unavailable."}</p>
+                  <Link to={`/resources/${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100">View full resource</Link>
+                </section>
+              )}
+
+              {selected.target_type === "opportunity" && (
+                <section className="rounded-2xl border border-[#E4E0FA] bg-gradient-to-br from-white to-[#F8F7FF] p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">{selected.listing_type === "TUTORING" ? "Reported tutoring profile" : "Reported freelance opportunity"}</p>
+                  <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Listing unavailable"}</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Listing details unavailable."}</p>
+                  <Link to={`/marketplace?type=${selected.listing_type === "TUTORING" ? "TUTORING" : "FREELANCE"}&listing=${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-[#EFEEFB] px-3 py-2 text-sm font-bold text-[#4338CA] transition hover:bg-[#E2DFFC]">{selected.listing_type === "TUTORING" ? "View full tutor profile" : "View full freelance listing"}</Link>
+                </section>
+              )}
+
               <dl className="grid gap-2 rounded-2xl border border-[#ECEBF7] p-4 text-sm sm:grid-cols-3">
                 <div><dt className="text-xs text-slate-400">Report ID</dt><dd className="mt-0.5 break-all font-medium text-slate-700">#{selected.id}</dd></div>
                 <div><dt className="text-xs text-slate-400">Status</dt><dd className="mt-0.5 font-bold uppercase text-red-600">{readable(selected.moderation_status)}</dd></div>

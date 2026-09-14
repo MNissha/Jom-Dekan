@@ -103,7 +103,7 @@ export const reportModel = {
    */
   async notifyAdmins(
     adminIds: string[],
-    payload: { reportId: string; entityType: string; entityId: string; category: ReportCategory },
+    payload: { reportId: string; entityType: string; entityId: string; category: ReportCategory; listingType?: string },
   ): Promise<void> {
     if (adminIds.length === 0) return;
     await pool.query(

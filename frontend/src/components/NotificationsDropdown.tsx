@@ -1,15 +1,9 @@
 import { useState, useEffect } from "react";
 import { moderationService } from "../service/moderationService";
-
-interface DropdownNotification {
-  id: string;
-  title: string;
-  message: string;
-  read_at: string | null;
-}
+import type { Notification } from "../types/moderation";
 
 export function NotificationsDropdown() {
-  const [notifications, setNotifications] = useState<DropdownNotification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     moderationService
@@ -43,8 +37,8 @@ export function NotificationsDropdown() {
               key={n.id}
               className={`p-2 rounded text-sm ${n.read_at ? "bg-stone-50" : "bg-amber-50 border-l-4 border-amber-600"}`}
             >
-              <p className="font-semibold text-stone-900">{n.title}</p>
-              <p className="text-stone-600 text-xs mt-1">{n.message}</p>
+              <p className="font-semibold text-stone-900">{typeof n.payload.title === "string" ? n.payload.title : "Notification"}</p>
+              <p className="text-stone-600 text-xs mt-1">{typeof n.payload.message === "string" ? n.payload.message : "You have a new update."}</p>
               {!n.read_at && (
                 <button
                   onClick={() => handleRead(n.id)}

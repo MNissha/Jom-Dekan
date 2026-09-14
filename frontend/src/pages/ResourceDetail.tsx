@@ -19,6 +19,7 @@ import { FavoriteButton } from "../components/common/FavoriteButton";
 import { ReportButton } from "../components/common/ReportButton";
 import { PdfThumbnail } from "../components/common/PdfThumbnail";
 import { UserLink } from "../components/common/UserLink";
+import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 import {
   editResourceFormSchema,
@@ -62,6 +63,18 @@ export default function ResourceDetail() {
   const { data: previewUrl } = useFilePreviewUrl(
     isImage || isPdf ? readyFile?.id : undefined,
   );
+  const showSkeleton = useMinimumLoading(isLoading, 2000);
+
+  if (showSkeleton)
+    return (
+      <div className="mx-auto max-w-3xl animate-pulse px-[18px] py-[22px]" aria-label="Loading academic resource">
+        <div className="h-4 w-24 rounded bg-violet-100" />
+        <div className="mt-5 overflow-hidden rounded-[22px] border border-[#ECEBF7] bg-white shadow-sm">
+          <div className="h-48 bg-slate-100" />
+          <div className="space-y-3 p-6"><div className="h-7 w-2/3 rounded bg-violet-100" /><div className="h-4 w-full rounded bg-slate-100" /><div className="h-4 w-4/5 rounded bg-slate-100" /></div>
+        </div>
+      </div>
+    );
 
   if (isLoading)
     return (

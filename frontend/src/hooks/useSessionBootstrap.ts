@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import axios from 'axios';
-import { authService } from '../service/authService';
+import { refreshAccessToken } from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
 
 const RETRY_DELAY_MS = 800;
@@ -18,9 +18,19 @@ const MAX_RETRIES = 2;
  * shared IP, a transient 5xx) is retried a couple of times with a short
  * backoff before giving up — never treated as a logout, so a hiccup
  * during the request doesn't kick a real session out to /login.
+ *
+ * This goes through axiosInstance's shared single-flight
+ * `refreshAccessToken` (which also sets the session on success) rather
+ * than issuing its own independent /auth/refresh call. The backend
+ * rotates the refresh token on every call, so two concurrent refresh
+ * requests racing on the same not-yet-rotated cookie — e.g. this effect
+ * running twice under React StrictMode, whose cleanup can't actually
+ * abort the in-flight request — makes the backend's reuse-detection
+ * logic treat the second, legitimate request as token theft and revoke
+ * the whole session family, including the one the first request just
+ * created. Sharing the single in-flight promise app-wide closes that race.
  */
 export function useSessionBootstrap(): void {
-  const setSession = useAuthStore((s) => s.setSession);
   const setInitialized = useAuthStore((s) => s.setInitialized);
   const setSessionCheckFailed = useAuthStore((s) => s.setSessionCheckFailed);
   const isInitialized = useAuthStore((s) => s.isInitialized);
@@ -31,8 +41,7 @@ export function useSessionBootstrap(): void {
 
     async function attempt(retriesLeft: number): Promise<void> {
       try {
-        const data = await authService.refresh();
-        if (!cancelled) setSession(data.accessToken, data.user);
+        await refreshAccessToken();
       } catch (err) {
         if (cancelled) return;
 

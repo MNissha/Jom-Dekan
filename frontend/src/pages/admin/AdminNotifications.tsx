@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Bell, Megaphone, Search, ShieldAlert, X } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { useAdminUsersList } from "../../hooks/useAdminUsers";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useModeration } from "../../hooks/useModeration";
 import type { AdminUserListItem } from "../../types/adminUser";
 import type { Notification } from "../../types/moderation";
+import { adminReportRoute } from "../../utils/adminReportRoute";
 
 export default function AdminNotifications() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSection =
     searchParams.get("section") === "announcement"
@@ -21,7 +21,8 @@ export default function AdminNotifications() {
   const [search, setSearch] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<AdminUserListItem[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const debouncedSearch = useDebounce(search, 300);
+  const debouncedSearch = useDebounce(search, 500);
+  const isSearchPending = search !== debouncedSearch;
   const usersQuery = useAdminUsersList({
     search: debouncedSearch || undefined,
     page: 1,
@@ -30,9 +31,9 @@ export default function AdminNotifications() {
   const {
     notifications,
     isLoadingNotifications,
-    markAsRead,
     sendAnnouncement,
     isSendingAnnouncement,
+    queue,
   } = useModeration();
 
   const reportNotifications = (notifications as Notification[]).filter(
@@ -65,16 +66,6 @@ export default function AdminNotifications() {
         : undefined;
       setFeedback(apiMessage ?? "Could not send the announcement.");
     }
-  };
-
-  const openReport = async (notification: Notification) => {
-    if (!notification.read_at) await markAsRead(notification.id);
-    const reportId = notification.payload.reportId;
-    navigate(
-      typeof reportId === "string"
-        ? `/admin/moderation?report=${encodeURIComponent(reportId)}`
-        : "/admin/moderation",
-    );
   };
 
   return (
@@ -164,7 +155,9 @@ export default function AdminNotifications() {
                 </div>
                 {search.trim() && (
                   <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-slate-200">
-                    {matchingUsers.length ? (
+                    {isSearchPending || usersQuery.isLoading ? (
+                      <div className="space-y-2 p-3" role="status" aria-label="Searching users">{Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-10 animate-pulse rounded-lg bg-slate-100" />)}</div>
+                    ) : matchingUsers.length ? (
                       matchingUsers.map((user) => (
                         <button
                           key={user.id}
@@ -181,7 +174,7 @@ export default function AdminNotifications() {
                       ))
                     ) : (
                       <p className="px-3 py-3 text-sm text-slate-500">
-                        {usersQuery.isLoading ? "Searching..." : "No matching users."}
+                        No matching users.
                       </p>
                     )}
                   </div>
@@ -262,9 +255,9 @@ export default function AdminNotifications() {
             <ul className="divide-y divide-slate-100">
               {reportNotifications.map((notification) => (
                 <li key={notification.id}>
-                  <button
-                    type="button"
-                    onClick={() => void openReport(notification)}
+                  <Link
+                    to={adminReportRoute(notification, queue)}
+                    state={notification.read_at ? undefined : { notificationIdToMarkRead: notification.id }}
                     className="flex w-full items-start gap-3 p-4 text-left hover:bg-slate-50"
                   >
                     <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${notification.read_at ? "bg-slate-200" : "bg-red-500"}`} />
@@ -276,7 +269,7 @@ export default function AdminNotifications() {
                         {new Date(notification.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
                       </span>
                     </span>
-                  </button>
+                  </Link>
                 </li>
               ))}
             </ul>

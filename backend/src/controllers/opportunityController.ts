@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { OpportunityModel } from "../models/opportunityModel";
+import { auditLogModel } from "../models/auditLogModel";
 
 export class OpportunityService {
   static async getOpportunities() {
@@ -35,8 +36,28 @@ export class OpportunityService {
     return await OpportunityModel.getAllForAdmin();
   }
 
-  static async updateStatus(id: string, status: string) {
-    return await OpportunityModel.updateStatus(id, status);
+  static async updateStatus(adminId: string, id: string, status: string) {
+    const result = await OpportunityModel.updateStatus(id, status);
+    if (result) await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_STATUS_UPDATED", targetType: "opportunity", targetId: id, metadata: { status } });
+    return result;
+  }
+
+  static async adminCreate(adminId: string, data: { title: string; description: string; mode: string; listingType: string }) {
+    const result = await OpportunityModel.create(adminId, data);
+    await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_CREATED", targetType: "opportunity", targetId: result.id });
+    return result;
+  }
+
+  static async adminUpdate(adminId: string, id: string, data: { title: string; description: string; mode: string }) {
+    const result = await OpportunityModel.update(id, data);
+    if (result) await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_UPDATED", targetType: "opportunity", targetId: id });
+    return result;
+  }
+
+  static async adminDelete(adminId: string, id: string) {
+    const removed = await OpportunityModel.remove(id);
+    if (removed) await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_DELETED", targetType: "opportunity", targetId: id });
+    return removed;
   }
 }
 
@@ -117,7 +138,7 @@ export const updateOpportunityStatus = async (
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const data = await OpportunityService.updateStatus(id, status);
+    const data = await OpportunityService.updateStatus(req.user!.id, id, status);
     if (!data) {
       return res
         .status(404)
@@ -127,6 +148,26 @@ export const updateOpportunityStatus = async (
   } catch (error) {
     return next(error);
   }
+};
+
+export const adminCreateOpportunity = async (req: Request, res: Response, next: NextFunction) => {
+  try { const data = await OpportunityService.adminCreate(req.user!.id, req.body); return res.status(201).json({ data }); }
+  catch (error) { return next(error); }
+};
+
+export const adminUpdateOpportunity = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await OpportunityService.adminUpdate(req.user!.id, req.params.id, req.body);
+    if (!data) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Opportunity not found." } });
+    return res.json({ data });
+  } catch (error) { return next(error); }
+};
+
+export const adminDeleteOpportunity = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!(await OpportunityService.adminDelete(req.user!.id, req.params.id))) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Opportunity not found." } });
+    return res.status(204).send();
+  } catch (error) { return next(error); }
 };
 
 /**

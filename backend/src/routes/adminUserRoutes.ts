@@ -9,9 +9,18 @@ import {
   adminUserSubListQuerySchema,
   disableUserSchema,
   deleteUserSchema,
+  createAdminUserBodySchema,
+  updateAdminUserBodySchema,
+  updateAdminUserStatusBodySchema,
+  userOpportunityParamSchema,
 } from "../validators/adminUserValidators";
 
 const router = Router();
+
+router.post("/", authenticate, authorize("ADMIN"), validate({ body: createAdminUserBodySchema }), adminUserController.create);
+router.patch("/:id", authenticate, authorize("ADMIN"), validate({ params: userIdParamSchema, body: updateAdminUserBodySchema }), adminUserController.update);
+router.patch("/:id/status", authenticate, authorize("ADMIN"), validate({ params: userIdParamSchema, body: updateAdminUserStatusBodySchema }), adminUserController.updateStatus);
+router.get("/:id/opportunities/:listingType", authenticate, authorize("ADMIN"), validate({ params: userOpportunityParamSchema, query: adminUserSubListQuerySchema }), adminUserController.getOpportunities);
 
 /**
  * @openapi

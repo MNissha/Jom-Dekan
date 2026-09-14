@@ -25,10 +25,16 @@ interface RetryableConfig extends InternalAxiosRequestConfig {
 }
 
 // Single-flight refresh: concurrent 401s all wait on the same promise
-// instead of hammering /auth/refresh in parallel.
+// instead of hammering /auth/refresh in parallel. This is exported so
+// useSessionBootstrap can share it too — the backend rotates the refresh
+// token on every call, so two independent concurrent refresh requests
+// (e.g. one from here, one from bootstrap) racing on the same
+// not-yet-rotated cookie makes the backend's reuse-detection logic treat
+// the second, legitimate request as token theft and revoke the whole
+// session family, including the one the first request just created.
 let refreshPromise: Promise<string> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
     refreshPromise = axios
       .post<{ accessToken: string; user: { id: string; email: string; role: 'USER' | 'ADMIN' } }>(
@@ -61,6 +67,13 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(original);
       } catch {
         useAuthStore.getState().clearSession();
+        // The refresh cookie is invalid or expired. A hard navigation clears
+        // the unusable authenticated React tree and prevents the user from
+        // being left on a dashboard that can scroll but cannot perform any
+        // authenticated action.
+        if (window.location.pathname !== '/login') {
+          window.location.replace('/login?reason=session_expired');
+        }
       }
     }
 

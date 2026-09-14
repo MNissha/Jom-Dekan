@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   usePost,
@@ -13,22 +13,7 @@ import { useCurrentUser } from "../hooks/useAuth";
 import { VoteButtons } from "../components/common/VoteButtons";
 import { CommentReportButton } from "../components/common/CommentReportButton";
 import { UserLink } from "../components/common/UserLink";
-
-function useMinDuration(isLoading: boolean, minMs = 2000) {
-  const [show, setShow] = useState(isLoading);
-  const startedAt = useRef<number | null>(isLoading ? Date.now() : null);
-  useEffect(() => {
-    if (isLoading) {
-      startedAt.current = Date.now();
-      setShow(true);
-      return;
-    }
-    const elapsed = startedAt.current ? Date.now() - startedAt.current : minMs;
-    const timer = window.setTimeout(() => setShow(false), Math.max(0, minMs - elapsed));
-    return () => window.clearTimeout(timer);
-  }, [isLoading, minMs]);
-  return show;
-}
+import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 function DiscussionDetailSkeleton() {
   return (
@@ -65,7 +50,7 @@ export default function ForumPostDetail() {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState("");
   const [commentVisibility, setCommentVisibility] = useState<Record<string, boolean>>({});
-  const showSkeleton = useMinDuration(isLoading || commentsLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading || commentsLoading, 2000);
 
   if (showSkeleton) return <DiscussionDetailSkeleton />;
 

@@ -6,6 +6,9 @@ import type {
   AdminUserForumActivity,
   AdminUserApplication,
   PaginatedMeta,
+  CreateAdminUserInput,
+  UpdateAdminUserInput,
+  AdminUserOpportunity,
 } from "../types/adminUser";
 
 interface Paginated<T> {
@@ -22,9 +25,25 @@ interface ListParams {
 interface SubListParams {
   page?: number;
   pageSize?: number;
+  type?: "post" | "comment";
 }
 
 export const adminUserService = {
+  async create(input: CreateAdminUserInput): Promise<AdminUserProfile> {
+    const res = await axiosInstance.post<{ data: AdminUserProfile }>("/admin/users", input);
+    return res.data.data;
+  },
+
+  async update(userId: string, input: UpdateAdminUserInput): Promise<AdminUserProfile> {
+    const res = await axiosInstance.patch<{ data: AdminUserProfile }>(`/admin/users/${userId}`, input);
+    return res.data.data;
+  },
+
+  async updateStatus(userId: string, status: "ACTIVE" | "SUSPENDED"): Promise<AdminUserProfile> {
+    const res = await axiosInstance.patch<{ data: AdminUserProfile }>(`/admin/users/${userId}/status`, { status });
+    return res.data.data;
+  },
+
   async list(params: ListParams): Promise<Paginated<AdminUserListItem>> {
     const res = await axiosInstance.get<Paginated<AdminUserListItem>>(
       "/admin/users",
@@ -93,5 +112,10 @@ export const adminUserService = {
 
   async remove(userId: string, data: { reason: string }): Promise<void> {
     await axiosInstance.delete(`/admin/users/${userId}`, { data });
+  },
+
+  async getOpportunities(userId: string, listingType: "TUTORING" | "PROJECT_MENTORSHIP", params: SubListParams): Promise<Paginated<AdminUserOpportunity>> {
+    const res = await axiosInstance.get<Paginated<AdminUserOpportunity>>(`/admin/users/${userId}/opportunities/${listingType}`, { params });
+    return res.data;
   },
 };

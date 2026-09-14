@@ -15,9 +15,19 @@ export type ModerationDecision =
 export class ModerationModel {
   static async getNotificationsForUser(userId: string) {
     const query = `
-            SELECT * FROM notifications 
-            WHERE user_id = $1 
-            ORDER BY created_at DESC 
+            SELECT n.id, n.user_id, n.type,
+                   CASE WHEN o.id IS NOT NULL
+                     THEN n.payload || jsonb_build_object('listingType', o.listing_type)
+                     ELSE n.payload
+                   END AS payload,
+                   n.read_at, n.created_at
+            FROM notifications n
+            LEFT JOIN opportunities o
+              ON n.type = 'REPORT_SUBMITTED'
+             AND n.payload->>'entityType' = 'opportunity'
+             AND o.id::text = n.payload->>'entityId'
+            WHERE n.user_id = $1
+            ORDER BY n.created_at DESC
             LIMIT 50
         `;
     const result = await pool.query(query, [userId]);

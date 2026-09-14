@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MessageSquare, Search, Plus, ChevronUp, ChevronDown, X, CheckCircle2, Circle } from "lucide-react";
 import { usePosts, useCreatePost, useCastVote, useRemoveVote, useSetPostSolved } from "../hooks/useForum";
@@ -9,6 +9,7 @@ import { ReportButton } from "../components/common/ReportButton";
 import { ForumPostSkeleton } from "../components/forum/ForumPostSkeleton";
 import { UserLink } from "../components/common/UserLink";
 import type { ForumPostListItem } from "../types/forum";
+import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 const PAGE_SIZE = 12;
 const EMPTY_POSTS: ForumPostListItem[] = [];
@@ -26,24 +27,6 @@ type TabKey = (typeof TABS)[number]["key"];
 // fetch resolves faster, so the loading state never just flashes by —
 // tracked per loading transition (not just on mount) so it also applies
 // to refetches from changing sort/page/filters.
-function useMinDuration(isLoading: boolean, minMs = 2000) {
-  const [show, setShow] = useState(isLoading);
-  const startRef = useRef<number | null>(isLoading ? Date.now() : null);
-
-  useEffect(() => {
-    if (isLoading) {
-      startRef.current = Date.now();
-      setShow(true);
-      return;
-    }
-    const elapsed = startRef.current ? Date.now() - startRef.current : minMs;
-    const timer = setTimeout(() => setShow(false), Math.max(0, minMs - elapsed));
-    return () => clearTimeout(timer);
-  }, [isLoading, minMs]);
-
-  return show;
-}
-
 // A vertical vote box matching the reference design's compact "N / VOTES"
 // look, but still fully functional (unlike the static reference) — the
 // up/down controls reveal on hover/focus instead of sitting inline, so it
@@ -225,7 +208,7 @@ export default function Forum() {
     unanswered: activeTab === "unanswered" ? true : undefined,
     solved: activeTab === "solved" ? true : undefined,
   });
-  const showSkeleton = useMinDuration(isLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading, 2000);
   const createPost = useCreatePost();
   const allPosts = data?.data ?? EMPTY_POSTS;
   const total = data?.meta.total ?? 0;
