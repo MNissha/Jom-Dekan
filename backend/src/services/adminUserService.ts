@@ -38,7 +38,7 @@ export const adminUserService = {
       displayName: input.displayName,
       role: input.role,
     });
-    await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_USER_CREATED", targetType: "user", targetId: row.id, metadata: { role: input.role } });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_USER_CREATED", targetType: "user", targetId: row.id, metadata: { role: input.role } });
     return toApiAdminUserProfile(row);
   },
 
@@ -51,7 +51,7 @@ export const adminUserService = {
     const row = await adminUserModel.update(userId, input);
     if (!row) throw AppError.notFound("User not found.");
     if (userId !== adminId) await sessionModel.revokeAllForUser(userId);
-    await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_USER_UPDATED", targetType: "user", targetId: userId, metadata: { role: input.role } });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_USER_UPDATED", targetType: "user", targetId: userId, metadata: { role: input.role } });
     return toApiAdminUserProfile(row);
   },
 
@@ -60,7 +60,7 @@ export const adminUserService = {
     const row = await adminUserModel.updateStatus(userId, status);
     if (!row) throw AppError.notFound("User not found.");
     if (status === "SUSPENDED") await sessionModel.revokeAllForUser(userId);
-    await auditLogModel.record({ actorUserId: adminId, action: status === "SUSPENDED" ? "USER_SUSPENDED" : "USER_REACTIVATED", targetType: "user", targetId: userId });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: status === "SUSPENDED" ? "USER_SUSPENDED" : "USER_REACTIVATED", targetType: "user", targetId: userId });
     return toApiAdminUserProfile(row);
   },
 
@@ -107,6 +107,7 @@ export const adminUserService = {
 
     await auditLogModel.record({
       actorUserId,
+      actorRole: "ADMIN",
       action: "ACCOUNT_DISABLED",
       targetType: "user",
       targetId: userId,
@@ -146,6 +147,7 @@ export const adminUserService = {
 
     await auditLogModel.record({
       actorUserId,
+      actorRole: "ADMIN",
       action: "ACCOUNT_ENABLED",
       targetType: "user",
       targetId: userId,
@@ -184,6 +186,7 @@ export const adminUserService = {
 
     await auditLogModel.record({
       actorUserId,
+      actorRole: "ADMIN",
       action: "ACCOUNT_DELETED",
       targetType: "user",
       targetId: userId,

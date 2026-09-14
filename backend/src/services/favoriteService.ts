@@ -79,6 +79,7 @@ export const favoriteService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "FAVORITE_ADDED",
       targetType,
       targetId,
@@ -94,6 +95,7 @@ export const favoriteService = {
     if (removed) {
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FAVORITE_REMOVED",
         targetType,
         targetId,

@@ -13,6 +13,7 @@ import {
   LogOut,
   X,
   GraduationCap,
+  ScrollText,
 } from "lucide-react";
 import { useCurrentUser, useLogout } from "../../hooks/useAuth";
 import { useModeration } from "../../hooks/useModeration";
@@ -45,6 +46,7 @@ const adminToolLinks = [
     icon: ShieldCheck,
   },
   { to: "/admin/notifications", label: "Notifications", icon: Bell },
+  { to: "/admin/logs", label: "Logs", icon: ScrollText },
 ];
 
 // Reference sidebar: active row = translucent white fill + inset gold bar

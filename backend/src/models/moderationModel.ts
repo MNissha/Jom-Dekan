@@ -225,8 +225,8 @@ export class ModerationModel {
       }
       await client.query(
         `INSERT INTO audit_logs
-           (actor_user_id, action, target_type, target_id, reason, metadata)
-         VALUES ($1, $2, 'report', $3, $4, $5::jsonb)`,
+           (actor_user_id, actor_role, action, target_type, target_id, reason, metadata)
+         VALUES ($1, 'ADMIN', $2, 'report', $3, $4, $5::jsonb)`,
         [
           adminId,
           status,
@@ -286,8 +286,8 @@ export class ModerationModel {
 
       // Mandatory immutable audit log entry
       const auditQuery = `
-                INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, reason, metadata)
-                VALUES ($1, $2, 'resource', $3, $4, $5)
+                INSERT INTO audit_logs (actor_user_id, actor_role, action, target_type, target_id, reason, metadata)
+                VALUES ($1, 'ADMIN', $2, 'resource', $3, $4, $5)
             `;
 
       await client.query(auditQuery, [

@@ -50,6 +50,7 @@ export const forumService = {
       const post = await forumModel.posts.create(ctx.actorUserId, input);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_POST_CREATED",
         targetType: "forum_post",
         targetId: post.id,
@@ -108,6 +109,7 @@ export const forumService = {
       const updated = await forumModel.posts.setSolved(id, solved);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: solved ? "FORUM_POST_SOLVED" : "FORUM_POST_UNSOLVED",
         targetType: "forum_post",
         targetId: id,
@@ -128,6 +130,7 @@ export const forumService = {
       const updated = await forumModel.posts.update(id, input);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_POST_UPDATED",
         targetType: "forum_post",
         targetId: id,
@@ -144,6 +147,7 @@ export const forumService = {
       await forumModel.posts.softDelete(id);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_POST_DELETED",
         targetType: "forum_post",
         targetId: id,
@@ -167,6 +171,7 @@ export const forumService = {
       );
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_COMMENT_CREATED",
         targetType: "forum_comment",
         targetId: comment.id,
@@ -192,6 +197,7 @@ export const forumService = {
       const updated = await forumModel.comments.update(id, body);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_COMMENT_UPDATED",
         targetType: "forum_comment",
         targetId: id,
@@ -208,6 +214,7 @@ export const forumService = {
       await forumModel.comments.softDelete(id);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_COMMENT_DELETED",
         targetType: "forum_comment",
         targetId: id,
@@ -239,6 +246,7 @@ export const forumService = {
       );
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "FORUM_VOTE_CAST",
         targetType,
         targetId,
@@ -266,6 +274,7 @@ export const forumService = {
       if (removed) {
         await auditLogModel.record({
           actorUserId: ctx.actorUserId,
+          actorRole: ctx.actorRole,
           action: "FORUM_VOTE_REMOVED",
           targetType,
           targetId,

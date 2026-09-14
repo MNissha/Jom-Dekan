@@ -106,6 +106,7 @@ export const authService = {
 
     await auditLogModel.record({
       actorUserId: user.id,
+      actorRole: user.role,
       action: 'USER_REGISTERED',
       targetType: 'user',
       targetId: user.id,
@@ -162,6 +163,7 @@ export const authService = {
 
     await auditLogModel.record({
       actorUserId: user.id,
+      actorRole: user.role,
       action: 'EMAIL_VERIFIED',
       targetType: 'user',
       targetId: user.id,
@@ -201,6 +203,7 @@ export const authService = {
           await userModel.setLockout(user.id, lockoutUntil);
           await auditLogModel.record({
             actorUserId: user.id,
+            actorRole: user.role,
             action: 'ACCOUNT_LOCKED',
             targetType: 'user',
             targetId: user.id,
@@ -235,6 +238,7 @@ export const authService = {
 
     await auditLogModel.record({
       actorUserId: user.id,
+      actorRole: user.role,
       action: 'USER_LOGIN',
       targetType: 'user',
       targetId: user.id,
@@ -337,6 +341,7 @@ export const authService = {
 
       await auditLogModel.record({
         actorUserId: user.id,
+        actorRole: user.role,
         action: 'PASSWORD_RESET_REQUESTED',
         targetType: 'user',
         targetId: user.id,
@@ -365,6 +370,7 @@ export const authService = {
 
     await auditLogModel.record({
       actorUserId: user.id,
+      actorRole: user.role,
       action: 'PASSWORD_RESET_COMPLETED',
       targetType: 'user',
       targetId: user.id,

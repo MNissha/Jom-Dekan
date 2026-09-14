@@ -3,6 +3,7 @@ import {
   ModerationModel,
   type ModerationDecision,
 } from "../models/moderationModel";
+import { auditLogModel } from "../models/auditLogModel";
 import { emailService } from "../services/emailService";
 import { logger } from "../utils/logger";
 
@@ -19,7 +20,16 @@ export class ModerationService {
     adminId: string,
     input: { title: string; message: string; sendToAll: boolean; userIds: string[] },
   ) {
-    return await ModerationModel.sendAnnouncement(adminId, input);
+    const recipientCount = await ModerationModel.sendAnnouncement(adminId, input);
+    await auditLogModel.record({
+      actorUserId: adminId,
+      actorRole: "ADMIN",
+      action: "ADMIN_ANNOUNCEMENT_SENT",
+      targetType: "notification",
+      reason: input.title,
+      metadata: { recipientCount, sendToAll: input.sendToAll },
+    });
+    return recipientCount;
   }
 
   static async getQueue() {
