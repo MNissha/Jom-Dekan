@@ -12,6 +12,7 @@ export interface UserRow {
   deleted_at: Date | null;
   failed_login_attempts: number;
   lockout_until: Date | null;
+  suspended_until: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -130,6 +131,53 @@ export const userModel = {
   /** Called on successful login, or lazily when a past lockout has expired. */
   async resetLoginAttempts(id: string): Promise<void> {
     await pool.query(`UPDATE users SET failed_login_attempts = 0, lockout_until = NULL WHERE id = $1`, [id]);
+  },
+
+  /** Admin-initiated disable — indefinite when `until` is null, otherwise lazily lifted by reactivateExpiredSuspensions(). */
+  async suspend(id: string, until: Date | null): Promise<UserRow | null> {
+    const result = await pool.query<UserRow>(
+      `UPDATE users SET status = 'SUSPENDED', suspended_until = $2
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING *`,
+      [id, until],
+    );
+    return result.rows[0] ?? null;
+  },
+
+  /** Admin-initiated re-enable, or the lazy reactivation path's single-row equivalent. */
+  async reactivate(id: string): Promise<UserRow | null> {
+    const result = await pool.query<UserRow>(
+      `UPDATE users SET status = 'ACTIVE', suspended_until = NULL
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING *`,
+      [id],
+    );
+    return result.rows[0] ?? null;
+  },
+
+  /**
+   * Same lazy-expiry pattern as the lockout_until check in
+   * authService.login — rather than a cron job this codebase doesn't
+   * have, a disable-until timestamp is swept back to ACTIVE the next
+   * time it's touched by a login/refresh attempt or the admin user
+   * list/profile endpoints.
+   */
+  async reactivateExpiredSuspensions(): Promise<void> {
+    await pool.query(
+      `UPDATE users SET status = 'ACTIVE', suspended_until = NULL
+       WHERE status = 'SUSPENDED' AND suspended_until IS NOT NULL AND suspended_until <= now()`,
+    );
+  },
+
+  /** Soft delete — same convention as resources/forum_posts/forum_comments. */
+  async softDelete(id: string): Promise<UserRow | null> {
+    const result = await pool.query<UserRow>(
+      `UPDATE users SET deleted_at = now(), status = 'DEACTIVATED'
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING *`,
+      [id],
+    );
+    return result.rows[0] ?? null;
   },
 };
 

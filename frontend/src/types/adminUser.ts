@@ -4,6 +4,7 @@ export interface AdminUserListItem {
   displayName: string;
   role: "USER" | "ADMIN";
   status: string;
+  suspendedUntil: string | null;
   createdAt: string;
   postCount: number;
   commentCount: number;
@@ -16,6 +17,7 @@ export interface AdminUserProfile {
   displayName: string;
   role: "USER" | "ADMIN";
   status: string;
+  suspendedUntil: string | null;
   createdAt: string;
 }
 

@@ -107,6 +107,22 @@ export const resourceModel = {
     return result.rows[0] ?? null;
   },
 
+  // Same shape as list()'s owner_name join, but for the single-resource
+  // detail fetch (ResourceDetail's "uploaded by" byline), which findById
+  // above doesn't carry since it also backs the internal ownership
+  // checks that don't need it.
+  async findByIdWithOwner(id: string): Promise<ResourceListRow | null> {
+    const result = await pool.query<ResourceListRow>(
+      `SELECT r.*, NULL::uuid AS ready_file_id, NULL::text AS ready_file_mime_type,
+              up.display_name AS owner_name
+       FROM resources r
+       LEFT JOIN user_profiles up ON up.user_id = r.owner_id
+       WHERE r.id = $1`,
+      [id],
+    );
+    return result.rows[0] ?? null;
+  },
+
   async update(
     id: string,
     params: {

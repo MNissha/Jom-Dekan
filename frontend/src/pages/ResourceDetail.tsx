@@ -16,7 +16,9 @@ import {
 } from "../hooks/useResources";
 import { useCurrentUser } from "../hooks/useAuth";
 import { FavoriteButton } from "../components/common/FavoriteButton";
+import { ReportButton } from "../components/common/ReportButton";
 import { PdfThumbnail } from "../components/common/PdfThumbnail";
+import { UserLink } from "../components/common/UserLink";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 import {
@@ -229,6 +231,17 @@ export default function ResourceDetail() {
                 {resource.status}
               </span>
             </div>
+            <p className="mt-1 text-xs font-semibold text-slate-400">
+              Uploaded by{" "}
+              {resource.ownerName ? (
+                <UserLink userId={resource.ownerId} name={resource.ownerName} className="font-semibold text-slate-500 hover:text-primary-700 hover:underline" />
+              ) : (
+                "A JomDekan student"
+              )}
+              {" · "}
+              {new Date(resource.createdAt).toLocaleDateString()}
+            </p>
+
             {resource.description && (
               <p className="mt-2 whitespace-pre-wrap text-slate-600">
                 {resource.description}
@@ -251,6 +264,7 @@ export default function ResourceDetail() {
 
             <div className="mt-6 flex flex-wrap gap-2">
               <FavoriteButton targetType="resource" targetId={resource.id} variant="pill" />
+              <ReportButton targetType="resource" targetId={resource.id} />
               {readyFile && (
                 <button
                   type="button"
@@ -347,7 +361,7 @@ export default function ResourceDetail() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-800">
-                      {comment.authorName}
+                      <UserLink userId={comment.authorId} name={comment.authorName} className="font-semibold text-slate-800 hover:text-primary-700 hover:underline" />
                     </p>
                     <p className="text-xs text-slate-400">
                       {new Date(comment.createdAt).toLocaleDateString()}

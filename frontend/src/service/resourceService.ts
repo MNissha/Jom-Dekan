@@ -162,9 +162,9 @@ export const resourceService = {
 
   getById: async (
     id: string,
-  ): Promise<{ resource: Resource; files: ResourceFile[] }> => {
+  ): Promise<{ resource: ResourceListItem; files: ResourceFile[] }> => {
     const res = await axiosInstance.get<{
-      data: { resource: Resource; files: ResourceFile[] };
+      data: { resource: ResourceListItem; files: ResourceFile[] };
     }>(`/resources/${id}`);
     return res.data.data;
   },

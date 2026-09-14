@@ -15,6 +15,7 @@ export interface ForumPostListRow extends ForumPostRow {
   vote_score: string;
   my_vote: number;
   comment_count: string;
+  author_name: string;
 }
 
 export interface ForumCommentRow {
@@ -30,6 +31,7 @@ export interface ForumCommentRow {
 export interface ForumCommentListRow extends ForumCommentRow {
   vote_score: string;
   my_vote: number;
+  author_name: string;
 }
 
 export type VoteTargetType = "forum_post" | "forum_comment";
@@ -97,10 +99,12 @@ export const forumModel = {
     ): Promise<ForumPostListRow | null> {
       const result = await pool.query<ForumPostListRow>(
         `SELECT p.*,
-                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
+                COALESCE(up.display_name, 'Student') AS author_name,
+                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $2), 0) AS my_vote,
                 (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
          FROM forum_posts p
+         LEFT JOIN user_profiles up ON up.user_id = p.author_id
          WHERE p.id = $1`,
         [id, currentUserId],
       );
@@ -170,10 +174,12 @@ export const forumModel = {
       ];
       const rowsResult = await pool.query<ForumPostListRow>(
         `SELECT p.*,
-                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND value = 1) AS vote_score,
+                COALESCE(up.display_name, 'Student') AS author_name,
+                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_post' AND target_id = p.id), 0) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_post' AND target_id = p.id AND user_id = $${myVoteParamIndex}), 0) AS my_vote,
                 (SELECT COUNT(*) FROM forum_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comment_count
          FROM forum_posts p
+         LEFT JOIN user_profiles up ON up.user_id = p.author_id
          ${whereClause}
          ORDER BY ${POST_SORT_BY_SQL[filters.sortBy]}
          LIMIT $${myVoteParamIndex + 1} OFFSET $${myVoteParamIndex + 2}`,
@@ -232,9 +238,11 @@ export const forumModel = {
     ): Promise<ForumCommentListRow[]> {
       const result = await pool.query<ForumCommentListRow>(
         `SELECT c.*,
-                (SELECT COUNT(*) FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id AND value = 1) AS vote_score,
+                COALESCE(up.display_name, 'Student') AS author_name,
+                COALESCE((SELECT SUM(value) FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id), 0) AS vote_score,
                 COALESCE((SELECT value FROM votes WHERE target_type = 'forum_comment' AND target_id = c.id AND user_id = $2), 0) AS my_vote
          FROM forum_comments c
+         LEFT JOIN user_profiles up ON up.user_id = c.author_id
          WHERE c.post_id = $1 AND c.deleted_at IS NULL AND c.moderation_status = 'visible'
          ORDER BY c.created_at ASC`,
         [postId, currentUserId],
@@ -290,6 +298,7 @@ export function toApiForumPost(row: ForumPostRow) {
 export function toApiForumPostListItem(row: ForumPostListRow) {
   return {
     ...toApiForumPost(row),
+    authorName: row.author_name,
     voteScore: Number(row.vote_score),
     myVote: Number(row.my_vote),
     commentCount: Number(row.comment_count),
@@ -310,6 +319,7 @@ export function toApiForumComment(row: ForumCommentRow) {
 export function toApiForumCommentListItem(row: ForumCommentListRow) {
   return {
     ...toApiForumComment(row),
+    authorName: row.author_name,
     voteScore: Number(row.vote_score),
     myVote: Number(row.my_vote),
   };

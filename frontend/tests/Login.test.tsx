@@ -27,6 +27,6 @@ describe('Login page', () => {
   it('renders email and password fields with accessible labels', () => {
     renderWithProviders(<Login />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i, { selector: 'input' })).toBeInTheDocument();
   });
 });

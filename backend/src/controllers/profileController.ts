@@ -38,4 +38,13 @@ export const profileController = {
       next(err);
     }
   },
+
+  async getPublicProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await profileService.getPublicProfile(req.params.id);
+      res.status(200).json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
 };

@@ -16,6 +16,19 @@ export interface Profile {
   createdAt: string;
 }
 
+// The public-facing view of another user's profile — no email/phone,
+// just what's safe to show behind a clickable username.
+export interface PublicProfile {
+  id: string;
+  displayName: string;
+  photoPath: string | null;
+  academicRole: 'STUDENT' | 'TUTOR';
+  university: { id: string; name: string | null } | null;
+  fieldOfStudy: string | null;
+  studyLevel: string | null;
+  createdAt: string;
+}
+
 export interface ProfileStats {
   resourceCount: number;
   forumPostCount: number;

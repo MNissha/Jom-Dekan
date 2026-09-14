@@ -44,10 +44,6 @@ export const adminUserService = {
     return res.data.data;
   },
 
-  async remove(userId: string): Promise<void> {
-    await axiosInstance.delete(`/admin/users/${userId}`);
-  },
-
   async list(params: ListParams): Promise<Paginated<AdminUserListItem>> {
     const res = await axiosInstance.get<Paginated<AdminUserListItem>>(
       "/admin/users",
@@ -94,6 +90,28 @@ export const adminUserService = {
       { params },
     );
     return res.data;
+  },
+
+  async disable(
+    userId: string,
+    data: { until?: string; reason: string },
+  ): Promise<AdminUserProfile> {
+    const res = await axiosInstance.post<{ data: AdminUserProfile }>(
+      `/admin/users/${userId}/disable`,
+      data,
+    );
+    return res.data.data;
+  },
+
+  async enable(userId: string): Promise<AdminUserProfile> {
+    const res = await axiosInstance.post<{ data: AdminUserProfile }>(
+      `/admin/users/${userId}/enable`,
+    );
+    return res.data.data;
+  },
+
+  async remove(userId: string, data: { reason: string }): Promise<void> {
+    await axiosInstance.delete(`/admin/users/${userId}`, { data });
   },
 
   async getOpportunities(userId: string, listingType: "TUTORING" | "PROJECT_MENTORSHIP", params: SubListParams): Promise<Paginated<AdminUserOpportunity>> {

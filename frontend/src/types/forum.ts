@@ -9,6 +9,7 @@ export interface ForumPost {
 }
 
 export interface ForumPostListItem extends ForumPost {
+  authorName: string;
   voteScore: number;
   myVote: number;
   commentCount: number;
@@ -24,6 +25,7 @@ export interface ForumComment {
 }
 
 export interface ForumCommentListItem extends ForumComment {
+  authorName: string;
   voteScore: number;
   myVote: number;
 }

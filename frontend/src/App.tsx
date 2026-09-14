@@ -10,6 +10,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import Dashboard from "./pages/Dashboard";
 import Resources from "./pages/Resources";
 import UploadResource from "./pages/UploadResource";
@@ -217,6 +218,18 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Profile />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ErrorBoundary>
+                  <UserProfile />
+                </ErrorBoundary>
               </DashboardLayout>
             </ProtectedRoute>
           }

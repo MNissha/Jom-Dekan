@@ -1,6 +1,6 @@
 import { pool } from "../config/config/db";
 
-export type ReportTargetType = "resource" | "forum_post" | "forum_comment" | "opportunity";
+export type ReportTargetType = "resource" | "forum_post" | "forum_comment" | "opportunity" | "user";
 export type ReportCategory =
   | "INAPPROPRIATE_CONTENT"
   | "COPYRIGHT_VIOLATION"

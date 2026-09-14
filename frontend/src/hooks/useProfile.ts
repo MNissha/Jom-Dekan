@@ -12,6 +12,14 @@ export function useMyProfile() {
   });
 }
 
+export function useUserProfile(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['profile', userId],
+    queryFn: () => profileService.getById(userId!),
+    enabled: Boolean(userId),
+  });
+}
+
 export function useMyStats() {
   const currentUser = useCurrentUser();
   return useQuery({

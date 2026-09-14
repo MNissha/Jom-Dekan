@@ -23,13 +23,6 @@ export const adminUserController = {
     } catch (err) { next(err); }
   },
 
-  async remove(req: Request, res: Response, next: NextFunction) {
-    try {
-      await adminUserService.remove(req.params.id, req.user!.id);
-      res.status(204).send();
-    } catch (err) { next(err); }
-  },
-
   async list(req: Request, res: Response, next: NextFunction) {
     try {
       const { data, meta } = await adminUserService.list(
@@ -85,6 +78,49 @@ export const adminUserController = {
         req.query as unknown as { page: number; pageSize: number },
       );
       res.status(200).json({ data, meta });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async disable(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      const data = await adminUserService.disable(
+        req.user!.id,
+        id,
+        req.body as { until?: string; reason: string },
+        { requestId: req.requestId, ipAddress: req.ip },
+      );
+      res.status(200).json({ message: "Account disabled.", data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async enable(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      const data = await adminUserService.enable(req.user!.id, id, {
+        requestId: req.requestId,
+        ipAddress: req.ip,
+      });
+      res.status(200).json({ message: "Account re-enabled.", data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async remove(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      await adminUserService.remove(
+        req.user!.id,
+        id,
+        req.body as { reason: string },
+        { requestId: req.requestId, ipAddress: req.ip },
+      );
+      res.status(200).json({ message: "Account deleted." });
     } catch (err) {
       next(err);
     }

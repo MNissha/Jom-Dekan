@@ -2,10 +2,35 @@ import { reportModel, toApiReport, type ReportCategory, type ReportTargetType } 
 import { resourceService } from "./resourceService";
 import { forumModel } from "../models/forumModel";
 import { OpportunityModel } from "../models/opportunityModel";
+import { userModel } from "../models/userModel";
 import { emailService } from "./emailService";
 import { auditLogModel } from "../models/auditLogModel";
 import { AppError } from "../types/errors";
 import { logger } from "../utils/logger";
+import { env } from "../config/config/env";
+
+// Mirrors the frontend's own target-link logic (AdminModerationQueue.tsx)
+// so the admin notification email can deep-link straight to the reported
+// page, not just name it.
+function targetUrl(targetType: ReportTargetType, targetId: string, parentId?: string): string | null {
+  const base = env.corsOrigins[0];
+  switch (targetType) {
+    case "resource":
+      return `${base}/resources/${targetId}`;
+    case "forum_post":
+      return `${base}/forum/${targetId}`;
+    case "forum_comment":
+      return parentId ? `${base}/forum/${parentId}` : null;
+    case "opportunity":
+      return `${base}/marketplace`;
+    case "user":
+      // Only admins ever read this email, so link straight to the
+      // admin-only user detail page rather than the public profile.
+      return `${base}/admin/users/${targetId}`;
+    default:
+      return null;
+  }
+}
 
 interface ActorContext {
   actorUserId: string;
@@ -26,6 +51,11 @@ async function assertTargetExists(targetType: ReportTargetType, targetId: string
     const post = await forumModel.posts.findById(targetId);
     if (!post || post.deleted_at) throw AppError.notFound("Post not found.");
     return undefined;
+  }
+  if (targetType === "user") {
+    const target = await userModel.findById(targetId);
+    if (!target) throw AppError.notFound("User not found.");
+    return;
   }
   const opportunity = await OpportunityModel.findById(targetId);
   if (!opportunity) throw AppError.notFound("Listing not found.");
@@ -54,6 +84,9 @@ export const reportService = {
       if (comment.post_id !== input.parentId) throw AppError.badRequest("Comment does not belong to this discussion.");
       if (comment.author_id === ctx.actorUserId) throw AppError.badRequest("You cannot report your own comment.");
     } else {
+      if (input.targetType === "user" && input.targetId === ctx.actorUserId) {
+        throw AppError.badRequest("You cannot report your own account.");
+      }
       listingType = await assertTargetExists(input.targetType, input.targetId, ctx);
     }
 
@@ -99,6 +132,8 @@ export const reportService = {
     // Best-effort: a report is already recorded and admins already have
     // an in-app notification even if email delivery fails, so this
     // never fails the request itself.
+    const reportedUrl = targetUrl(input.targetType, input.targetId, input.parentId);
+    const queueUrl = `${env.corsOrigins[0]}/admin/moderation`;
     await Promise.all(
       admins.map((admin) =>
         emailService
@@ -107,12 +142,17 @@ export const reportService = {
             subject: `New JomDekan report: ${input.category.replace(/_/g, " ").toLowerCase()}`,
             text: [
               `A new report was filed on a ${input.targetType.replace("_", " ")}.`,
+              `Report id: ${report.id}`,
               `Category: ${input.category}`,
+              `Submitted: ${report.created_at.toLocaleString()}`,
               `Reported by: ${input.reporterName} (${input.reporterEmail}, ${input.reporterPhone})`,
               "",
+              "Description:",
               input.description,
               "",
-              `Report id: ${report.id}`,
+              ...(input.evidence ? ["A screenshot was attached — view it in the moderation queue.", ""] : []),
+              ...(reportedUrl ? [`Reported page: ${reportedUrl}`] : []),
+              `Review this report: ${queueUrl}`,
             ].join("\n"),
           })
           .catch((err) => logger.error({ err, adminId: admin.id }, "Failed to email admin about new report")),

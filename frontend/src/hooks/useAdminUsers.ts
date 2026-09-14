@@ -7,9 +7,7 @@ export function useAdminUserMutations() {
   const refreshUsers = () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
   const createUser = useMutation({ mutationFn: (input: CreateAdminUserInput) => adminUserService.create(input), onSuccess: refreshUsers });
   const updateUser = useMutation({ mutationFn: ({ id, input }: { id: string; input: UpdateAdminUserInput }) => adminUserService.update(id, input), onSuccess: refreshUsers });
-  const updateStatus = useMutation({ mutationFn: ({ id, status }: { id: string; status: "ACTIVE" | "SUSPENDED" }) => adminUserService.updateStatus(id, status), onSuccess: refreshUsers });
-  const removeUser = useMutation({ mutationFn: (id: string) => adminUserService.remove(id), onSuccess: refreshUsers });
-  return { createUser, updateUser, updateStatus, removeUser };
+  return { createUser, updateUser };
 }
 
 export function useAdminUsersList(params: {
@@ -61,6 +59,41 @@ export function useAdminUserApplications(
     queryKey: ["admin", "users", "applications", userId, params],
     queryFn: () => adminUserService.getApplications(userId!, params),
     enabled: Boolean(userId),
+  });
+}
+
+export function useDisableUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, until, reason }: { userId: string; until?: string; reason: string }) =>
+      adminUserService.disable(userId, { until, reason }),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "profile", userId] });
+    },
+  });
+}
+
+export function useEnableUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => adminUserService.enable(userId),
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "profile", userId] });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      adminUserService.remove(userId, { reason }),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users", "profile", userId] });
+    },
   });
 }
 

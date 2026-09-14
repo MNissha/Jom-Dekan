@@ -10,7 +10,7 @@ import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { moderationService } from "../../service/moderationService";
 import { Link, useSearchParams } from "react-router-dom";
 
-type ReportSection = "resources" | "discussions" | "tutoring" | "freelance";
+type ReportSection = "resources" | "discussions" | "tutoring" | "freelance" | "users";
 type DiscussionFilter = "all" | "threads" | "comments";
 type Decision = "approve" | "reject";
 
@@ -40,8 +40,29 @@ const templates: ResponseTemplate[] = [
 function reportSection(item: ModerationQueueItem): ReportSection | null {
   if (item.target_type === "resource") return "resources";
   if (item.target_type === "forum_post" || item.target_type === "forum_comment") return "discussions";
+  if (item.target_type === "user") return "users";
   if (item.target_type !== "opportunity") return null;
   return item.listing_type === "TUTORING" ? "tutoring" : "freelance";
+}
+
+// Where the reported title should link to. forum_comment reports link to
+// the parent thread (a comment has no page of its own); opportunities have
+// no per-listing route yet, so they link to the right marketplace tab.
+function targetLink(item: ModerationQueueItem): string | null {
+  switch (item.target_type) {
+    case "resource":
+      return `/resources/${item.entity_id}`;
+    case "forum_post":
+      return `/forum/${item.entity_id}`;
+    case "forum_comment":
+      return item.parent_id ? `/forum/${item.parent_id}` : null;
+    case "opportunity":
+      return item.listing_type === "TUTORING" ? "/marketplace?type=TUTORING" : "/marketplace";
+    case "user":
+      return `/admin/users/${item.entity_id}`;
+    default:
+      return null;
+  }
 }
 
 const readable = (value: string | null) =>
@@ -55,7 +76,8 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
   const [section, setSection] = useState<ReportSection>(
     requestedSection === "discussions" ||
       requestedSection === "tutoring" ||
-      requestedSection === "freelance"
+      requestedSection === "freelance" ||
+      requestedSection === "users"
       ? requestedSection
       : "resources",
   );
@@ -98,7 +120,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
           if (itemSection) counts[itemSection] += 1;
           return counts;
         },
-        { resources: 0, discussions: 0, tutoring: 0, freelance: 0 },
+        { resources: 0, discussions: 0, tutoring: 0, freelance: 0, users: 0 },
       ),
     [queue],
   );
@@ -217,6 +239,8 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
             ? "Discussion Thread"
           : selected.target_type === "forum_comment"
             ? "Discussion Comment"
+          : selected.target_type === "user"
+            ? "User Account"
           : selected.listing_type === "TUTORING"
             ? "Tutoring Listing"
             : "Freelance Opportunity";
@@ -263,6 +287,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
             ["discussions", "Discussions"],
             ["tutoring", "Tutoring"],
             ["freelance", "Freelance opportunities"],
+            ["users", "Users"],
           ] as const).map(([key, text]) => (
               <button key={key} type="button" onClick={() => { setSection(key); setSearchParams({ section: key }); }} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition motion-safe:duration-150 ${section === key ? "bg-[#4338CA] text-white shadow-sm" : "text-slate-600 hover:-translate-y-0.5 hover:bg-[#F4F3FB] hover:text-[#4338CA]"}`}>
               {text}
@@ -294,7 +319,17 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               <tbody>
                 {visibleReports.map((item) => (
                   <tr key={item.id} className="border-b bg-red-50/40 text-sm transition motion-safe:duration-150 last:border-0 hover:bg-red-50/80">
-                    <td className="p-4 font-medium text-stone-800"><span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" aria-label="Pending response" />{item.target_title ?? "Unavailable item"}<span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase text-red-700">Pending</span></td>
+                    <td className="p-4 font-medium text-stone-800">
+                      <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" aria-label="Pending response" />
+                      {targetLink(item) ? (
+                        <Link to={targetLink(item)!} target="_blank" rel="noreferrer" className="hover:underline" title="Open the reported page">
+                          {item.target_title ?? "Unavailable item"}
+                        </Link>
+                      ) : (
+                        item.target_title ?? "Unavailable item"
+                      )}
+                      <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase text-red-700">Pending</span>
+                    </td>
                     {section === "discussions" && <td className="p-4"><span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase text-violet-700">{item.target_type === "forum_comment" ? "Comment" : "Thread"}</span></td>}
                     <td className="p-4 capitalize text-stone-600">{readable(item.category)}</td>
                     <td className="max-w-md p-4 text-stone-600"><p className="line-clamp-2">{item.details}</p></td>
@@ -321,7 +356,16 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
               <div className="rounded-2xl border border-[#ECEBF7] bg-[#F8F8FD] p-4">
-                <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#4338CA]" /><h3 className="font-bold text-slate-900">{selected.target_title ?? "Reported item"}</h3></div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[#4338CA]" />
+                  {targetLink(selected) ? (
+                    <Link to={targetLink(selected)!} target="_blank" rel="noreferrer" className="font-bold text-slate-900 hover:underline" title="Open the reported page">
+                      {selected.target_title ?? "Reported item"}
+                    </Link>
+                  ) : (
+                    <h3 className="font-bold text-slate-900">{selected.target_title ?? "Reported item"}</h3>
+                  )}
+                </div>
                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{readable(selected.category)}</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.details}</p>
               </div>
@@ -408,7 +452,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                 </div>
                 <label className="mt-3 block text-sm font-semibold text-slate-700">Standard response
                   <select value={selectedTemplate.decision} onChange={(event) => chooseTemplate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#DDDCEC] bg-white px-3 py-2.5 outline-none transition focus:border-[#4338CA] focus:ring-2 focus:ring-[#4338CA]/15">
-                    {templates.filter((template) => template.outcome === decision && (selected.target_type !== "forum_comment" || template.decision !== "LISTING_SUSPENSION")).map((template) => <option key={template.decision} value={template.decision}>{selected.target_type === "forum_comment" && template.decision === "CONTENT_REMOVAL" ? "Remove Comment" : selected.target_type === "forum_comment" && template.decision === "CONTENT_RESTRICTION" ? "Restrict Comment" : template.label}</option>)}
+                    {templates.filter((template) => template.outcome === decision && (selected.target_type !== "forum_comment" || template.decision !== "LISTING_SUSPENSION") && (selected.target_type !== "user" || template.decision !== "LISTING_SUSPENSION")).map((template) => <option key={template.decision} value={template.decision}>{selected.target_type === "forum_comment" && template.decision === "CONTENT_REMOVAL" ? "Remove Comment" : selected.target_type === "forum_comment" && template.decision === "CONTENT_RESTRICTION" ? "Restrict Comment" : template.label}</option>)}
                   </select>
                 </label>
                 <label className="mt-3 block text-sm font-semibold text-slate-700">Response title

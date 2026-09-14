@@ -1,9 +1,14 @@
 import axiosInstance from '../api/axiosInstance';
-import type { ActivityItem, Profile, ProfileStats, UpdateProfileInput } from '../types/profile';
+import type { ActivityItem, Profile, ProfileStats, PublicProfile, UpdateProfileInput } from '../types/profile';
 
 export const profileService = {
   getMe: async (): Promise<Profile> => {
     const response = await axiosInstance.get<{ data: Profile }>('/users/me');
+    return response.data.data;
+  },
+
+  getById: async (id: string): Promise<PublicProfile> => {
+    const response = await axiosInstance.get<{ data: PublicProfile }>(`/users/${id}`);
     return response.data.data;
   },
 

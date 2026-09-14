@@ -5,6 +5,7 @@ import { useOpportunities } from "../../hooks/useOpportunities";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
+import { UserLink } from "../common/UserLink";
 import { MarketplaceCardSkeleton } from "./MarketplaceCardSkeleton";
 import type { Opportunity, OpportunityMode } from "../../types/opportunity";
 import { useMinimumLoading } from "../../hooks/useMinimumLoading";
@@ -406,7 +407,13 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                           {initials}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate text-[15.5px] font-bold text-slate-900">{opp.owner_name || "A JomDekan student"}</p>
+                          <p className="truncate text-[15.5px] font-bold text-slate-900">
+                            {opp.owner_name ? (
+                              <UserLink userId={opp.owner_id} name={opp.owner_name} className="font-bold text-slate-900 hover:text-primary-700 hover:underline" />
+                            ) : (
+                              "A JomDekan student"
+                            )}
+                          </p>
                           {opp.subject_name && <p className="truncate text-xs font-semibold text-primary-600">{opp.subject_name}</p>}
                         </div>
                       </div>
@@ -755,7 +762,13 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                     {initials}
                   </span>
                   <div className="min-w-0">
-                    <h2 className="truncate text-lg font-extrabold">{detailOpp.owner_name || "A JomDekan student"}</h2>
+                    <h2 className="truncate text-lg font-extrabold">
+                      {detailOpp.owner_name ? (
+                        <UserLink userId={detailOpp.owner_id} name={detailOpp.owner_name} className="text-white hover:underline" />
+                      ) : (
+                        "A JomDekan student"
+                      )}
+                    </h2>
                     {detailOpp.subject_name && <p className="truncate text-sm font-medium text-[#C6C2EC]">{detailOpp.subject_name}</p>}
                   </div>
                 </div>
