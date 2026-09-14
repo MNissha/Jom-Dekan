@@ -30,6 +30,11 @@ const links = [
 const adminToolLinks = [
   { to: "/admin/users", label: "Users", icon: Users },
   {
+    to: "/admin/tutoring",
+    label: "Tutoring",
+    icon: GraduationCap,
+  },
+  {
     to: "/admin/opportunities",
     label: "Freelance Listings",
     icon: Briefcase,

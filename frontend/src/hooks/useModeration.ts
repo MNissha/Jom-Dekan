@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { moderationService } from "../service/moderationService";
 import { useCurrentUser } from "./useAuth";
-import type { ReportResolutionPayload } from "../types/moderation";
+import type { Notification, ReportResolutionPayload } from "../types/moderation";
 
 export function useModeration() {
   const queryClient = useQueryClient();
@@ -20,8 +20,21 @@ export function useModeration() {
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => moderationService.markNotificationAsRead(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    onMutate: (id: string) => {
+      const previous = queryClient.getQueryData<Notification[]>(["notifications"]);
+      queryClient.setQueryData<Notification[]>(["notifications"], (current = []) =>
+        current.map((notification) =>
+          notification.id === id
+            ? { ...notification, read_at: notification.read_at ?? new Date().toISOString() }
+            : notification,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["notifications"], context.previous);
+      }
     },
   });
 

@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import axios from "axios";
-import { UserPlus, X, Check, Wifi, MapPin, Shuffle, CalendarClock, Phone, Mail, Link as LinkIcon, GraduationCap } from "lucide-react";
+import { UserPlus, X, Check, Wifi, MapPin, Shuffle, CalendarClock, Phone, Mail, Link as LinkIcon, GraduationCap, ClipboardPen, ShieldCheck, Rocket, MessagesSquare, Info } from "lucide-react";
 import { useOpportunities } from "../../hooks/useOpportunities";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
 import { MarketplaceCardSkeleton } from "./MarketplaceCardSkeleton";
 import type { Opportunity, OpportunityMode } from "../../types/opportunity";
+import { useMinimumLoading } from "../../hooks/useMinimumLoading";
 
 // The tutor application form (below) writes subjects, rate, contact info
 // etc. into one free-text `description` in a fixed layout — there's no
@@ -79,21 +80,33 @@ const AVAILABILITY_OPTIONS = ["Weekday evenings", "Weekends", "Before 12 PM", "A
 const HOW_IT_WORKS = [
   {
     n: "1",
+    icon: ClipboardPen,
+    accent: "from-violet-500 to-indigo-600",
+    wash: "bg-violet-50",
     title: "Apply with your details",
     body: "Subjects, rate, contact details, qualifications and availability — about five minutes.",
   },
   {
     n: "2",
+    icon: ShieldCheck,
+    accent: "from-amber-400 to-orange-500",
+    wash: "bg-amber-50",
     title: "Accept the tutor terms",
     body: "Including that JomDekan only connects you with students and isn't responsible for what happens in a session.",
   },
   {
     n: "3",
+    icon: Rocket,
+    accent: "from-teal-400 to-emerald-600",
+    wash: "bg-teal-50",
     title: "Your listing goes live",
     body: "It appears here for other students to find. Admins can still close a listing that breaks the academic-integrity policy.",
   },
   {
     n: "4",
+    icon: MessagesSquare,
+    accent: "from-rose-400 to-pink-600",
+    wash: "bg-rose-50",
     title: "Students reach out to you",
     body: "You arrange the schedule and payment directly with each other — JomDekan doesn't process payments or guarantee sessions.",
   },
@@ -155,8 +168,9 @@ const EMPTY_FORM: ApplyForm = {
   pitch: "",
 };
 
-export function TutoringView() {
+export function TutoringView({ initialDetailId = null }: { initialDetailId?: string | null }) {
   const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
+  const showSkeleton = useMinimumLoading(isLoading, 2000);
 
   const tutors = useMemo(
     () => (opportunities as Opportunity[]).filter((o) => o.listing_type === "TUTORING" && o.status === "active"),
@@ -181,7 +195,7 @@ export function TutoringView() {
 
   const [selectedOpp, setSelectedOpp] = useState<string | null>(null);
   const [coverMessage, setCoverMessage] = useState("");
-  const [detailOppId, setDetailOppId] = useState<string | null>(null);
+  const [detailOppId, setDetailOppId] = useState<string | null>(initialDetailId);
   const detailOpp = tutors.find((t) => t.id === detailOppId) ?? null;
 
   function updateForm<K extends keyof ApplyForm>(key: K, value: ApplyForm[K]) {
@@ -303,43 +317,46 @@ export function TutoringView() {
       </div>
 
       {howOpen && (
-        <section className="flex flex-col gap-4 rounded-[22px] border border-[#ECEBF7] bg-white p-5 motion-safe:animate-[fadeIn_150ms_ease-out]">
+        <section className="relative flex flex-col gap-5 overflow-hidden rounded-[24px] border border-[#DDD9F1] bg-white p-5 shadow-[0_14px_40px_rgba(67,56,202,0.08)] motion-safe:animate-[modalRise_240ms_ease-out] sm:p-6">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-violet-200/35 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-amber-100/50 blur-3xl" />
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-[16.5px] font-bold text-slate-900">How tutoring on JomDekan works</h2>
-              <p className="mt-0.5 text-sm text-slate-500">Four steps from application to your first student.</p>
+            <div className="relative">
+              <h2 className="text-xl font-bold text-slate-900">How tutoring on JomDekan works</h2>
+              <p className="mt-1 text-sm text-slate-500">Four steps from application to your first student.</p>
             </div>
             <button
               type="button"
               onClick={() => setHowOpen(false)}
               aria-label="Close"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#E4E3F2] text-slate-500 hover:bg-slate-50"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E4E3F2] bg-white text-slate-500 shadow-sm transition motion-safe:duration-200 hover:rotate-90 hover:border-violet-200 hover:bg-violet-50 hover:text-[#4338CA]"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {HOW_IT_WORKS.map((s) => (
-              <div key={s.n} className="rounded-xl border border-[#ECEBF7] p-4">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EFEEFB] text-sm font-bold text-[#4338CA]">
-                  {s.n}
-                </span>
-                <p className="mt-2 text-sm font-bold text-slate-800">{s.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{s.body}</p>
+            {HOW_IT_WORKS.map((s, index) => (
+              <div key={s.n} className={`group relative overflow-hidden rounded-2xl border border-[#E8E5F7] ${s.wash} p-5 transition motion-safe:duration-300 motion-safe:animate-[notificationRise_320ms_ease-out_both] hover:-translate-y-1 hover:border-violet-200 hover:shadow-lg`} style={{ animationDelay: `${index * 80}ms` }}>
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${s.accent}`} />
+                <div className="flex items-start justify-between gap-3">
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.accent} text-white shadow-md transition motion-safe:duration-300 group-hover:rotate-3 group-hover:scale-110`}><s.icon className="h-5 w-5" aria-hidden="true" /></span>
+                  <span className="text-3xl font-black text-slate-900/10 transition group-hover:text-[#4338CA]/20">0{s.n}</span>
+                </div>
+                <p className="mt-4 text-sm font-bold text-slate-800 transition group-hover:text-[#332475]">{s.title}</p>
+                <p className="mt-1.5 text-xs leading-5 text-slate-600">{s.body}</p>
               </div>
             ))}
           </div>
-          <div className="rounded-xl bg-[#F8F8FD] p-4 text-xs font-semibold text-slate-600">
-            JomDekan only connects tutors and students — we're not a party to your arrangement and aren't responsible for
-            payment, scheduling, or what happens in a session. Contract cheating or completing graded work for a student
-            is never allowed.
+          <div className="relative flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-violet-50 p-4 text-xs font-semibold leading-5 text-slate-700">
+            <span className="rounded-xl bg-[#F5C21A] p-2 text-[#231C57] shadow-sm"><Info className="h-4 w-4" aria-hidden="true" /></span>
+            <p>JomDekan only connects tutors and students — we're not a party to your arrangement and aren't responsible for payment, scheduling, or what happens in a session. Contract cheating or completing graded work for a student is never allowed.</p>
           </div>
         </section>
       )}
 
       <div className="flex flex-wrap gap-5 lg:flex-nowrap">
         <div className="min-w-0 flex-[2] basis-[480px]">
-          {isLoading ? (
+          {showSkeleton ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <MarketplaceCardSkeleton key={i} />

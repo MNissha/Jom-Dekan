@@ -78,6 +78,20 @@ export class OpportunityModel {
     return result.rows[0];
   }
 
+  static async update(id: string, data: { title: string; description: string; mode: string }) {
+    const result = await pool.query(
+      `UPDATE opportunities SET title = $2, description = $3, mode = $4, updated_at = now()
+       WHERE id = $1 RETURNING *`,
+      [id, data.title, data.description, data.mode],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  static async remove(id: string) {
+    const result = await pool.query<{ id: string }>(`DELETE FROM opportunities WHERE id = $1 RETURNING id`, [id]);
+    return Boolean(result.rows[0]);
+  }
+
   static async findById(id: string) {
     const result = await pool.query(`SELECT * FROM opportunities WHERE id = $1`, [id]);
     return result.rows[0] ?? null;

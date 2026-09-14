@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { verifyAccessToken } from '../config/auth';
 import { AppError } from '../../types/errors';
+import { userModel } from '../../models/userModel';
 
 export interface AuthenticatedUser {
   id: string;
@@ -20,7 +21,7 @@ declare module 'express-serve-static-core' {
  * localStorage); the refresh token lives in an HTTP-only cookie and is
  * only ever sent to POST /api/v1/auth/refresh.
  */
-export function authenticate(req: Request, _res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith('Bearer ')) {
@@ -32,7 +33,12 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
 
   try {
     const decoded = verifyAccessToken(token);
-    req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+    const user = await userModel.findById(decoded.sub);
+    if (!user || user.status !== 'ACTIVE') {
+      next(AppError.unauthorized('This account is not active.'));
+      return;
+    }
+    req.user = { id: user.id, email: user.email, role: user.role };
     next();
   } catch {
     next(AppError.unauthorized('Invalid or expired access token.'));

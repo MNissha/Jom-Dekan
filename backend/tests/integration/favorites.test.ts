@@ -193,6 +193,28 @@ describe("Favorites API", () => {
     expect(resourceIds).toContain(resourceId);
   });
 
+  it("does not list a saved resource after it is no longer publicly available", async () => {
+    if (skip) return;
+    const resourceId = await createReadyResource(ownerToken);
+    await request(app)
+      .post("/api/v1/favorites")
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ targetType: "resource", targetId: resourceId });
+
+    await pool.query("UPDATE resources SET status = 'ARCHIVED' WHERE id = $1", [resourceId]);
+
+    const listRes = await request(app)
+      .get("/api/v1/favorites")
+      .set("Authorization", `Bearer ${userToken}`);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.data).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ resource: expect.objectContaining({ id: resourceId }) }),
+      ]),
+    );
+    expect(listRes.body.meta.total).toBe(listRes.body.data.length);
+  });
+
   it("removes a favorite, and removing it again is still a success (idempotent)", async () => {
     if (skip) return;
     const resourceId = await createReadyResource(ownerToken);

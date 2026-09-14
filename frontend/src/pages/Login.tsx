@@ -35,6 +35,7 @@ export default function Login() {
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginFormSchema) });
 
   const idleLogout = searchParams.get('reason') === 'idle';
+  const sessionExpired = searchParams.get('reason') === 'session_expired';
 
   const apiError = axios.isAxiosError(login.error)
     ? (login.error.response?.data as ApiErrorBody | undefined)?.error
@@ -80,6 +81,12 @@ export default function Login() {
         {idleLogout && !serverError && (
           <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             You were signed out after a period of inactivity, for your security. Please log in again.
+          </div>
+        )}
+
+        {sessionExpired && !serverError && (
+          <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Your session expired or is no longer valid. Please log in again.
           </div>
         )}
 

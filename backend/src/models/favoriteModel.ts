@@ -96,7 +96,13 @@ export const favoriteModel = {
     params: ListParams,
   ): Promise<{ rows: (ResourceListRow & { favorite_id: string; favorited_at: Date })[]; total: number }> {
     const countResult = await pool.query<{ count: string }>(
-      `SELECT COUNT(*) FROM favorites WHERE user_id = $1 AND target_type = 'resource'`,
+      `SELECT COUNT(*)
+       FROM favorites f
+       JOIN resources r ON r.id = f.target_id
+       WHERE f.user_id = $1
+         AND f.target_type = 'resource'
+         AND r.status = 'READY'
+         AND r.moderation_status = 'approved'`,
       [params.userId],
     );
 
@@ -115,7 +121,10 @@ export const favoriteModel = {
          LIMIT 1
        ) rf ON true
        LEFT JOIN user_profiles up ON up.user_id = r.owner_id
-       WHERE f.user_id = $1 AND f.target_type = 'resource'
+       WHERE f.user_id = $1
+         AND f.target_type = 'resource'
+         AND r.status = 'READY'
+         AND r.moderation_status = 'approved'
        ORDER BY f.created_at DESC
        LIMIT $2 OFFSET $3`,
       [params.userId, params.limit, params.offset],
@@ -157,7 +166,12 @@ export const favoriteModel = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<{ rows: any[]; total: number }> {
     const countResult = await pool.query<{ count: string }>(
-      `SELECT COUNT(*) FROM favorites WHERE user_id = $1 AND target_type = 'opportunity'`,
+      `SELECT COUNT(*)
+       FROM favorites f
+       JOIN opportunities o ON o.id = f.target_id
+       WHERE f.user_id = $1
+         AND f.target_type = 'opportunity'
+         AND o.status = 'active'`,
       [params.userId],
     );
 
@@ -168,7 +182,9 @@ export const favoriteModel = {
        JOIN opportunities o ON o.id = f.target_id
        LEFT JOIN user_profiles up ON up.user_id = o.owner_id
        LEFT JOIN subjects s ON s.id = o.subject_id
-       WHERE f.user_id = $1 AND f.target_type = 'opportunity'
+       WHERE f.user_id = $1
+         AND f.target_type = 'opportunity'
+         AND o.status = 'active'
        ORDER BY f.created_at DESC
        LIMIT $2 OFFSET $3`,
       [params.userId, params.limit, params.offset],

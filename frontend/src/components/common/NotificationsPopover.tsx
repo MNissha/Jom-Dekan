@@ -4,6 +4,7 @@ import { Bell, Megaphone, ShieldCheck } from "lucide-react";
 import { useModeration } from "../../hooks/useModeration";
 import { useCurrentUser } from "../../hooks/useAuth";
 import type { Notification } from "../../types/moderation";
+import { adminReportRoute } from "../../utils/adminReportRoute";
 
 const RECENT_NOTIFICATION_LIMIT = 3;
 
@@ -27,7 +28,7 @@ function fallbackTitle(type: string) {
 export function NotificationsPopover() {
   const navigate = useNavigate();
   const user = useCurrentUser();
-  const { notifications, isLoadingNotifications, markAsRead } = useModeration();
+  const { notifications, isLoadingNotifications, markAsRead, queue } = useModeration();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,31 +49,22 @@ export function NotificationsPopover() {
   };
 
   const openNotification = (notification: Notification) => {
-    // Do not block navigation on the read-status request. Waiting here can make
-    // the popover feel frozen when the API or its query refresh is slow.
-    if (!notification.read_at) void handleMarkRead(notification.id);
-    const reportId = notification.payload.reportId;
-    const entityType = notification.payload.entityType;
+    const navigationState = notification.read_at
+      ? undefined
+      : { notificationIdToMarkRead: notification.id };
     if (user?.role !== "ADMIN") {
       setIsOpen(false);
-      navigate("/notifications");
+      navigate("/notifications", { state: navigationState });
       return;
     }
     if (
       notification.type === "REPORT_SUBMITTED"
     ) {
       setIsOpen(false);
-      if (entityType === "forum_comment") {
-        navigate("/admin/moderation?section=discussions&discussion=comments");
-        return;
-      }
-      if (entityType === "forum_post") {
-        navigate("/admin/moderation?section=discussions&discussion=threads");
-        return;
-      }
-      if (typeof reportId !== "string") return;
-      navigate(`/admin/moderation?report=${encodeURIComponent(reportId)}`);
+      navigate(adminReportRoute(notification, queue), { state: navigationState });
+      return;
     }
+    if (!notification.read_at) void handleMarkRead(notification.id);
   };
 
   useEffect(() => {

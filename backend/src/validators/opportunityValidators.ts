@@ -51,3 +51,18 @@ export const applyOpportunitySchema = z.object({
 export const updateOpportunityStatusSchema = z.object({
   status: z.enum(["active", "closed"]),
 });
+
+export const adminCreateOpportunitySchema = z.object({
+  title: z.string().trim().min(5).max(255),
+  description: z.string().trim().min(20).max(5000),
+  mode: z.enum(["ONLINE", "PHYSICAL", "HYBRID"]),
+  listingType: z.enum(["TUTORING", "STUDY_GROUP", "PROJECT_MENTORSHIP"]),
+}).strict();
+
+export const adminUpdateOpportunitySchema = z.object({
+  title: z.string().trim().min(5).max(255),
+  description: z.string().trim().min(20).max(5000),
+  mode: z.enum(["ONLINE", "PHYSICAL", "HYBRID"]),
+}).strict();
+
+export const opportunityIdParamSchema = z.object({ id: z.string().uuid("Invalid listing id.") }).strict();
