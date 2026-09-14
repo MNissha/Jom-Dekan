@@ -7,6 +7,7 @@ import { EmptyState } from "../components/common/EmptyState";
 import { FavoriteButton } from "../components/common/FavoriteButton";
 import { ReportButton } from "../components/common/ReportButton";
 import { ForumPostSkeleton } from "../components/forum/ForumPostSkeleton";
+import { UserLink } from "../components/common/UserLink";
 import type { ForumPostListItem } from "../types/forum";
 
 const PAGE_SIZE = 12;
@@ -427,6 +428,8 @@ export default function Forum() {
                   {post.title}
                 </h2>
                 <p className="mt-1 text-xs font-semibold text-slate-400">
+                  <UserLink userId={post.authorId} name={post.authorName} className="font-semibold text-slate-500 hover:text-primary-700 hover:underline" />
+                  {" · "}
                   {new Date(post.createdAt).toLocaleDateString()} · {post.commentCount}{" "}
                   {post.commentCount === 1 ? "reply" : "replies"}
                 </p>

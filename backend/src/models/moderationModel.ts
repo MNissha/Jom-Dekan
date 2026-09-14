@@ -77,12 +77,12 @@ export class ModerationModel {
                    rep.created_at, rep.entity_type as target_type,
                    rep.category, rep.reporter_name, rep.reporter_phone,
                    rep.reporter_email,
-                   COALESCE(resource.title, opportunity.title, post.title, LEFT(comment.body, 160)) as target_title,
-                   COALESCE(resource.description, opportunity.description, post.body, comment.body) as target_description,
+                   COALESCE(resource.title, opportunity.title, post.title, LEFT(comment.body, 160), reported_profile.display_name, reported_user.email) as target_title,
+                   COALESCE(resource.description, opportunity.description, post.body, comment.body, reported_user.email) as target_description,
                    opportunity.listing_type,
                    (rep.evidence_data IS NOT NULL) as has_evidence,
                    rep.parent_id as parent_id, parent.title as parent_title, parent.body as parent_description,
-                   COALESCE(resource.owner_id, opportunity.owner_id, post.author_id, comment.author_id) as target_owner_id
+                   COALESCE(resource.owner_id, opportunity.owner_id, post.author_id, comment.author_id, reported_user.id) as target_owner_id
             FROM reports rep
             LEFT JOIN resources resource
               ON rep.entity_type = 'resource' AND resource.id = rep.entity_id
@@ -94,6 +94,10 @@ export class ModerationModel {
               ON rep.entity_type = 'forum_comment' AND comment.id = rep.entity_id
             LEFT JOIN forum_posts parent
               ON parent.id = COALESCE(rep.parent_id, comment.post_id)
+            LEFT JOIN users reported_user
+              ON rep.entity_type = 'user' AND reported_user.id = rep.entity_id
+            LEFT JOIN user_profiles reported_profile
+              ON reported_profile.user_id = reported_user.id
             WHERE UPPER(rep.status) = 'PENDING'
             ORDER BY created_at DESC
         `;

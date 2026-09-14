@@ -6,6 +6,7 @@ import { useCurrentUser } from "../hooks/useAuth";
 import { FavoriteButton } from "../components/common/FavoriteButton";
 import { ReportButton } from "../components/common/ReportButton";
 import { PdfThumbnail } from "../components/common/PdfThumbnail";
+import { UserLink } from "../components/common/UserLink";
 import { SearchableSelect } from "../components/common/SearchableSelect";
 import { useUniversities, useFaculties, useProgrammes, useSubjects } from "../hooks/useTaxonomy";
 import { ResourcesPageSkeleton } from "../components/common/ResourcesPageSkeleton";
@@ -428,7 +429,11 @@ export default function Resources() {
 
                     <div className="mt-4 flex flex-1 items-end justify-between gap-3 border-t border-[#F4F3FB] pt-3">
                       <span className="min-w-0 truncate text-xs font-semibold text-slate-500">
-                        {r.ownerName || "A JomDekan student"}
+                        {r.ownerName ? (
+                          <UserLink userId={r.ownerId} name={r.ownerName} className="font-semibold text-slate-500 hover:text-primary-700 hover:underline" />
+                        ) : (
+                          "A JomDekan student"
+                        )}
                         <span className="block text-[11px] font-medium text-slate-400">
                           Uploaded {new Date(r.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                         </span>

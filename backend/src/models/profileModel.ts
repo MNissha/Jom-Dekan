@@ -177,6 +177,23 @@ export function toApiProfile(row: ProfileRow) {
   };
 }
 
+// The public-facing view of a profile (any other signed-in user viewing
+// someone via a clickable username) — same row as toApiProfile, but
+// deliberately omits contact/account fields (email, phone, verification
+// status) that only the owner (or an admin, via adminUserModel) should see.
+export function toApiPublicProfile(row: ProfileRow) {
+  return {
+    id: row.user_id,
+    displayName: row.display_name,
+    photoPath: row.photo_path,
+    academicRole: row.academic_role,
+    university: row.university_id ? { id: row.university_id, name: row.university_name } : null,
+    fieldOfStudy: row.field_of_study,
+    studyLevel: row.study_level,
+    createdAt: row.created_at,
+  };
+}
+
 export function toApiActivity(row: ActivityRow) {
   return {
     id: row.id,

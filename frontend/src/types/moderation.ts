@@ -15,7 +15,7 @@ export interface ModerationQueueItem {
   details: string;
   moderation_status: string;
   created_at: string;
-  target_type: "resource" | "forum_post" | "forum_comment" | "opportunity";
+  target_type: "resource" | "forum_post" | "forum_comment" | "opportunity" | "user";
   category: string | null;
   reporter_name: string | null;
   reporter_phone: string | null;

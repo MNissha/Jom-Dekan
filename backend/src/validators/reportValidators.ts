@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const REPORT_TARGET_TYPES = ["resource", "forum_post", "forum_comment", "opportunity"] as const;
+export const REPORT_TARGET_TYPES = ["resource", "forum_post", "forum_comment", "opportunity", "user"] as const;
 
 export const REPORT_CATEGORIES = [
   "INAPPROPRIATE_CONTENT",

@@ -6,6 +6,7 @@ export interface AdminUserListRow {
   display_name: string;
   role: string;
   status: string;
+  suspended_until: Date | null;
   created_at: Date;
   post_count: string;
   comment_count: string;
@@ -18,6 +19,7 @@ export interface AdminUserProfileRow {
   display_name: string;
   role: string;
   status: string;
+  suspended_until: Date | null;
   created_at: Date;
 }
 
@@ -59,10 +61,10 @@ export const adminUserModel = {
     offset: number;
   }): Promise<{ rows: AdminUserListRow[]; total: number }> {
     const values: unknown[] = [];
-    let searchClause = "";
+    let searchClause = "WHERE u.deleted_at IS NULL";
     if (params.search) {
       values.push(`%${params.search}%`);
-      searchClause = `WHERE u.email ILIKE $${values.length} OR p.display_name ILIKE $${values.length}`;
+      searchClause += ` AND (u.email ILIKE $${values.length} OR p.display_name ILIKE $${values.length})`;
     }
 
     const countResult = await pool.query<{ count: string }>(
@@ -75,7 +77,7 @@ export const adminUserModel = {
     const dataValues = [...values, params.limit, params.offset];
     const rowsResult = await pool.query<AdminUserListRow>(
       `SELECT
-         u.id, u.email, u.role, u.status, u.created_at,
+         u.id, u.email, u.role, u.status, u.suspended_until, u.created_at,
          COALESCE(p.display_name, u.email) AS display_name,
          (SELECT COUNT(*) FROM forum_posts fp WHERE fp.author_id = u.id AND fp.deleted_at IS NULL) AS post_count,
          (SELECT COUNT(*) FROM forum_comments fc WHERE fc.author_id = u.id AND fc.deleted_at IS NULL) AS comment_count,
@@ -101,7 +103,7 @@ export const adminUserModel = {
 
   async getProfile(userId: string): Promise<AdminUserProfileRow | null> {
     const result = await pool.query<AdminUserProfileRow>(
-      `SELECT u.id, u.email, u.role, u.status, u.created_at,
+      `SELECT u.id, u.email, u.role, u.status, u.suspended_until, u.created_at,
               COALESCE(p.display_name, u.email) AS display_name
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
@@ -188,6 +190,7 @@ export function toApiAdminUserListItem(row: AdminUserListRow) {
     displayName: row.display_name,
     role: row.role,
     status: row.status,
+    suspendedUntil: row.suspended_until,
     createdAt: row.created_at,
     postCount: Number(row.post_count),
     commentCount: Number(row.comment_count),
@@ -202,6 +205,7 @@ export function toApiAdminUserProfile(row: AdminUserProfileRow) {
     displayName: row.display_name,
     role: row.role,
     status: row.status,
+    suspendedUntil: row.suspended_until,
     createdAt: row.created_at,
   };
 }

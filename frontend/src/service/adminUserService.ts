@@ -72,4 +72,26 @@ export const adminUserService = {
     );
     return res.data;
   },
+
+  async disable(
+    userId: string,
+    data: { until?: string; reason: string },
+  ): Promise<AdminUserProfile> {
+    const res = await axiosInstance.post<{ data: AdminUserProfile }>(
+      `/admin/users/${userId}/disable`,
+      data,
+    );
+    return res.data.data;
+  },
+
+  async enable(userId: string): Promise<AdminUserProfile> {
+    const res = await axiosInstance.post<{ data: AdminUserProfile }>(
+      `/admin/users/${userId}/enable`,
+    );
+    return res.data.data;
+  },
+
+  async remove(userId: string, data: { reason: string }): Promise<void> {
+    await axiosInstance.delete(`/admin/users/${userId}`, { data });
+  },
 };

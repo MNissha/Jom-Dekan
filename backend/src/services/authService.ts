@@ -173,6 +173,7 @@ export const authService = {
   },
 
   async login(params: { email: string; password: string; requestId?: string; ipAddress?: string; userAgent?: string }) {
+    await userModel.reactivateExpiredSuspensions();
     const user = await userModel.findByEmail(params.email);
 
     if (user?.lockout_until) {
@@ -271,6 +272,7 @@ export const authService = {
       throw AppError.unauthorized('Refresh token has expired. Please log in again.');
     }
 
+    await userModel.reactivateExpiredSuspensions();
     const user = await userModel.findById(session.user_id);
     if (!user || user.status !== 'ACTIVE') {
       throw AppError.unauthorized('Account is not active.');

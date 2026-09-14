@@ -1,4 +1,4 @@
-import { profileModel, toApiProfile, toApiStats, toApiActivity } from '../models/profileModel';
+import { profileModel, toApiProfile, toApiPublicProfile, toApiStats, toApiActivity } from '../models/profileModel';
 import { taxonomyModel } from '../models/taxonomyModel';
 import { userModel } from '../models/userModel';
 import { authService } from './authService';
@@ -70,6 +70,14 @@ export const profileService = {
       throw AppError.notFound('Profile not found.');
     }
     return toApiProfile(profile);
+  },
+
+  async getPublicProfile(userId: string) {
+    const profile = await profileModel.findByUserId(userId);
+    if (!profile) {
+      throw AppError.notFound('User not found.');
+    }
+    return toApiPublicProfile(profile);
   },
 
   async getMyStats(userId: string) {

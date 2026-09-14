@@ -361,10 +361,13 @@ export const resourceService = {
   },
 
   async getById(id: string, ctx: ActorContext) {
-    const resource = await getVisibleOrThrow(id, ctx);
-    const files = await resourceModel.files.findByResourceId(id);
+    await getVisibleOrThrow(id, ctx);
+    const [withOwner, files] = await Promise.all([
+      resourceModel.findByIdWithOwner(id),
+      resourceModel.files.findByResourceId(id),
+    ]);
     return {
-      resource: toApiResource(resource),
+      resource: toApiResourceListItem(withOwner!),
       files: files.map(toApiResourceFile),
     };
   },

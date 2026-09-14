@@ -18,3 +18,22 @@ export const adminUserSubListQuerySchema = z
     pageSize: z.coerce.number().int().positive().max(100).default(20),
   })
   .strict();
+
+// `until` is optional — an indefinite disable, same as omitting a
+// lockout expiry, just means an admin has to manually re-enable it.
+export const disableUserSchema = z
+  .object({
+    until: z.string().datetime({ message: "Invalid date/time." }).optional(),
+    reason: z.string().trim().min(5, "A reason of at least 5 characters is required.").max(2000),
+  })
+  .strict()
+  .refine((data) => !data.until || new Date(data.until).getTime() > Date.now(), {
+    message: "The disable-until time must be in the future.",
+    path: ["until"],
+  });
+
+export const deleteUserSchema = z
+  .object({
+    reason: z.string().trim().min(5, "A reason of at least 5 characters is required.").max(2000),
+  })
+  .strict();

@@ -3,6 +3,7 @@ import { profileController } from '../controllers/profileController';
 import { validate } from '../config/middleware/validateMiddleware';
 import { authenticate } from '../config/middleware/authMiddleware';
 import { updateProfileSchema } from '../validators/userValidators';
+import { idParamSchema } from '../validators/taxonomyValidators';
 
 const router = Router();
 
@@ -49,5 +50,18 @@ router.get('/me/stats', authenticate, profileController.getMyStats);
  *       200: { description: Recent activity feed }
  */
 router.get('/me/activity', authenticate, profileController.getMyActivity);
+
+/**
+ * @openapi
+ * /users/{id}:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get another user's public profile (for clickable usernames across discussions/resources/comments)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Public profile }
+ *       404: { description: User not found }
+ */
+router.get('/:id', authenticate, validate({ params: idParamSchema }), profileController.getPublicProfile);
 
 export default router;

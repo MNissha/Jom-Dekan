@@ -12,6 +12,7 @@ import {
 import { useCurrentUser } from "../hooks/useAuth";
 import { VoteButtons } from "../components/common/VoteButtons";
 import { CommentReportButton } from "../components/common/CommentReportButton";
+import { UserLink } from "../components/common/UserLink";
 
 function useMinDuration(isLoading: boolean, minMs = 2000) {
   const [show, setShow] = useState(isLoading);
@@ -217,6 +218,11 @@ export default function ForumPostDetail() {
                 <h1 className="text-2xl font-bold text-slate-900">
                   {post.title}
                 </h1>
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  Posted by <UserLink userId={post.authorId} name={post.authorName} className="font-semibold text-slate-500 hover:text-primary-700 hover:underline" />
+                  {" · "}
+                  {new Date(post.createdAt).toLocaleDateString()}
+                </p>
                 <p className="mt-2 whitespace-pre-wrap text-slate-600">
                   {post.body}
                 </p>
@@ -322,7 +328,10 @@ export default function ForumPostDetail() {
                     </form>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700">
+                      <p className="text-xs font-semibold text-slate-400">
+                        <UserLink userId={comment.authorId} name={comment.authorName} className="font-semibold text-slate-500 hover:text-primary-700 hover:underline" />
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
                         {comment.body}
                       </p>
                       {commentCanManage && (

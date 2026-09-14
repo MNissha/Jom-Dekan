@@ -72,14 +72,22 @@ export function AdminUserDetail({
         )}
 
         {profile && (
-          <div className="mt-3 mb-6">
-            <h1 className="text-2xl font-bold text-stone-800">
-              {profile.displayName}
-            </h1>
-            <p className="text-sm text-stone-500">{profile.email}</p>
-            <p className="mt-1 text-xs uppercase tracking-wide text-stone-400">
-              {profile.role} · {profile.status}
-            </p>
+          <div className="mt-3 mb-6 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-stone-800">
+                {profile.displayName}
+              </h1>
+              <p className="text-sm text-stone-500">{profile.email}</p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-stone-400">
+                {profile.role} · {profile.status}
+              </p>
+            </div>
+            <Link
+              to={`/users/${profile.id}`}
+              className="shrink-0 rounded-full border border-primary-600 px-4 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-50"
+            >
+              View profile
+            </Link>
           </div>
         )}
 
