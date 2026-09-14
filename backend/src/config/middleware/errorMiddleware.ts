@@ -25,6 +25,7 @@ export function errorMiddleware(err: unknown, req: Request, res: Response, _next
         message: err.message,
         details: err.details ?? [],
         requestId: req.requestId,
+        ...(err.meta ? { meta: err.meta } : {}),
       },
     });
     return;

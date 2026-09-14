@@ -158,6 +158,13 @@ interface UploadResourceInput {
   facultyId?: string;
   programmeId?: string;
   subjectId?: string;
+  // Set instead of subjectId when the uploader is naming a subject that
+  // isn't in the catalogue yet — only meaningful on the file-upload path
+  // below (createTextResource doesn't accept these).
+  subjectCode?: string;
+  subjectName?: string;
+  subjectSemester?: number;
+  subjectCurriculumYear?: number;
   // Optional: with no file, `description` becomes the resource's actual
   // content instead of just a caption — see createTextResourceSchema.
   file?: File;
@@ -193,6 +200,10 @@ export function useUploadResource() {
         facultyId: input.facultyId,
         programmeId: input.programmeId,
         subjectId: input.subjectId,
+        subjectCode: input.subjectCode,
+        subjectName: input.subjectName,
+        subjectSemester: input.subjectSemester,
+        subjectCurriculumYear: input.subjectCurriculumYear,
         fileName: input.file.name,
         contentType: input.file.type,
         sizeBytes: input.file.size,
@@ -204,6 +215,11 @@ export function useUploadResource() {
       );
       return resourceService.confirmUpload(intent.file.id);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      // A new subject may have just been created inline — refresh the
+      // catalogue so it shows up the next time someone opens the picker.
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+    },
   });
 }

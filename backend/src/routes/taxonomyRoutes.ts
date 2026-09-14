@@ -17,8 +17,10 @@ import {
   createSubjectSchema,
   updateSubjectSchema,
   listSubjectsQuerySchema,
+  findOrCreateSubjectSchema,
   linkProgrammeSubjectSchema,
   unlinkProgrammeSubjectParamsSchema,
+  createTaxonomyRequestSchema,
 } from "../validators/taxonomyValidators";
 
 const router = Router();
@@ -199,6 +201,29 @@ router.patch(
 
 /**
  * @openapi
+ * /taxonomy/programmes/{id}/subjects/find-or-create:
+ *   post:
+ *     tags: [Taxonomy]
+ *     summary: >
+ *       Resolve a subject by code for this programme (any authenticated
+ *       user) — reuses a matching subject if one exists, otherwise
+ *       creates a COMMUNITY_SUBMITTED one and links it to the programme.
+ *       Used by the resource-upload flow so a student can name a subject
+ *       that isn't in the catalogue yet.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Matched an existing subject }
+ *       201: { description: Created a new subject }
+ */
+router.post(
+  "/programmes/:id/subjects/find-or-create",
+  authenticate,
+  validate({ params: idParamSchema, body: findOrCreateSubjectSchema }),
+  taxonomyController.findOrCreateSubject,
+);
+
+/**
+ * @openapi
  * /taxonomy/programmes/{id}/subjects:
  *   post:
  *     tags: [Taxonomy]
@@ -227,6 +252,38 @@ router.delete(
   authorize("ADMIN"),
   validate({ params: unlinkProgrammeSubjectParamsSchema }),
   taxonomyController.unlinkProgrammeSubject,
+);
+
+/**
+ * @openapi
+ * /taxonomy/requests:
+ *   post:
+ *     tags: [Taxonomy]
+ *     summary: >
+ *       Request a missing university, faculty, and/or programme (any
+ *       authenticated user). Unlike subjects/find-or-create, this never
+ *       creates the row immediately — universities and programmes still
+ *       require ADMIN — it just records the request and notifies admins.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       201: { description: Request submitted }
+ *   get:
+ *     tags: [Taxonomy]
+ *     summary: List the current user's own submitted taxonomy requests
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: List of the caller's requests }
+ */
+router.post(
+  "/requests",
+  authenticate,
+  validate({ body: createTaxonomyRequestSchema }),
+  taxonomyController.createTaxonomyRequest,
+);
+router.get(
+  "/requests/mine",
+  authenticate,
+  taxonomyController.listMyTaxonomyRequests,
 );
 
 export default router;

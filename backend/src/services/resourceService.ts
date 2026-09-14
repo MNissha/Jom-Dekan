@@ -19,6 +19,7 @@ import {
 import { env } from "../config/config/env";
 import { AppError } from "../types/errors";
 import { taxonomyModel } from "../models/taxonomyModel";
+import { taxonomyService } from "./taxonomyService";
 
 interface ActorContext {
   actorUserId: string;
@@ -127,6 +128,10 @@ export const resourceService = {
       facultyId?: string;
       programmeId?: string;
       subjectId?: string;
+      subjectCode?: string;
+      subjectName?: string;
+      subjectCurriculumYear?: number;
+      subjectSemester?: number;
       fileName: string;
       contentType: string;
       sizeBytes: number;
@@ -146,6 +151,29 @@ export const resourceService = {
 
     await validateTaxonomy(input);
 
+    // A student typed a subject that isn't in the catalogue yet — stand
+    // it up (or reuse a matching one) before the resource row exists, so
+    // the resource is never left pointing at a subjectId that doesn't
+    // exist yet.
+    let subjectId = input.subjectId ?? null;
+    if (!subjectId && input.subjectCode) {
+      const { subject } = await taxonomyService.subjects.findOrCreateForProgramme(
+        {
+          programmeId: input.programmeId!,
+          code: input.subjectCode,
+          name: input.subjectName!,
+          curriculumYear: input.subjectCurriculumYear,
+          recommendedSemester: input.subjectSemester,
+        },
+        {
+          actorUserId: ctx.actorUserId,
+          requestId: ctx.requestId,
+          ipAddress: ctx.ipAddress,
+        },
+      );
+      subjectId = subject.id;
+    }
+
     const resource = await resourceModel.create({
       ownerId: ctx.actorUserId,
       title: input.title,
@@ -154,7 +182,7 @@ export const resourceService = {
       universityId: input.universityId ?? null,
       facultyId: input.facultyId ?? null,
       programmeId: input.programmeId ?? null,
-      subjectId: input.subjectId ?? null,
+      subjectId,
     });
 
     const storageKey = randomUUID();
