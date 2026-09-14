@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, Megaphone, ShieldCheck } from "lucide-react";
+import { Bell, Megaphone, ShieldCheck, LifeBuoy, Lightbulb } from "lucide-react";
 import { useModeration } from "../../hooks/useModeration";
 import { useCurrentUser } from "../../hooks/useAuth";
 import type { Notification } from "../../types/moderation";
@@ -14,6 +14,12 @@ function popoverStyle(type: string) {
   }
   if (type === "REPORT_REVIEWED") {
     return { icon: ShieldCheck, iconClass: "bg-emerald-50 text-emerald-700", label: "Report update" };
+  }
+  if (type === "SUPPORT_REQUEST_SUBMITTED") {
+    return { icon: LifeBuoy, iconClass: "bg-sky-50 text-sky-700", label: "Support request" };
+  }
+  if (type === "SUGGESTION_SUBMITTED") {
+    return { icon: Lightbulb, iconClass: "bg-amber-50 text-amber-700", label: "Suggestion" };
   }
   return { icon: Bell, iconClass: "bg-[#EFEEFB] text-[#4338CA]", label: "Update" };
 }
@@ -95,7 +101,7 @@ export function NotificationsPopover() {
       >
         <Bell className="h-5 w-5" aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#E8543F] px-1 text-[10px] font-bold text-white shadow-sm" aria-label={`${unreadCount} unread notifications`}>
+          <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#C14634] px-1 text-[10px] font-bold text-white shadow-sm" aria-label={`${unreadCount} unread notifications`}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -110,9 +116,9 @@ export function NotificationsPopover() {
 
           <div className="max-h-80 overflow-y-auto divide-y divide-[#F4F3FB] dark:divide-[#2E2A54]">
             {isLoadingNotifications ? (
-              <p className="p-4 text-center text-xs text-slate-400 dark:text-slate-500">Loading…</p>
+              <p className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</p>
             ) : notifications.length === 0 ? (
-              <p className="p-4 text-center text-xs text-slate-400 dark:text-slate-500">No notifications yet.</p>
+              <p className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">No notifications yet.</p>
             ) : (
               recentNotifications.map((notification) => {
                 const style = popoverStyle(notification.type);
@@ -142,10 +148,10 @@ export function NotificationsPopover() {
                       <Icon className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{style.label}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{style.label}</span>
                       <p className={`truncate text-xs ${notification.read_at ? "font-semibold" : "font-bold text-slate-900 dark:text-white"}`}>{title}</p>
                       <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{description}</p>
-                      <span className="mt-1 block text-[10px] text-slate-400 dark:text-slate-500">
+                      <span className="mt-1 block text-[10px] text-slate-500 dark:text-slate-400">
                         {new Date(notification.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
                       </span>
                     </div>

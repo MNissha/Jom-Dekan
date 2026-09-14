@@ -10,6 +10,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
+import Help from "./pages/Help";
 import UserProfile from "./pages/UserProfile";
 import Dashboard from "./pages/Dashboard";
 import Resources from "./pages/Resources";
@@ -219,6 +220,16 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Profile />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Help />
               </DashboardLayout>
             </ProtectedRoute>
           }

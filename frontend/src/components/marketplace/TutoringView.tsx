@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import axios from "axios";
 import { UserPlus, X, Check, Wifi, MapPin, Shuffle, CalendarClock, Phone, Mail, Link as LinkIcon, GraduationCap, ClipboardPen, ShieldCheck, Rocket, MessagesSquare, Info } from "lucide-react";
 import { useOpportunities } from "../../hooks/useOpportunities";
+import { useToast } from "../../context/ToastContext";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
@@ -170,6 +171,7 @@ const EMPTY_FORM: ApplyForm = {
 };
 
 export function TutoringView({ initialDetailId = null }: { initialDetailId?: string | null }) {
+  const toast = useToast();
   const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
   const showSkeleton = useMinimumLoading(isLoading, 2000);
 
@@ -262,7 +264,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
       const message = axios.isAxiosError(err)
         ? (err.response?.data as { error?: { message?: string } })?.error?.message
         : undefined;
-      alert(message || "Failed to submit your tutor listing");
+      toast.error(message || "Failed to submit your tutor listing");
     } finally {
       setSubmitting(false);
     }
@@ -279,15 +281,15 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
       const message = axios.isAxiosError(err)
         ? (err.response?.data as { error?: { message?: string } })?.error?.message
         : undefined;
-      alert(message || "Failed to submit application");
+      toast.error(message || "Failed to submit application");
     }
   }
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Tutoring</h1>
-        <p className="mt-1 text-sm text-slate-500">Verified senior students and lecturers. Mentoring and guidance only.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Tutoring</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Verified senior students and lecturers. Mentoring and guidance only.</p>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-[#ECEBF7] bg-white p-5">

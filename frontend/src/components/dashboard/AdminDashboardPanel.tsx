@@ -48,10 +48,10 @@ export function AdminDashboardPanel() {
     <section ref={toolsRef} aria-label="Admin dashboard tools">
       <div className="mb-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">
             Dashboard tools
           </p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
             Users, moderation and marketplace
           </h2>
         </div>

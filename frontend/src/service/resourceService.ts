@@ -44,6 +44,10 @@ interface UploadIntentInput {
   subjectName?: string;
   subjectSemester?: number;
   subjectCurriculumYear?: number;
+  // Present for the 2nd+ file of a multi-file upload — attaches this
+  // file to a resource already created earlier in the same upload
+  // instead of creating a new one.
+  resourceId?: string;
   fileName: string;
   contentType: string;
   sizeBytes: number;
@@ -94,6 +98,7 @@ export const resourceService = {
         subjectName: data.subjectName || undefined,
         subjectSemester: data.subjectSemester,
         subjectCurriculumYear: data.subjectCurriculumYear,
+        resourceId: optionalId(data.resourceId),
       },
     );
     return res.data.data;

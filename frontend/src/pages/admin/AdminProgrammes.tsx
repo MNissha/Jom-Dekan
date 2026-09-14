@@ -200,8 +200,8 @@ export default function AdminProgrammes({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900">Programmes</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Programmes</h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Pick a university, then a faculty, to manage its programmes.
       </p>
 

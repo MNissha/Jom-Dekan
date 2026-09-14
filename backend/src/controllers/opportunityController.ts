@@ -1,10 +1,22 @@
 import { Request, Response, NextFunction } from "express";
-import { OpportunityModel } from "../models/opportunityModel";
+import { OpportunityModel, type OpportunityApplicationFile } from "../models/opportunityModel";
 import { auditLogModel } from "../models/auditLogModel";
+import { emailService } from "../services/emailService";
+import { logger } from "../utils/logger";
+import { env } from "../config/config/env";
+import { AppError } from "../types/errors";
+
+function marketplaceUrl(): string {
+  return `${env.corsOrigins[0]}/marketplace`;
+}
 
 export class OpportunityService {
-  static async getOpportunities() {
-    return await OpportunityModel.getAllActive();
+  static async getOpportunities(userId?: string) {
+    return await OpportunityModel.getAllActive(userId);
+  }
+
+  static async getMyOpportunities(ownerId: string) {
+    return await OpportunityModel.getAllForOwner(ownerId);
   }
 
   static async createOpportunity(
@@ -15,6 +27,7 @@ export class OpportunityService {
       subjectId?: string;
       listingType: string;
       mode: string;
+      applicationDeadline?: string;
     },
   ) {
     return await OpportunityModel.create(ownerId, data);
@@ -23,13 +36,148 @@ export class OpportunityService {
   static async apply(
     opportunityId: string,
     applicantId: string,
-    coverMessage: string,
+    input: {
+      coverMessage: string;
+      cvUrl?: string;
+      portfolioUrl?: string;
+      cv?: OpportunityApplicationFile;
+      portfolio?: OpportunityApplicationFile;
+    },
   ) {
-    return await OpportunityModel.createApplication(
+    const opportunity = await OpportunityModel.findById(opportunityId);
+    if (!opportunity) throw AppError.notFound("Listing not found.");
+    if (opportunity.status !== "active") {
+      throw AppError.badRequest("This listing is no longer accepting applications.");
+    }
+    if (opportunity.owner_id === applicantId) {
+      throw AppError.badRequest("You cannot apply to your own listing.");
+    }
+
+    const application = await OpportunityModel.createApplication(
       opportunityId,
       applicantId,
-      coverMessage,
+      input.coverMessage,
+      {
+        cv: input.cv,
+        cvUrl: input.cvUrl,
+        portfolio: input.portfolio,
+        portfolioUrl: input.portfolioUrl,
+      },
     );
+
+    const applicant = await OpportunityModel.findApplicationById(application.id);
+
+    await OpportunityModel.notifyUser(opportunity.owner_id, "OPPORTUNITY_APPLICATION_RECEIVED", {
+      title: "New application received",
+      message: `${applicant?.applicant_name ?? "A student"} applied to "${opportunity.title}".`,
+      opportunityId: opportunity.id,
+      opportunityTitle: opportunity.title,
+      applicationId: application.id,
+    });
+
+    // Best-effort: the application is already recorded and the poster
+    // already has an in-app notification even if email delivery fails —
+    // same reasoning as reportService's admin-notification email.
+    await emailService
+      .sendEmail({
+        to: applicant?.applicant_email ?? "",
+        subject: `New application for "${opportunity.title}"`,
+        text: [
+          `${applicant?.applicant_name ?? "A student"} applied to your listing "${opportunity.title}".`,
+          `Applicant email: ${applicant?.applicant_email ?? "unknown"}`,
+          "",
+          "Cover message:",
+          input.coverMessage,
+          "",
+          ...(input.cv || input.cvUrl ? ["A CV was attached — view it from your listing's applications."] : []),
+          ...(input.portfolio || input.portfolioUrl ? ["A portfolio was attached — view it from your listing's applications."] : []),
+          "",
+          `Review this application: ${marketplaceUrl()}`,
+        ].join("\n"),
+      })
+      .catch((err) => logger.error({ err, opportunityId }, "Failed to email poster about new application"));
+
+    return application;
+  }
+
+  static async getApplicationsForOpportunity(
+    actorId: string,
+    actorRole: "USER" | "ADMIN",
+    opportunityId: string,
+  ) {
+    const opportunity = await OpportunityModel.findById(opportunityId);
+    if (!opportunity) throw AppError.notFound("Listing not found.");
+    if (opportunity.owner_id !== actorId && actorRole !== "ADMIN") throw AppError.forbidden();
+    return await OpportunityModel.getApplicationsForOpportunity(opportunityId);
+  }
+
+  static async updateApplicationStatus(
+    actorId: string,
+    actorRole: "USER" | "ADMIN",
+    applicationId: string,
+    status: "accepted" | "declined",
+  ) {
+    const application = await OpportunityModel.findApplicationById(applicationId);
+    if (!application) throw AppError.notFound("Application not found.");
+    if (application.opportunity_owner_id !== actorId && actorRole !== "ADMIN") throw AppError.forbidden();
+    if (application.status !== "pending") {
+      throw AppError.badRequest("This application has already been decided.");
+    }
+
+    const updated = await OpportunityModel.updateApplicationStatus(applicationId, status);
+
+    await auditLogModel.record({
+      actorUserId: actorId,
+      actorRole,
+      action: "OPPORTUNITY_APPLICATION_DECIDED",
+      targetType: "opportunity_application",
+      targetId: applicationId,
+      metadata: { status },
+    });
+
+    await OpportunityModel.notifyUser(
+      application.applicant_id,
+      status === "accepted" ? "OPPORTUNITY_APPLICATION_ACCEPTED" : "OPPORTUNITY_APPLICATION_DECLINED",
+      {
+        title: status === "accepted" ? "Your application was accepted" : "Your application was declined",
+        message: `Your application for "${application.opportunity_title}" was ${status}.`,
+        opportunityId: application.opportunity_id,
+        opportunityTitle: application.opportunity_title,
+        applicationId,
+      },
+    );
+
+    await emailService
+      .sendEmail({
+        to: application.applicant_email,
+        subject: `Your application for "${application.opportunity_title}" was ${status}`,
+        text: [
+          `Your application for "${application.opportunity_title}" was ${status} by the poster.`,
+          `View the marketplace: ${marketplaceUrl()}`,
+        ].join("\n"),
+      })
+      .catch((err) => logger.error({ err, applicationId }, "Failed to email applicant about application decision"));
+
+    return updated;
+  }
+
+  static async getApplicationFile(
+    actorId: string,
+    actorRole: "USER" | "ADMIN",
+    applicationId: string,
+    kind: "cv" | "portfolio",
+  ) {
+    const application = await OpportunityModel.findApplicationById(applicationId);
+    if (!application) throw AppError.notFound("Application not found.");
+    const isAuthorized =
+      actorRole === "ADMIN" ||
+      application.opportunity_owner_id === actorId ||
+      application.applicant_id === actorId;
+    if (!isAuthorized) throw AppError.forbidden();
+
+    const file = await OpportunityModel.getApplicationFile(applicationId, kind);
+    if (!file) throw AppError.notFound("File not found.");
+    return file;
   }
 
   static async getAllForAdmin() {
@@ -62,12 +210,25 @@ export class OpportunityService {
 }
 
 export const getOpportunities = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const data = await OpportunityService.getOpportunities();
+    const data = await OpportunityService.getOpportunities(req.user?.id);
+    return res.json({ data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getMyOpportunities = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const data = await OpportunityService.getMyOpportunities(req.user!.id);
     return res.json({ data });
   } catch (error) {
     return next(error);
@@ -90,6 +251,12 @@ export const createOpportunity = async (
   }
 };
 
+function fileFromField(files: Record<string, Express.Multer.File[]> | undefined, field: string): OpportunityApplicationFile | undefined {
+  const file = files?.[field]?.[0];
+  if (!file) return undefined;
+  return { filename: file.originalname, mimeType: file.mimetype, data: file.buffer };
+}
+
 export const applyToOpportunity = async (
   req: Request,
   res: Response,
@@ -98,9 +265,16 @@ export const applyToOpportunity = async (
   try {
     const applicantId = req.user!.id;
     const { id } = req.params;
-    const { coverMessage } = req.body;
+    const { coverMessage, cvUrl, portfolioUrl } = req.body;
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
-    const data = await OpportunityService.apply(id, applicantId, coverMessage);
+    const data = await OpportunityService.apply(id, applicantId, {
+      coverMessage,
+      cvUrl: cvUrl || undefined,
+      portfolioUrl: portfolioUrl || undefined,
+      cv: fileFromField(files, "cv"),
+      portfolio: fileFromField(files, "portfolio"),
+    });
     return res
       .status(201)
       .json({ message: "Application submitted successfully", data });
@@ -113,6 +287,60 @@ export const applyToOpportunity = async (
         },
       });
     }
+    return next(error);
+  }
+};
+
+export const getApplicationsForOpportunity = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const data = await OpportunityService.getApplicationsForOpportunity(
+      req.user!.id,
+      req.user!.role,
+      req.params.id,
+    );
+    return res.json({ data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const updateApplicationStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const data = await OpportunityService.updateApplicationStatus(
+      req.user!.id,
+      req.user!.role,
+      req.params.applicationId,
+      req.body.status,
+    );
+    return res.json({ message: "Application updated", data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getApplicationFile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { applicationId, kind } = req.params as { applicationId: string; kind: "cv" | "portfolio" };
+    const file = await OpportunityService.getApplicationFile(req.user!.id, req.user!.role, applicationId, kind);
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.filename.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "'")}"`,
+    );
+    return res.send(file.data);
+  } catch (error) {
     return next(error);
   }
 };

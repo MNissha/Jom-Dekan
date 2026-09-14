@@ -12,6 +12,10 @@ export const createOpportunitySchema = z.object({
   subjectId: z.string().uuid().optional(),
   listingType: z.enum(["TUTORING", "STUDY_GROUP", "PROJECT_MENTORSHIP"]),
   mode: z.enum(["ONLINE", "PHYSICAL", "HYBRID"]),
+  applicationDeadline: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Application deadline must use YYYY-MM-DD format.")
+    .optional(),
 }).superRefine((value, ctx) => {
   const phone = value.description.match(/^Contact:\s*([^\s]+)/m)?.[1];
   if (phone && !/^\d+$/.test(phone)) {
@@ -46,11 +50,24 @@ export const applyOpportunitySchema = z.object({
     .string()
     .min(10, "Cover message must be at least 10 characters long.")
     .max(2000),
+  cvUrl: z.string().trim().url("Enter a valid CV link.").max(500).optional().or(z.literal("")),
+  portfolioUrl: z.string().trim().url("Enter a valid portfolio link.").max(500).optional().or(z.literal("")),
 });
 
 export const updateOpportunityStatusSchema = z.object({
   status: z.enum(["active", "closed"]),
 });
+
+export const applicationStatusSchema = z.object({
+  status: z.enum(["accepted", "declined"]),
+}).strict();
+
+export const applicationIdParamSchema = z.object({ applicationId: z.string().uuid("Invalid application id.") }).strict();
+
+export const applicationFileParamSchema = z.object({
+  applicationId: z.string().uuid("Invalid application id."),
+  kind: z.enum(["cv", "portfolio"]),
+}).strict();
 
 export const adminCreateOpportunitySchema = z.object({
   title: z.string().trim().min(5).max(255),

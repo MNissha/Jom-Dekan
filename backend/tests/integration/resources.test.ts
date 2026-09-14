@@ -140,6 +140,65 @@ describe("Resources API", () => {
     expect(confirmRes.body.data.file.status).toBe("READY");
   });
 
+  it("attaches a second file to the same resource via resourceId, keeping both", async () => {
+    if (skip) return;
+    const { resourceId } = await uploadAndConfirm(ownerAToken);
+
+    const secondIntentRes = await createUploadIntent(ownerAToken, {
+      resourceId,
+      fileName: "slides.pdf",
+      sizeBytes: PDF_BUFFER.length,
+    });
+    expect(secondIntentRes.status).toBe(201);
+    expect(secondIntentRes.body.data.resource.id).toBe(resourceId);
+
+    await request(app)
+      .put(secondIntentRes.body.data.uploadUrl)
+      .set("Authorization", `Bearer ${ownerAToken}`)
+      .attach("file", PDF_BUFFER, "slides.pdf");
+    const secondConfirmRes = await request(app)
+      .post(`/api/v1/resources/files/${secondIntentRes.body.data.file.id}/confirm`)
+      .set("Authorization", `Bearer ${ownerAToken}`);
+    expect(secondConfirmRes.status).toBe(200);
+
+    const getRes = await request(app)
+      .get(`/api/v1/resources/${resourceId}`)
+      .set("Authorization", `Bearer ${ownerAToken}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.data.files).toHaveLength(2);
+    expect(
+      getRes.body.data.files.map((f: { originalFilename: string }) => f.originalFilename),
+    ).toEqual(["notes.pdf", "slides.pdf"]);
+  });
+
+  it("rejects attaching a file to another user's resource", async () => {
+    if (skip) return;
+    const { resourceId } = await uploadAndConfirm(ownerAToken);
+
+    const res = await createUploadIntent(ownerBToken, { resourceId });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects attaching a file to a resource that doesn't exist", async () => {
+    if (skip) return;
+    const res = await createUploadIntent(ownerAToken, {
+      resourceId: "00000000-0000-0000-0000-000000000000",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects attaching a file to an archived resource", async () => {
+    if (skip) return;
+    const { resourceId } = await uploadAndConfirm(ownerAToken);
+    await request(app)
+      .patch(`/api/v1/resources/${resourceId}/status`)
+      .set("Authorization", `Bearer ${ownerAToken}`)
+      .send({ action: "ARCHIVE" });
+
+    const res = await createUploadIntent(ownerAToken, { resourceId });
+    expect(res.status).toBe(400);
+  });
+
   it("rejects a file whose content does not match any allowed type", async () => {
     if (skip) return;
     const intentRes = await createUploadIntent(ownerAToken, {

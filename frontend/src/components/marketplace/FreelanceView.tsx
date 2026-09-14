@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import axios from "axios";
-import { Briefcase, Plus, X, Check, Phone, Mail, Link as LinkIcon, PenLine, ShieldCheck, Rocket, Handshake, Info } from "lucide-react";
-import { useOpportunities } from "../../hooks/useOpportunities";
+import { Briefcase, Plus, X, Check, Phone, Mail, Link as LinkIcon, PenLine, ShieldCheck, Rocket, Handshake, Info, ChevronDown, Download, UserRound, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useOpportunities, useMyOpportunities, useOpportunityApplications, useDecideApplication } from "../../hooks/useOpportunities";
+import { opportunityService } from "../../service/opportunityService";
+import { useCurrentUser } from "../../hooks/useAuth";
+import { useToast } from "../../context/ToastContext";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
 import { MarketplaceCardSkeleton } from "./MarketplaceCardSkeleton";
-import type { Opportunity, OpportunityMode } from "../../types/opportunity";
+import type { Opportunity, OpportunityApplication, OpportunityApplicationStatus, OpportunityMode } from "../../types/opportunity";
 import { useMinimumLoading } from "../../hooks/useMinimumLoading";
 
 const MODE_LABEL: Record<OpportunityMode, string> = {
@@ -16,6 +19,13 @@ const MODE_LABEL: Record<OpportunityMode, string> = {
 };
 
 const SKILL_OPTIONS = ["Design", "Web dev", "Mobile dev", "Copywriting", "Video", "Data entry"];
+
+function applicationStatusBadge(status: OpportunityApplicationStatus | null | undefined) {
+  if (status === "pending") return { label: "Application pending", className: "bg-amber-50 text-amber-700" };
+  if (status === "accepted") return { label: "Application accepted", className: "bg-emerald-50 text-emerald-700" };
+  if (status === "declined") return { label: "Application declined", className: "bg-rose-50 text-rose-700" };
+  return null;
+}
 
 const HOW_IT_WORKS = [
   {
@@ -177,12 +187,22 @@ function parseListing(description: string): ParsedListing {
 }
 
 export function FreelanceView({ initialDetailId = null }: { initialDetailId?: string | null }) {
+  const currentUser = useCurrentUser();
+  const toast = useToast();
   const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
+  const { myOpportunities, isLoading: isLoadingMine } = useMyOpportunities();
   const showSkeleton = useMinimumLoading(isLoading, 2000);
+
+  const [view, setView] = useState<"browse" | "mine">("browse");
 
   const gigs = useMemo(
     () => (opportunities as Opportunity[]).filter((o) => o.listing_type !== "TUTORING" && o.status === "active"),
     [opportunities],
+  );
+
+  const myGigs = useMemo(
+    () => (myOpportunities as Opportunity[]).filter((o) => o.listing_type !== "TUTORING"),
+    [myOpportunities],
   );
 
   const [howOpen, setHowOpen] = useState(false);
@@ -192,6 +212,8 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
   const [postDone, setPostDone] = useState(false);
   const [form, setForm] = useState<PostForm>(EMPTY_FORM);
   const [skills, setSkills] = useState<Record<string, boolean>>({});
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [customSkillInput, setCustomSkillInput] = useState("");
   const [terms, setTerms] = useState<Record<TermKey, boolean>>({
     legit: false,
     integrity: false,
@@ -203,8 +225,20 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
 
   const [selectedOpp, setSelectedOpp] = useState<string | null>(null);
   const [coverMessage, setCoverMessage] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUrl, setCvUrl] = useState("");
+  const [portfolioFile, setPortfolioFile] = useState<File | null>(null);
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [applying, setApplying] = useState(false);
   const [detailOppId, setDetailOppId] = useState<string | null>(initialDetailId);
   const detailOpp = gigs.find((g) => g.id === detailOppId) ?? null;
+
+  function addCustomSkill() {
+    const trimmed = customSkillInput.trim();
+    if (!trimmed || customSkills.includes(trimmed)) return;
+    setCustomSkills((s) => [...s, trimmed]);
+    setCustomSkillInput("");
+  }
 
   function updateForm<K extends keyof PostForm>(key: K, value: PostForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -238,9 +272,12 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
   async function handleSubmit() {
     if (!termsReady) return;
     setSubmitting(true);
-    const skillList = Object.entries(skills)
-      .filter(([, on]) => on)
-      .map(([label]) => label);
+    const skillList = [
+      ...Object.entries(skills)
+        .filter(([, on]) => on)
+        .map(([label]) => label),
+      ...customSkills,
+    ];
 
     try {
       await createOpportunity({
@@ -252,33 +289,54 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
         // enum value.
         listingType: "PROJECT_MENTORSHIP",
         mode: form.mode,
+        applicationDeadline: form.closes || undefined,
       });
       setPostDone(true);
       setForm(EMPTY_FORM);
       setSkills({});
+      setCustomSkills([]);
+      setCustomSkillInput("");
       setTerms({ legit: false, integrity: false, pay: false, accurate: false, liability: false });
     } catch (err) {
       const message = axios.isAxiosError(err)
         ? (err.response?.data as { error?: { message?: string } })?.error?.message
         : undefined;
-      alert(message || "Failed to post your listing");
+      toast.error(message || "Failed to post your listing");
     } finally {
       setSubmitting(false);
     }
   }
 
+  function resetApplyForm() {
+    setSelectedOpp(null);
+    setCoverMessage("");
+    setCvFile(null);
+    setCvUrl("");
+    setPortfolioFile(null);
+    setPortfolioUrl("");
+  }
+
   async function handleApply(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedOpp) return;
+    setApplying(true);
     try {
-      await applyToOpportunity({ opportunityId: selectedOpp, coverMessage });
-      setSelectedOpp(null);
-      setCoverMessage("");
+      await applyToOpportunity({
+        opportunityId: selectedOpp,
+        coverMessage,
+        cvFile: cvFile ?? undefined,
+        cvUrl: cvUrl.trim() || undefined,
+        portfolioFile: portfolioFile ?? undefined,
+        portfolioUrl: portfolioUrl.trim() || undefined,
+      });
+      resetApplyForm();
     } catch (err) {
       const message = axios.isAxiosError(err)
         ? (err.response?.data as { error?: { message?: string } })?.error?.message
         : undefined;
-      alert(message || "Failed to submit application");
+      toast.error(message || "Failed to submit application");
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -286,8 +344,8 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Freelance Opportunities</h1>
-          <p className="mt-1 text-sm text-slate-500">Paid student gigs from campus clubs, startups and lecturers.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Freelance Opportunities</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Paid student gigs from campus clubs, startups and lecturers.</p>
         </div>
         <div className="flex flex-wrap gap-2.5">
           <button
@@ -313,6 +371,33 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
         Every listing is manually reviewed. Academic ghost-writing requests are rejected and reported.
       </div>
 
+      {currentUser && (
+        <div className="inline-flex w-fit rounded-xl border border-[#E4E3F2] bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setView("browse")}
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition motion-safe:duration-150 ${
+              view === "browse" ? "bg-primary-600 text-white" : "text-slate-600 hover:text-primary-700"
+            }`}
+          >
+            Browse
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("mine")}
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition motion-safe:duration-150 ${
+              view === "mine" ? "bg-primary-600 text-white" : "text-slate-600 hover:text-primary-700"
+            }`}
+          >
+            My listings
+          </button>
+        </div>
+      )}
+
+      {view === "mine" ? (
+        <MyListings listings={myGigs} isLoading={isLoadingMine} onPost={openPost} />
+      ) : (
+        <>
       {howOpen && (
         <section className="relative flex flex-col gap-5 overflow-hidden rounded-[24px] border border-[#DDD9F1] bg-white p-5 shadow-[0_14px_40px_rgba(67,56,202,0.08)] motion-safe:animate-[modalRise_240ms_ease-out] sm:p-6">
           <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-violet-200/35 blur-3xl" />
@@ -407,21 +492,30 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                   {parsed.budget && <span className="text-lg font-extrabold text-[#2E2372]">{parsed.budget}</span>}
                   <FavoriteButton targetType="opportunity" targetId={opp.id} />
                   <ReportButton targetType="opportunity" targetId={opp.id} />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOpp(opp.id);
-                    }}
-                    className="rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
-                  >
-                    Apply
-                  </button>
+                  {opp.owner_id !== currentUser?.id && (() => {
+                    const badge = applicationStatusBadge(opp.my_application_status);
+                    return badge ? (
+                      <span className={`rounded-xl px-5 py-2.5 text-sm font-bold ${badge.className}`}>{badge.label}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedOpp(opp.id);
+                        }}
+                        className="rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
+                      >
+                        Apply
+                      </button>
+                    );
+                  })()}
                 </div>
               </article>
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       {/* Post-a-listing modal */}
@@ -549,6 +643,45 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                         </button>
                       );
                     })}
+                    {customSkills.map((label) => (
+                      <span
+                        key={label}
+                        className="flex h-9 items-center gap-1.5 rounded-full border border-primary-500 bg-primary-50 pl-3.5 pr-2 text-xs font-bold text-primary-700"
+                      >
+                        {label}
+                        <button
+                          type="button"
+                          onClick={() => setCustomSkills((s) => s.filter((skill) => skill !== label))}
+                          aria-label={`Remove ${label}`}
+                          className="rounded-full p-0.5 text-primary-600 hover:bg-primary-100"
+                        >
+                          <X className="h-3 w-3" aria-hidden="true" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={customSkillInput}
+                      onChange={(e) => setCustomSkillInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomSkill();
+                        }
+                      }}
+                      placeholder="Add a skill that isn't listed above…"
+                      className="h-9 flex-1 rounded-full border border-[#E4E3F2] bg-[#FBFBFE] px-3.5 text-xs font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomSkill}
+                      disabled={!customSkillInput.trim()}
+                      className="flex h-9 items-center gap-1 rounded-full bg-primary-600 px-3.5 text-xs font-bold text-white transition motion-safe:duration-150 hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      Add
+                    </button>
                   </div>
                 </section>
 
@@ -632,7 +765,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
           applyToOpportunity mutation the tutoring/generic marketplace
           views use. */}
       {selectedOpp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 py-8">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="mb-4 text-lg font-bold text-slate-900">Submit application</h3>
             <form onSubmit={handleApply} className="space-y-4">
@@ -647,12 +780,52 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                   required
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  CV <span className="font-semibold text-slate-400">· optional</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,image/jpeg,image/png"
+                  onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-primary-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-primary-700 hover:file:bg-primary-100"
+                />
+                <input
+                  type="url"
+                  value={cvUrl}
+                  onChange={(e) => setCvUrl(e.target.value)}
+                  placeholder="…or paste a link (Google Drive, etc.)"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Portfolio <span className="font-semibold text-slate-400">· optional</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,image/jpeg,image/png"
+                  onChange={(e) => setPortfolioFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-primary-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-primary-700 hover:file:bg-primary-100"
+                />
+                <input
+                  type="url"
+                  value={portfolioUrl}
+                  onChange={(e) => setPortfolioUrl(e.target.value)}
+                  placeholder="…or paste a link (website, Behance, etc.)"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setSelectedOpp(null)} className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
+                <button type="button" onClick={resetApplyForm} className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
                   Cancel
                 </button>
-                <button type="submit" className="rounded-full bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700">
-                  Send application
+                <button
+                  type="submit"
+                  disabled={applying}
+                  className="rounded-full bg-primary-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {applying ? "Sending…" : "Send application"}
                 </button>
               </div>
             </form>
@@ -778,16 +951,23 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                 >
                   Close
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedOpp(detailOpp.id);
-                    setDetailOppId(null);
-                  }}
-                  className="rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white hover:bg-primary-700"
-                >
-                  Apply
-                </button>
+                {detailOpp.owner_id !== currentUser?.id && (() => {
+                  const badge = applicationStatusBadge(detailOpp.my_application_status);
+                  return badge ? (
+                    <span className={`rounded-xl px-5 py-3 text-sm font-bold ${badge.className}`}>{badge.label}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOpp(detailOpp.id);
+                        setDetailOppId(null);
+                      }}
+                      className="rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white hover:bg-primary-700"
+                    >
+                      Apply
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -842,5 +1022,207 @@ function Field({
       />
       {note && <span className="text-[11px] font-semibold text-slate-400">{note}</span>}
     </label>
+  );
+}
+
+const STATUS_BADGE: Record<Opportunity["status"], string> = {
+  active: "bg-emerald-50 text-emerald-700",
+  closed: "bg-slate-100 text-slate-500",
+};
+
+const APPLICATION_STATUS_BADGE: Record<OpportunityApplication["status"], string> = {
+  pending: "bg-amber-50 text-amber-700",
+  accepted: "bg-emerald-50 text-emerald-700",
+  declined: "bg-red-50 text-red-700",
+};
+
+function MyListings({
+  listings,
+  isLoading,
+  onPost,
+}: {
+  listings: Opportunity[];
+  isLoading: boolean;
+  onPost: () => void;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <MarketplaceCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  if (listings.length === 0) {
+    return (
+      <EmptyState icon={Briefcase} title="You haven't posted any listings yet" description="Post a freelance opportunity to start receiving applications.">
+        <button
+          type="button"
+          onClick={onPost}
+          className="mt-6 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+          Post an opportunity
+        </button>
+      </EmptyState>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {listings.map((opp) => {
+        const expanded = expandedId === opp.id;
+        return (
+          <div key={opp.id} className="rounded-[20px] border border-[#ECEBF7] bg-white p-[18px]">
+            <button
+              type="button"
+              onClick={() => setExpandedId(expanded ? null : opp.id)}
+              className="flex w-full flex-wrap items-center gap-4 text-left"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-[16px] font-bold text-slate-900">{opp.title}</h3>
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${STATUS_BADGE[opp.status]}`}>
+                    {opp.status}
+                  </span>
+                </div>
+                {opp.application_deadline && (
+                  <p className="mt-0.5 text-sm text-slate-500">Applications close {opp.application_deadline}</p>
+                )}
+              </div>
+              <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
+            {expanded && <ListingApplicantsPanel opportunityId={opp.id} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ListingApplicantsPanel({ opportunityId }: { opportunityId: string }) {
+  const toast = useToast();
+  const { applications, isLoading } = useOpportunityApplications(opportunityId);
+  const decideMutation = useDecideApplication(opportunityId);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  async function handleDownload(applicationId: string, kind: "cv" | "portfolio", applicantName: string) {
+    setDownloadingId(`${applicationId}-${kind}`);
+    try {
+      await opportunityService.downloadApplicationFile(applicationId, kind, `${applicantName}-${kind}`);
+    } catch {
+      toast.error("Failed to download the file.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  async function handleDecide(applicationId: string, status: "accepted" | "declined") {
+    try {
+      await decideMutation.mutateAsync({ applicationId, status });
+    } catch (err) {
+      const message = axios.isAxiosError(err)
+        ? (err.response?.data as { error?: { message?: string } })?.error?.message
+        : undefined;
+      toast.error(message || "Failed to update the application");
+    }
+  }
+
+  if (isLoading) {
+    return <p className="mt-4 text-sm text-slate-500">Loading applications…</p>;
+  }
+
+  if (applications.length === 0) {
+    return <p className="mt-4 text-sm text-slate-500">No applications yet.</p>;
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 border-t border-[#F1F0FA] pt-4">
+      {applications.map((app) => {
+        const name = app.applicant_name || app.applicant_email;
+        return (
+          <div key={app.id} className="rounded-xl border border-[#ECEBF7] bg-[#FBFBFE] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EFEEFB] text-[#4338CA]">
+                  <UserRound className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{name}</p>
+                  <p className="text-xs text-slate-500">{app.applicant_email}</p>
+                </div>
+              </div>
+              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${APPLICATION_STATUS_BADGE[app.status]}`}>
+                {app.status}
+              </span>
+            </div>
+            <p className="mt-3 whitespace-pre-line text-sm text-slate-600">{app.cover_message}</p>
+            {(app.has_cv || app.cv_url || app.has_portfolio || app.portfolio_url) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {app.has_cv && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(app.id, "cv", name)}
+                    disabled={downloadingId === `${app.id}-cv`}
+                    className="flex items-center gap-1.5 rounded-full border border-[#E4E3F2] px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-700"
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    {downloadingId === `${app.id}-cv` ? "Downloading…" : "Download CV"}
+                  </button>
+                )}
+                {app.cv_url && (
+                  <a href={app.cv_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-full border border-[#E4E3F2] px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-700">
+                    <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    CV link
+                  </a>
+                )}
+                {app.has_portfolio && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(app.id, "portfolio", name)}
+                    disabled={downloadingId === `${app.id}-portfolio`}
+                    className="flex items-center gap-1.5 rounded-full border border-[#E4E3F2] px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-700"
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    {downloadingId === `${app.id}-portfolio` ? "Downloading…" : "Download portfolio"}
+                  </button>
+                )}
+                {app.portfolio_url && (
+                  <a href={app.portfolio_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-full border border-[#E4E3F2] px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-primary-300 hover:text-primary-700">
+                    <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    Portfolio link
+                  </a>
+                )}
+              </div>
+            )}
+            {app.status === "pending" && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDecide(app.id, "accepted")}
+                  disabled={decideMutation.isPending}
+                  className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDecide(app.id, "declined")}
+                  disabled={decideMutation.isPending}
+                  className="flex items-center gap-1.5 rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+                  Reject
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

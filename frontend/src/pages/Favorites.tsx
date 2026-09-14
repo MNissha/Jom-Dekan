@@ -141,8 +141,8 @@ export default function Favorites() {
 
   return (
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
-      <h1 className="text-2xl font-bold text-slate-900">Saved Items</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Saved Items</h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Resources, discussions, tutors, and opportunities you've saved for later.
       </p>
 

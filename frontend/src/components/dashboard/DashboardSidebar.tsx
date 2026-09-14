@@ -10,6 +10,7 @@ import {
   Bell,
   ShieldCheck,
   UserCog,
+  LifeBuoy,
   LogOut,
   X,
   GraduationCap,
@@ -227,6 +228,7 @@ export function DashboardSidebar({
   }, [isOpen]);
 
   const isProfileActive = location.pathname === "/profile";
+  const isHelpActive = location.pathname === "/help";
 
   return (
     <>
@@ -288,6 +290,18 @@ export function DashboardSidebar({
                     aria-hidden="true"
                   />
                   {!collapsed && "Profile & Settings"}
+                </NavLink>
+                <NavLink
+                  to="/help"
+                  onClick={onClose}
+                  title={collapsed ? "Help & Support" : undefined}
+                  className={rowClass(isHelpActive, collapsed)}
+                >
+                  <LifeBuoy
+                    className="h-[19px] w-[19px] shrink-0"
+                    aria-hidden="true"
+                  />
+                  {!collapsed && "Help & Support"}
                 </NavLink>
               </>
             )}
@@ -388,6 +402,17 @@ export function DashboardSidebar({
                         aria-hidden="true"
                       />
                       Profile & Settings
+                    </NavLink>
+                    <NavLink
+                      to="/help"
+                      onClick={onClose}
+                      className={rowClass(isHelpActive, false)}
+                    >
+                      <LifeBuoy
+                        className="h-[19px] w-[19px] shrink-0"
+                        aria-hidden="true"
+                      />
+                      Help & Support
                     </NavLink>
                   </>
                 )}

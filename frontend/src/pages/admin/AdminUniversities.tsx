@@ -133,8 +133,8 @@ export default function AdminUniversities({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900">Universities</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Universities</h1>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Only admins can create, edit, or archive universities here. "Archive"
         hides a university from new picks without deleting it, so existing
         profiles/resources that reference it stay intact.

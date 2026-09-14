@@ -277,9 +277,9 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
   return (
     <AdminPageShell embedded={embedded}>
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Admin safety</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Moderation queue</h1>
-        <p className="mt-1 text-sm text-slate-500">Review reports and respond directly to reporters.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">Admin safety</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Moderation queue</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Review reports and respond directly to reporters.</p>
 
         <nav className="mt-5 flex w-fit flex-wrap gap-1 rounded-xl border border-[#ECEBF7] bg-white p-1 shadow-sm" aria-label="Report types">
           {([
