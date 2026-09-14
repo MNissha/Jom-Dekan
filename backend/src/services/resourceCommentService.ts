@@ -29,6 +29,7 @@ export const resourceCommentService = {
     );
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_COMMENT_CREATED",
       targetType: "resource_comment",
       targetId: row.id,

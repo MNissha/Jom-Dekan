@@ -30,6 +30,7 @@ import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminModerationQueue from "./pages/admin/AdminModerationQueue";
 import AdminOpportunities from "./pages/admin/AdminOpportunities";
 import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminLogs from "./pages/admin/AdminLogs";
 
 function App() {
   useSessionBootstrap();
@@ -301,6 +302,16 @@ function App() {
             <ProtectedRoute requireAdmin>
               <DashboardLayout>
                 <AdminUserDetail embedded />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/logs"
+          element={
+            <ProtectedRoute requireAdmin>
+              <DashboardLayout>
+                <AdminLogs embedded />
               </DashboardLayout>
             </ProtectedRoute>
           }

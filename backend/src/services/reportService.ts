@@ -115,6 +115,7 @@ export const reportService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "REPORT_SUBMITTED",
       targetType: input.targetType,
       targetId: input.targetId,

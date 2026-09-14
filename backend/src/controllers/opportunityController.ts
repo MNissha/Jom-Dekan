@@ -38,25 +38,25 @@ export class OpportunityService {
 
   static async updateStatus(adminId: string, id: string, status: string) {
     const result = await OpportunityModel.updateStatus(id, status);
-    if (result) await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_STATUS_UPDATED", targetType: "opportunity", targetId: id, metadata: { status } });
+    if (result) await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_OPPORTUNITY_STATUS_UPDATED", targetType: "opportunity", targetId: id, metadata: { status } });
     return result;
   }
 
   static async adminCreate(adminId: string, data: { title: string; description: string; mode: string; listingType: string }) {
     const result = await OpportunityModel.create(adminId, data);
-    await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_CREATED", targetType: "opportunity", targetId: result.id });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_OPPORTUNITY_CREATED", targetType: "opportunity", targetId: result.id });
     return result;
   }
 
   static async adminUpdate(adminId: string, id: string, data: { title: string; description: string; mode: string }) {
     const result = await OpportunityModel.update(id, data);
-    if (result) await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_UPDATED", targetType: "opportunity", targetId: id });
+    if (result) await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_OPPORTUNITY_UPDATED", targetType: "opportunity", targetId: id });
     return result;
   }
 
   static async adminDelete(adminId: string, id: string) {
     const removed = await OpportunityModel.remove(id);
-    if (removed) await auditLogModel.record({ actorUserId: adminId, action: "ADMIN_OPPORTUNITY_DELETED", targetType: "opportunity", targetId: id });
+    if (removed) await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_OPPORTUNITY_DELETED", targetType: "opportunity", targetId: id });
     return removed;
   }
 }

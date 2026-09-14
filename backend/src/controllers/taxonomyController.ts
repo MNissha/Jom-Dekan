@@ -4,6 +4,7 @@ import { taxonomyService } from "../services/taxonomyService";
 function ctxFrom(req: Request) {
   return {
     actorUserId: req.user!.id,
+    actorRole: req.user!.role,
     requestId: req.requestId,
     ipAddress: req.ip,
   };

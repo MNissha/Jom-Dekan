@@ -167,6 +167,7 @@ export const resourceService = {
         },
         {
           actorUserId: ctx.actorUserId,
+          actorRole: ctx.actorRole,
           requestId: ctx.requestId,
           ipAddress: ctx.ipAddress,
         },
@@ -201,6 +202,7 @@ export const resourceService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_CREATED",
       targetType: "resource",
       targetId: resource.id,
@@ -250,6 +252,7 @@ export const resourceService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_CREATED",
       targetType: "resource",
       targetId: resource.id,
@@ -258,6 +261,7 @@ export const resourceService = {
     });
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_READY",
       targetType: "resource",
       targetId: resource.id,
@@ -331,6 +335,7 @@ export const resourceService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_FILE_CONFIRMED",
       targetType: "resource_file",
       targetId: fileId,
@@ -346,6 +351,7 @@ export const resourceService = {
     );
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action:
         newResourceStatus === "READY" ? "RESOURCE_READY" : "RESOURCE_FAILED",
       targetType: "resource",
@@ -439,6 +445,7 @@ export const resourceService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_UPDATED",
       targetType: "resource",
       targetId: id,
@@ -462,6 +469,7 @@ export const resourceService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: action === "ARCHIVE" ? "RESOURCE_ARCHIVED" : "RESOURCE_RESTORED",
       targetType: "resource",
       targetId: id,
@@ -498,6 +506,7 @@ export const resourceService = {
 
     await auditLogModel.record({
       actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
       action: "RESOURCE_DELETED",
       targetType: "resource",
       targetId: id,

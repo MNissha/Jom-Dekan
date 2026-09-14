@@ -17,6 +17,7 @@ import { AppError } from "../types/errors";
 
 interface ActorContext {
   actorUserId: string;
+  actorRole: "USER" | "ADMIN";
   requestId?: string;
   ipAddress?: string;
 }
@@ -54,6 +55,7 @@ export const taxonomyService = {
       }
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_UNIVERSITY_CREATED",
         targetType: "university",
         targetId: row.id,
@@ -86,6 +88,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("University not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_UNIVERSITY_UPDATED",
         targetType: "university",
         targetId: row.id,
@@ -100,6 +103,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("University not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: isActive
           ? "TAXONOMY_UNIVERSITY_RESTORED"
           : "TAXONOMY_UNIVERSITY_ARCHIVED",
@@ -148,6 +152,7 @@ export const taxonomyService = {
       }
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_FACULTY_CREATED",
         targetType: "faculty",
         targetId: row.id,
@@ -175,6 +180,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("Faculty not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_FACULTY_UPDATED",
         targetType: "faculty",
         targetId: row.id,
@@ -189,6 +195,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("Faculty not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: isActive
           ? "TAXONOMY_FACULTY_RESTORED"
           : "TAXONOMY_FACULTY_ARCHIVED",
@@ -237,6 +244,7 @@ export const taxonomyService = {
       }
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_PROGRAMME_CREATED",
         targetType: "programme",
         targetId: row.id,
@@ -269,6 +277,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("Programme not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_PROGRAMME_UPDATED",
         targetType: "programme",
         targetId: row.id,
@@ -283,6 +292,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("Programme not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: isActive
           ? "TAXONOMY_PROGRAMME_RESTORED"
           : "TAXONOMY_PROGRAMME_ARCHIVED",
@@ -321,6 +331,7 @@ export const taxonomyService = {
       }
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_SUBJECT_CREATED",
         targetType: "subject",
         targetId: row.id,
@@ -388,6 +399,7 @@ export const taxonomyService = {
       });
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: created
           ? "TAXONOMY_SUBJECT_COMMUNITY_SUBMITTED"
           : "TAXONOMY_SUBJECT_REUSED_FOR_PROGRAMME",
@@ -422,6 +434,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("Subject not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_SUBJECT_UPDATED",
         targetType: "subject",
         targetId: row.id,
@@ -436,6 +449,7 @@ export const taxonomyService = {
       if (!row) throw AppError.notFound("Subject not found.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: isActive
           ? "TAXONOMY_SUBJECT_RESTORED"
           : "TAXONOMY_SUBJECT_ARCHIVED",
@@ -469,6 +483,7 @@ export const taxonomyService = {
       await taxonomyModel.programmeSubjects.link(input);
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_PROGRAMME_SUBJECT_LINKED",
         targetType: "programme",
         targetId: input.programmeId,
@@ -494,6 +509,7 @@ export const taxonomyService = {
       if (!removed) throw AppError.notFound("That subject isn't linked to this programme.");
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_PROGRAMME_SUBJECT_UNLINKED",
         targetType: "programme",
         targetId: programmeId,
@@ -564,6 +580,7 @@ export const taxonomyService = {
 
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
         action: "TAXONOMY_REQUEST_SUBMITTED",
         targetType: "taxonomy_request",
         targetId: row.id,
