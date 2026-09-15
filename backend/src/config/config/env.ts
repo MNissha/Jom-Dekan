@@ -90,6 +90,49 @@ const envSchema = z.object({
 
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   RATE_LIMIT_MAX_AUTH: z.coerce.number().int().positive().default(20),
+
+  // --- AI resource summaries -------------------------------------------
+  // Never exposed to the frontend, never logged, never read from a
+  // VITE_ variable — see backend/src/services/openaiSummaryService.ts.
+  OPENAI_API_KEY: z.string().optional().default(""),
+  OPENAI_SUMMARY_MODEL: z.string().default("gpt-5.6-luna"),
+  // A full structured summary (up to 8 study sections, 12 glossary
+  // entries, etc.) for a real multi-page document routinely needs more
+  // than 1000 tokens once the model's own reasoning-token overhead is
+  // included, or the response is cut off mid-JSON.
+  OPENAI_SUMMARY_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(4000),
+  AI_SUMMARY_ENABLED: booleanString(true),
+  AI_SUMMARY_MAX_INPUT_CHARACTERS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(80000),
+  AI_SUMMARY_DAILY_USER_LIMIT: z.coerce.number().int().positive().default(10),
+  AI_SUMMARY_MAX_IMAGE_SIZE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5 * 1024 * 1024),
+
+  // --- "Ask This Resource" agent (Phase 2) ------------------------------
+  // Reuses OPENAI_API_KEY above. If OPENAI_AGENT_MODEL is left empty, the
+  // agent reuses the already-validated OPENAI_SUMMARY_MODEL — one model
+  // ID is never hardcoded in more than this one config module.
+  AI_AGENT_ENABLED: booleanString(true),
+  OPENAI_AGENT_MODEL: z.string().optional().default(""),
+  AI_AGENT_MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(600),
+  AI_AGENT_MAX_TOOL_CALLS: z.coerce.number().int().positive().max(10).default(2),
+  AI_AGENT_MAX_CHUNKS_PER_SEARCH: z.coerce.number().int().positive().max(20).default(5),
+  AI_AGENT_MAX_CHUNK_CHARACTERS: z.coerce.number().int().positive().default(1500),
+  AI_AGENT_CONTEXT_TURNS: z.coerce.number().int().positive().max(20).default(4),
+  AI_AGENT_DAILY_USER_LIMIT: z.coerce.number().int().positive().default(10),
+  AI_AGENT_SESSION_MESSAGE_LIMIT: z.coerce.number().int().positive().default(30),
+  AI_AGENT_MAX_QUESTION_CHARACTERS: z.coerce.number().int().positive().default(1000),
+  AI_AGENT_SESSION_EXPIRY_DAYS: z.coerce.number().int().positive().default(30),
 }).superRefine((data, ctx) => {
   if (data.EMAIL_PROVIDER === "smtp") {
     const required = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD"] as const;
@@ -206,5 +249,32 @@ export const env = {
   rateLimit: {
     windowMs: raw.RATE_LIMIT_WINDOW_MS,
     maxAuth: raw.RATE_LIMIT_MAX_AUTH,
+  },
+
+  aiSummary: {
+    openaiApiKey: raw.OPENAI_API_KEY,
+    model: raw.OPENAI_SUMMARY_MODEL,
+    maxOutputTokens: raw.OPENAI_SUMMARY_MAX_OUTPUT_TOKENS,
+    enabled: raw.AI_SUMMARY_ENABLED,
+    maxInputCharacters: raw.AI_SUMMARY_MAX_INPUT_CHARACTERS,
+    dailyUserLimit: raw.AI_SUMMARY_DAILY_USER_LIMIT,
+    maxImageSizeBytes: raw.AI_SUMMARY_MAX_IMAGE_SIZE_BYTES,
+  },
+
+  aiAgent: {
+    openaiApiKey: raw.OPENAI_API_KEY,
+    // Falls back to the Phase 1 summary model when left unset — the one
+    // place this fallback happens; every other module reads env.aiAgent.model.
+    model: raw.OPENAI_AGENT_MODEL || raw.OPENAI_SUMMARY_MODEL,
+    enabled: raw.AI_AGENT_ENABLED,
+    maxOutputTokens: raw.AI_AGENT_MAX_OUTPUT_TOKENS,
+    maxToolCalls: raw.AI_AGENT_MAX_TOOL_CALLS,
+    maxChunksPerSearch: raw.AI_AGENT_MAX_CHUNKS_PER_SEARCH,
+    maxChunkCharacters: raw.AI_AGENT_MAX_CHUNK_CHARACTERS,
+    contextTurns: raw.AI_AGENT_CONTEXT_TURNS,
+    dailyUserLimit: raw.AI_AGENT_DAILY_USER_LIMIT,
+    sessionMessageLimit: raw.AI_AGENT_SESSION_MESSAGE_LIMIT,
+    maxQuestionCharacters: raw.AI_AGENT_MAX_QUESTION_CHARACTERS,
+    sessionExpiryDays: raw.AI_AGENT_SESSION_EXPIRY_DAYS,
   },
 };

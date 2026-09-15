@@ -13,16 +13,42 @@ checkout. It assumes no prior knowledge of this specific project.
   single command.
 - **Git**.
 
-## 2. Start PostgreSQL (and Redis, for later milestones)
+## 2. Choose how to run the stack
+
+### Option A: run everything in Docker
+
+From the repository root, optionally copy the Docker environment
+template and add your own development secrets/OpenAI key:
+
+```bash
+cp .env.docker.example .env
+docker compose up --build -d
+```
+
+This starts the frontend on `http://localhost:5173`, the backend on
+`http://localhost:3000`, PostgreSQL on `localhost:5432`, and Redis on
+`localhost:6379`. The backend waits for PostgreSQL, applies pending
+migrations, and then starts automatically. Follow logs with
+`docker compose logs -f backend frontend`.
+
+When using this option, skip steps 3 and 4 below unless you need to
+run a one-off command. You can seed the container database with:
+
+```bash
+docker compose exec backend npm run seed
+```
+
+### Option B: run Node locally and infrastructure in Docker
 
 From the repository root:
 
 ```bash
-docker compose up -d
+docker compose up -d postgres redis
 ```
 
-This starts Postgres on `localhost:5432` (user `postgres`, password
-`postgres`, database `jomdekan`) and Redis on `localhost:6379`.
+This starts only Postgres on `localhost:5432` (user `postgres`, password
+`postgres`, database `jomdekan`) and Redis on `localhost:6379`. Continue
+with steps 3 and 4 to run the backend and frontend directly with Node.
 
 Don't have Docker? Install PostgreSQL 16 yourself and create a
 database:
@@ -84,7 +110,88 @@ cd backend
 npm run create-admin -- --email you@example.com
 ```
 
-## 6. Running tests and builds
+## 6. AI Resource Summaries (optional)
+
+The AI Study Summary feature (resource detail page) calls OpenAI's
+Responses API on the backend only. It works out of the box with
+`.env.example`'s defaults **except** it needs a real `OPENAI_API_KEY`
+to actually reach OpenAI — without one, generation attempts fail
+safely (a `FAILED` status with a generic error message and a working
+Retry button), which is a perfectly fine way to develop/demo the
+feature's UI without spending any API credit.
+
+```bash
+# backend/.env
+OPENAI_API_KEY=sk-...              # leave blank/fake to develop without spending credit
+OPENAI_SUMMARY_MODEL=gpt-5.6-luna
+OPENAI_SUMMARY_MAX_OUTPUT_TOKENS=4000        # 1000 truncates real multi-page documents mid-JSON
+AI_SUMMARY_ENABLED=true            # false disables the feature everywhere (GET shows "DISABLED", POST returns 403)
+AI_SUMMARY_MAX_INPUT_CHARACTERS=80000
+AI_SUMMARY_DAILY_USER_LIMIT=10     # per user, per calendar day — only counts attempts that reach OpenAI
+AI_SUMMARY_MAX_IMAGE_SIZE_BYTES=5242880
+```
+
+To try the full READY state (rendered summary + PDF/DOCX downloads)
+without a real key, generate a resource + summary as usual (it will
+land on `FAILED`), then insert a fake `READY` row directly:
+
+```sql
+-- source_hash must match resourceTextExtractionService.hashTextResource(title, description)
+-- for a text-only resource, or the file's checksum_sha256 for a file-based one.
+UPDATE resource_ai_summaries
+SET status = 'READY',
+    content = '{"overview":"...","keyPoints":["..."],"studySections":[],"topics":[],"glossary":[],"limitations":[],"language":"English"}'::jsonb
+WHERE resource_id = '<uuid>';
+```
+
+Downloading (PDF/DOCX) and re-viewing a `READY` summary never call
+OpenAI, regardless of how it got there — see `docs/architecture.md`.
+
+Automated tests never touch the real OpenAI SDK — see "Running tests
+and builds" below and `backend/tests/integration/resourceAiSummary.test.ts`,
+which mocks `openaiSummaryService.generateStructuredSummary` directly.
+
+## 7. Ask This Resource (optional, needs an AI summary first)
+
+The "Ask This Resource" chat (also on the resource detail page) reuses
+`OPENAI_API_KEY` — there is no second key to configure. It only
+activates once that resource has a `READY` Phase 1 AI summary (see
+step 6); until then, opening the chat shows a "generate the AI summary
+first" message rather than an error.
+
+```bash
+# backend/.env
+AI_AGENT_ENABLED=true              # false disables the feature everywhere (403 on every route)
+OPENAI_AGENT_MODEL=                # leave blank to reuse OPENAI_SUMMARY_MODEL — never a second model config to keep in sync
+AI_AGENT_MAX_OUTPUT_TOKENS=600
+AI_AGENT_MAX_TOOL_CALLS=2          # read-only search/read calls allowed per question
+AI_AGENT_MAX_CHUNKS_PER_SEARCH=5
+AI_AGENT_MAX_CHUNK_CHARACTERS=1500
+AI_AGENT_CONTEXT_TURNS=4           # recent Q&A pairs resent as context per question
+AI_AGENT_DAILY_USER_LIMIT=10       # per user, per calendar day — cache hits/replays don't count
+AI_AGENT_SESSION_MESSAGE_LIMIT=30  # per conversation, user+assistant combined
+AI_AGENT_MAX_QUESTION_CHARACTERS=1000
+AI_AGENT_SESSION_EXPIRY_DAYS=30    # idle sessions beyond this are treated as expired and replaced
+```
+
+To pick a different OpenAI model, set `OPENAI_AGENT_MODEL` (any model
+your OpenAI project has access to that supports the Responses API,
+Structured Outputs, and function tools) — no code changes needed. To
+turn the feature off entirely (e.g. to guarantee zero OpenAI spend in
+a shared/demo environment), set `AI_AGENT_ENABLED=false`; every agent
+route then returns `403 AI_AGENT_DISABLED` immediately, before any
+database or OpenAI call.
+
+**Automated tests never call the real OpenAI API.** Unit tests
+(`backend/tests/unit/openaiAgentService.test.ts`,
+`resourceChunkService.test.ts`) mock the `openai` package's SDK client
+directly; the integration suite
+(`backend/tests/integration/resourceAgent.test.ts`) mocks
+`openaiAgentService.runAgentTurn` and `openaiSummaryService.generateStructuredSummary`
+at the module boundary, so `npm test` never spends real API credit
+even with a real `OPENAI_API_KEY` configured.
+
+## 8. Running tests and builds
 
 Backend:
 
@@ -117,12 +224,12 @@ npx playwright install --with-deps chromium   # first time only
 npm run test:e2e
 ```
 
-## 7. Opening this project in VS Code
+## 9. Opening this project in VS Code
 
 See the root `README.md`'s "Open in VS Code" section for editor setup,
 recommended extensions, and a two-terminal launch routine.
 
-## 8. Common problems
+## 10. Common problems
 
 | Symptom | Likely cause | Fix |
 |---|---|---|

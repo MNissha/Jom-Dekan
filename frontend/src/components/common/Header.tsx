@@ -197,15 +197,18 @@ export function Header() {
             </>
           ) : (
             <>
-              <NavLink to="/register" className={navLinkClass}>
+              <NavLink to="/how-it-works" className={navLinkClass}>
+                How it works
+              </NavLink>
+              <NavLink to="/login" className={navLinkClass}>
+                Log in
+              </NavLink>
+              <NavLink
+                to="/register"
+                className="rounded-full bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:px-4"
+              >
                 Register
               </NavLink>
-              <Link
-                to="/register"
-                className="rounded-full bg-primary-600 px-4 py-2 font-medium text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-              >
-                Get started
-              </Link>
             </>
           )}
         </nav>

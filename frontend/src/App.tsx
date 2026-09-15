@@ -4,13 +4,13 @@ import { DashboardLayout } from "./layouts/DashboardLayout";
 import { ProtectedRoute } from "./components/common/ProtectedRoute";
 import { useSessionBootstrap } from "./hooks/useSessionBootstrap";
 import Landing from "./pages/Landing";
+import HowItWorks from "./pages/HowItWorks";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
-import Help from "./pages/Help";
 import UserProfile from "./pages/UserProfile";
 import Dashboard from "./pages/Dashboard";
 import Resources from "./pages/Resources";
@@ -46,6 +46,14 @@ function App() {
           element={
             <MainLayout>
               <Landing />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/how-it-works"
+          element={
+            <MainLayout>
+              <HowItWorks />
             </MainLayout>
           }
         />
@@ -228,9 +236,15 @@ function App() {
           path="/help"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Help />
-              </DashboardLayout>
+              <Navigate to="/profile?section=contact" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/help-support"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/profile?section=contact" replace />
             </ProtectedRoute>
           }
         />

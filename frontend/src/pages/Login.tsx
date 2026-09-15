@@ -73,25 +73,31 @@ export default function Login() {
     login.isError && !lockoutJustExpired ? apiError?.message ?? 'Something went wrong. Please try again.' : null;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
-      <h1 className="text-2xl font-bold text-slate-900">Log in to JomDekan</h1>
-      <p className="mt-1 text-sm text-slate-500">Find past papers, notes, and study help for your course.</p>
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12 motion-safe:animate-[fadeIn_320ms_ease-out]">
+      <div className="motion-safe:animate-[modalRise_380ms_ease-out_both]">
+        <h1 className="text-2xl font-bold text-slate-900">Log in to JomDekan</h1>
+        <p className="mt-1 text-sm text-slate-500">Find past papers, notes, and study help for your course.</p>
+      </div>
 
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        className="mt-8 space-y-5 motion-safe:animate-[notificationRise_440ms_80ms_ease-out_both]"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
         {idleLogout && !serverError && (
-          <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 motion-safe:animate-[notificationRise_220ms_ease-out]">
             You were signed out after a period of inactivity, for your security. Please log in again.
           </div>
         )}
 
         {sessionExpired && !serverError && (
-          <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 motion-safe:animate-[notificationRise_220ms_ease-out]">
             Your session expired or is no longer valid. Please log in again.
           </div>
         )}
 
         {serverError && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 motion-safe:animate-[notificationRise_220ms_ease-out]">
             <p>{serverError}</p>
             {isLockedOut && lockoutUntil && (
               <p className="mt-1 font-medium">Try again in {formatCountdown(lockoutUntil - now)}.</p>
@@ -133,7 +139,7 @@ export default function Login() {
             <label htmlFor="password" className="block text-sm font-medium text-slate-700">
               Password
             </label>
-            <Link to="/forgot-password" className="text-sm font-medium text-primary-700 hover:underline">
+            <Link to="/forgot-password" className="rounded text-sm font-medium text-primary-700 underline-offset-4 transition-colors hover:text-primary-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
               Forgot password?
             </Link>
           </div>
@@ -154,7 +160,7 @@ export default function Login() {
         <button
           type="submit"
           disabled={isSubmitting || login.isPending || isLockedOut}
-          className="w-full rounded-full bg-primary-600 px-4 py-2.5 font-medium text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+          className="w-full rounded-full bg-primary-600 px-4 py-2.5 font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 motion-reduce:transform-none"
         >
           {isLockedOut
             ? `Locked (${formatCountdown(lockoutUntil! - now)})`
@@ -164,9 +170,9 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-6 text-center text-sm text-slate-500 motion-safe:animate-[fadeIn_500ms_160ms_ease-out_both]">
         New to JomDekan?{' '}
-        <Link to="/register" className="font-medium text-primary-700 hover:underline">
+        <Link to="/register" className="rounded font-medium text-primary-700 underline-offset-4 transition-colors hover:text-primary-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
           Create an account
         </Link>
       </p>

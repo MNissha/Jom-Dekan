@@ -100,6 +100,150 @@ Needs `004_create_moderation_and_events.sql`
 
 ## Milestone 8 — Responsible recommendation extension — NOT STARTED
 
+## AI Resource Summaries — Phase 1 — ✅ DONE
+
+Additive feature on top of Milestone 3's resource model — see
+`docs/architecture.md`'s dedicated section and `docs/api.md`'s
+"AI Resource Summaries" section.
+
+Implemented:
+
+- `GET`/`POST /api/v1/resources/:resourceId/ai-summary`,
+  `GET /api/v1/resources/:resourceId/ai-summary/download?format=pdf|docx`.
+- OpenAI Responses API integration (Structured Outputs + Zod
+  re-validation), backend-only, model/limits fully configurable via env.
+- Text extraction for PDF (`pdf-parse`) and DOCX (`mammoth`); direct
+  multimodal image summarization for PNG/JPEG (no separate
+  transcription call); text-only resources summarized from
+  title+description with a short-content-aware prompt tier.
+- PostgreSQL-backed caching keyed by source hash (migration 032,
+  `resource_ai_summaries`), atomic duplicate-generation protection, a
+  per-user daily generation limit, and safe FAILED/UNSUPPORTED error
+  mapping (never a raw OpenAI error to the client).
+- Deterministic PDF (`pdfkit`) and DOCX (`docx`) study-note generation
+  from the cached JSON — brand-styled, downloads never call OpenAI.
+- Frontend `AiSummarySection` on the resource-detail page covering all
+  documented states (NOT_GENERATED/PROCESSING/READY/FAILED/UNSUPPORTED/
+  DISABLED) plus PDF/DOCX download buttons.
+- Backend: 4 test files (unit: text extraction, OpenAI request/response
+  mapping, PDF/DOCX rendering; integration: the full API against a real
+  Postgres with OpenAI mocked). Frontend: `AiSummarySection.test.tsx`.
+
+Not in Phase 1 scope (explicitly deferred by the feature spec):
+
+- The conversational "Ask This Resource" agent (Phase 2) — Phase 1 only
+  builds the foundation (cached, validated structured summaries) it
+  will read from.
+- XLSX/PPTX and scanned/OCR'd PDFs are reported as unsupported rather
+  than summarized.
+- A resource with multiple files originally summarized only the first
+  READY file (upload order) — not all of them; superseded by explicit,
+  recommendation-based source selection, see below.
+
+## Ask This Resource — Phase 2 — ✅ DONE
+
+Resource-grounded conversational agent built on top of Phase 1 — see
+`docs/architecture.md`'s dedicated section and `docs/api.md`'s
+"Ask This Resource" section.
+
+Implemented:
+
+- `POST /api/v1/resources/:resourceId/agent/sessions`,
+  `GET`/`POST /api/v1/resources/:resourceId/agent/sessions/:sessionId/messages`,
+  `DELETE /api/v1/resources/:resourceId/agent/sessions/:sessionId`,
+  `GET /api/v1/resources/:resourceId/agent/suggestions`.
+- OpenAI Responses API tool-calling loop (`openaiAgentService`) with 3
+  strict, read-only function tools (`get_current_resource_summary`,
+  `search_current_resource`, `read_current_resource_sections`) — no
+  web search, no hosted File Search, no vector DB.
+- PostgreSQL full-text search over heading-aware resource chunks
+  (migration 033, `resource_ai_chunks`, generated `tsvector` + GIN
+  index), built lazily and cached by source hash, reusing Phase 1's
+  text extraction.
+- Conversation persistence in JomDekan's own database
+  (`resource_agent_sessions`, `resource_agent_messages`) —
+  `previous_response_id` is never used; bounded context window
+  (`AI_AGENT_CONTEXT_TURNS`) resent per turn.
+- Cost controls: per-user daily limit and per-session message cap
+  (both excluding cache hits/replays from the count), exact-answer
+  cache keyed by resource+source-hash+normalized-question,
+  idempotency-key replay for retried submissions, and hard caps on
+  output tokens/tool calls/chunk sizes.
+- Citation validation against a per-turn tool-execution ledger — a
+  well-formed but invented `chunkId` from the model is dropped rather
+  than trusted.
+- Frontend `ResourceAgentChat` on the resource-detail page: session
+  bootstrap, suggested starter questions, optimistic user bubble,
+  citation chips with expandable excerpts, NOT_FOUND/PARTIAL states,
+  daily-limit messaging, stale-source banner, clear-conversation
+  action.
+- Backend: 3 test files (unit: chunking algorithm against string
+  fixtures, OpenAI request/response mapping against a mocked `openai`
+  SDK; integration: the full API against a real Postgres with both
+  `openaiSummaryService` and `openaiAgentService` mocked — including
+  prompt-injection, cross-user isolation, and cost-control scenarios).
+  Frontend: originally `ResourceAgentChat.test.tsx`, superseded by
+  `ResourceAgentPanel.test.tsx` once the agent moved into the right-side
+  panel (see below).
+
+Not in Phase 2 scope (explicitly deferred by the feature spec):
+
+- Character-offset-precise citations (chunk/page-level only).
+- Image-only and scanned/OCR'd-PDF resources (inherits Phase 1's
+  `UNSUPPORTED` gating — the agent requires a READY Phase 1 summary).
+- Any tool capable of writing to a resource, moderating content, or
+  browsing the web.
+
+## Ask This Resource — right-side panel redesign — ✅ DONE
+
+Replaced the always-inline agent conversation with a browser-extension-
+style panel sliding in from the right, without changing any backend
+API. New: `ResourceAgentPanel.tsx` (portal-rendered, focus/Escape/mobile-
+scroll-lock management, lazy session fetch on first open),
+`ResourceAgentHeader.tsx`, `ResourceAgentSummaryContext.tsx`,
+`ResourceAgentConversation.tsx`, `ResourceAgentMessage.tsx`,
+`ResourceAgentComposer.tsx`. `AiSummarySection.tsx` gained the "Ask AI
+about this resource" launcher button. Fixed two real bugs found in the
+process: a `??`-based staleness check that could let a `false` mask a
+real `true`, and a missing `Idempotency-Key` entry in the backend's CORS
+`allowedHeaders` that silently blocked the ask-question request in a
+real browser (preflight-only failure, invisible to any non-browser
+test). Tests: `ResourceAgentPanel.test.tsx` (25 cases).
+
+## Multi-file resources: badges, file list, and AI source selection — ✅ DONE
+
+Resources can already hold multiple uploaded files (Milestone 3). This
+slice makes that explicit and deterministic wherever it previously
+wasn't:
+
+- Resource-card badge aggregates every READY file
+  (`readyFileCount`/`readyFileTypes`/`fileTypeDisplay` in
+  `resourceModel.list`'s response) — `TEXT` / a single normalized type /
+  `TYPE · N files` / `MULTI-FILE · N files`, computed via one aggregate
+  LATERAL join (no N+1).
+- Resource-detail page gained `ResourceFileList.tsx` — every READY
+  file's icon, normalized type, size, and an authenticated download
+  button, reusing the existing `useDownloadUrl` hook.
+- AI Summary and Ask This Resource now share one explicit,
+  server-validated source selection (`resourceSourceSelectionService`):
+  an optional `resourceFileId` on every affected endpoint, a
+  deterministic MIME-priority recommendation for a resource with several
+  READY files (never all of them, never an OpenAI call to decide), and
+  an accessible radio-group selector (`AiSourceSelector.tsx`) shown only
+  when there's a genuine choice to make.
+- No new migration was needed for `resource_ai_summaries`' cache safety
+  (its existing `(resource_id, source_hash)` uniqueness was already
+  file-content-scoped); migration 034 added a nullable
+  `resource_file_id` column to `resource_agent_sessions` so a session
+  re-resolves the exact file it was created for, not a possibly-
+  different "recommended" default, on every later action.
+- Tests: `resourceMultiFileSource.test.ts` (21 backend integration
+  cases — badges, recommendation/tie-breaking, selection validation,
+  per-file cache isolation, concurrent-generation protection, download
+  binding, and agent session/chunk isolation across files) plus
+  `fileTypeBadge.test.ts`, `ResourceFileList.test.tsx`,
+  `AiSourceSelector.test.tsx`, and new cases in `AiSummarySection.test.tsx`.
+
 ---
 
 ## Exact next vertical slice (continue here)

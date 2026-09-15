@@ -8,7 +8,7 @@ import { useRegister } from '../hooks/useAuth';
 import { useUniversities } from '../hooks/useTaxonomy';
 import { FIELDS_OF_STUDY } from '../constants/fieldsOfStudy';
 import { SearchableSelect } from '../components/common/SearchableSelect';
-import { TermsModal } from '../components/common/TermsModal';
+import { PrivacyNoticeModal, TermsModal } from '../components/common/TermsModal';
 import { PasswordField } from '../components/common/PasswordField';
 import { PasswordRequirementsChecklist } from '../components/common/PasswordRequirements';
 import { fieldClassName } from '../utils/inputStyles';
@@ -18,6 +18,7 @@ const CURRENT_SEMESTER_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
 export default function Register() {
   const registerAccount = useRegister();
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const {
     register,
     handleSubmit,
@@ -55,13 +56,15 @@ export default function Register() {
         : null;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
-      <h1 className="text-2xl font-bold text-slate-900">Create your JomDekan account</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        For Malaysian university students — past papers, notes, discussions, and legitimate tutoring, all in one place.
-      </p>
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12 motion-safe:animate-[fadeIn_320ms_ease-out]">
+      <div className="motion-safe:animate-[modalRise_380ms_ease-out_both]">
+        <h1 className="text-2xl font-bold text-slate-900">Create your JomDekan account</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          For Malaysian university students — past papers, notes, discussions, and legitimate tutoring, all in one place.
+        </p>
+      </div>
 
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form className="mt-8 space-y-5 motion-safe:animate-[notificationRise_440ms_80ms_ease-out_both]" onSubmit={handleSubmit(onSubmit)} noValidate>
         {serverError && (
           <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {serverError}
@@ -255,6 +258,14 @@ export default function Register() {
               >
                 Terms &amp; Conditions
               </button>
+              {' '}and acknowledge the{' '}
+              <button
+                type="button"
+                onClick={() => setIsPrivacyOpen(true)}
+                className="font-medium text-primary-700 underline-offset-2 hover:underline"
+              >
+                Privacy Notice
+              </button>
             </span>
           </label>
           {errors.termsAccepted && <p className="mt-1 text-sm text-red-600">{errors.termsAccepted.message}</p>}
@@ -268,17 +279,18 @@ export default function Register() {
             setIsTermsOpen(false);
           }}
         />
+        <PrivacyNoticeModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
 
         <button
           type="submit"
           disabled={isSubmitting || registerAccount.isPending}
-          className="w-full rounded-full bg-primary-600 px-4 py-2.5 font-medium text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+          className="w-full rounded-full bg-primary-600 px-4 py-2.5 font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 motion-reduce:transform-none"
         >
           {registerAccount.isPending ? 'Creating account…' : 'Create account'}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-6 text-center text-sm text-slate-500 motion-safe:animate-[fadeIn_500ms_160ms_ease-out_both]">
         Already have an account?{' '}
         <Link to="/login" className="font-medium text-primary-700 hover:underline">
           Log in

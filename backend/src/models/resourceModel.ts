@@ -1,11 +1,13 @@
 import { pool } from "../config/config/db";
+import { normalizeFileType } from "../utils/fileTypeLabel";
 
 export type ResourceCategory =
   | "PAST_PAPER"
   | "NOTES"
   | "SLIDES"
   | "ARTICLE"
-  | "EXCEL";
+  | "EXCEL"
+  | "EXERCISES";
 
 export interface ResourceRow {
   id: string;
@@ -39,6 +41,12 @@ export interface ResourceFileRow {
 export interface ResourceListRow extends ResourceRow {
   ready_file_id: string | null;
   ready_file_mime_type: string | null;
+  // Aggregated across every READY file (not just the first) — powers the
+  // card's file-type badge without an N+1 query per resource. `null`
+  // mime types (a READY file whose detection somehow never ran) are
+  // filtered out when this is turned into the API shape.
+  ready_file_count: string; // COUNT(*) comes back as string from pg
+  ready_file_mime_types: (string | null)[] | null;
   owner_name: string | null;
 }
 
@@ -114,6 +122,7 @@ export const resourceModel = {
   async findByIdWithOwner(id: string): Promise<ResourceListRow | null> {
     const result = await pool.query<ResourceListRow>(
       `SELECT r.*, NULL::uuid AS ready_file_id, NULL::text AS ready_file_mime_type,
+              NULL::bigint AS ready_file_count, NULL::text[] AS ready_file_mime_types,
               up.display_name AS owner_name
        FROM resources r
        LEFT JOIN user_profiles up ON up.user_id = r.owner_id
@@ -235,15 +244,28 @@ export const resourceModel = {
     );
 
     const dataValues = [...values, filters.limit, filters.offset];
+    // The lateral join aggregates ALL of this resource's READY files in
+    // one pass (not just the first) so the card's file-type badge never
+    // needs a follow-up per-resource query — `ready_file_id`/
+    // `ready_file_mime_type` still carry the first-by-upload-order file
+    // (existing thumbnail-preview consumers), while `ready_file_count`/
+    // `ready_file_mime_types` are the new aggregate fields. A resource
+    // with zero READY files still gets exactly one joined row (aggregates
+    // over zero rows collapse to one row of NULLs/0), so this never turns
+    // into an accidental fan-out.
     const rowsResult = await pool.query<ResourceListRow>(
-      `SELECT r.*, rf.id AS ready_file_id, rf.detected_mime_type AS ready_file_mime_type,
+      `SELECT r.*, rf.ready_file_id, rf.ready_file_mime_type,
+              rf.ready_file_count, rf.ready_file_mime_types,
               up.display_name AS owner_name
        FROM resources r
        LEFT JOIN LATERAL (
-         SELECT id, detected_mime_type FROM resource_files
+         SELECT
+           (array_agg(id ORDER BY created_at ASC))[1] AS ready_file_id,
+           (array_agg(detected_mime_type ORDER BY created_at ASC))[1] AS ready_file_mime_type,
+           COUNT(*) AS ready_file_count,
+           array_agg(DISTINCT detected_mime_type) AS ready_file_mime_types
+         FROM resource_files
          WHERE resource_id = r.id AND status = 'READY'
-         ORDER BY created_at ASC
-         LIMIT 1
        ) rf ON true
        LEFT JOIN user_profiles up ON up.user_id = r.owner_id
        ${whereClause}
@@ -365,10 +387,31 @@ export function toApiResource(row: ResourceRow) {
 // per card to look up "does this resource have a ready image file",
 // plus the uploader's display name for the byline.
 export function toApiResourceListItem(row: ResourceListRow) {
+  const readyFileCount = Number(row.ready_file_count ?? 0);
+  // DISTINCT + array_agg can hand back a NULL element if some READY row's
+  // detection genuinely never ran (shouldn't happen once a file reaches
+  // READY, but this is display-only badge logic, not a security check —
+  // fail toward an honest "unknown" label, never toward crashing the list).
+  const readyFileTypes = Array.from(
+    new Set((row.ready_file_mime_types ?? []).filter((m): m is string => Boolean(m)).map(normalizeFileType)),
+  );
+
+  let fileTypeDisplay: string;
+  if (readyFileCount === 0) {
+    fileTypeDisplay = "TEXT";
+  } else if (readyFileTypes.length <= 1) {
+    fileTypeDisplay = readyFileTypes[0] ?? "FILE";
+  } else {
+    fileTypeDisplay = "MULTI-FILE";
+  }
+
   return {
     ...toApiResource(row),
     readyFileId: row.ready_file_id,
     readyFileMimeType: row.ready_file_mime_type,
+    readyFileCount,
+    readyFileTypes,
+    fileTypeDisplay,
     ownerName: row.owner_name,
   };
 }
