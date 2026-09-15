@@ -76,13 +76,14 @@ const envSchema = z.object({
 
   REDIS_URL: z.string().optional().default(""),
 
-  EMAIL_PROVIDER: z.enum(["console", "smtp", "resend"]).default("console"),
+  EMAIL_PROVIDER: z.enum(["console", "smtp", "resend", "sendgrid"]).default("console"),
   EMAIL_FROM: z.string().email().default("no-reply@jomdekan.app"),
   SMTP_HOST: z.string().optional().default(""),
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASSWORD: z.string().optional().default(""),
   RESEND_API_KEY: z.string().optional().default(""),
+  SENDGRID_API_KEY: z.string().optional().default(""),
 
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
@@ -107,6 +108,13 @@ const envSchema = z.object({
       code: "custom",
       path: ["RESEND_API_KEY"],
       message: "RESEND_API_KEY is required when EMAIL_PROVIDER=resend",
+    });
+  }
+  if (data.EMAIL_PROVIDER === "sendgrid" && !data.SENDGRID_API_KEY) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["SENDGRID_API_KEY"],
+      message: "SENDGRID_API_KEY is required when EMAIL_PROVIDER=sendgrid",
     });
   }
 });
@@ -187,6 +195,7 @@ export const env = {
       password: raw.SMTP_PASSWORD,
     },
     resendApiKey: raw.RESEND_API_KEY,
+    sendgridApiKey: raw.SENDGRID_API_KEY,
   },
 
   google: {

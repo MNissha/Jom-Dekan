@@ -65,7 +65,10 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
     navigate(trimmed ? `/resources?search=${encodeURIComponent(trimmed)}` : "/resources");
   }
 
-  const displayName = profile?.displayName || (user?.email ? user.email.split("@")[0] : "");
+  const isAdmin = user?.role === "ADMIN";
+  const displayName = isAdmin
+    ? "JomDekan Admin"
+    : profile?.displayName || (user?.email ? user.email.split("@")[0] : "");
 
   return (
     // Flat white, not translucent/blurred — the shell's own layout (not
@@ -121,8 +124,11 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
               <span className="hidden min-w-0 flex-col items-start leading-tight sm:flex">
                 <span className="max-w-[9rem] truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{displayName}</span>
                 {/* No programme/university field exists on the user record
-                    yet — an honest placeholder instead of inventing one. */}
-                <span className="max-w-[9rem] truncate text-xs text-slate-500 dark:text-slate-400">Programme not set</span>
+                    yet — an honest placeholder instead of inventing one.
+                    Admin accounts aren't students, so skip it for them. */}
+                <span className="max-w-[9rem] truncate text-xs text-slate-500 dark:text-slate-400">
+                  {isAdmin ? "Administrator" : "Programme not set"}
+                </span>
               </span>
               <ChevronDown
                 className={`hidden h-4 w-4 text-slate-500 transition motion-safe:duration-200 sm:inline dark:text-slate-400 ${isProfileOpen ? "rotate-180" : ""}`}

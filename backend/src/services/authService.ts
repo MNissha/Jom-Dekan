@@ -6,6 +6,7 @@ import { auditLogModel } from '../models/auditLogModel';
 import { passwordResetTokenModel } from '../models/passwordResetTokenModel';
 import { emailVerificationTokenModel } from '../models/emailVerificationTokenModel';
 import { taxonomyModel } from '../models/taxonomyModel';
+import { notificationModel } from '../models/notificationModel';
 import { emailService } from './emailService';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../config/config/auth';
 import { env } from '../config/config/env';
@@ -122,6 +123,19 @@ export const authService = {
       // later (once a resend endpoint exists) or verify never and stay
       // functionally a USER either way.
       logger.warn({ userId: user.id, err }, 'Failed to send verification email');
+    }
+
+    try {
+      // In-app notification, independent of email deliverability — the
+      // user sees "account created" the moment they land in the app even
+      // if the verification email above got delayed or dropped by the
+      // provider.
+      await notificationModel.notifyUser(user.id, 'ACCOUNT_CREATED', {
+        title: 'Welcome to JomDekan!',
+        message: `Hi ${params.displayName}, your account has been created successfully. Check your email to verify your address and unlock full access.`,
+      });
+    } catch (err) {
+      logger.warn({ userId: user.id, err }, 'Failed to create account-created notification');
     }
 
     logger.info({ userId: user.id }, 'User registered');
@@ -333,11 +347,20 @@ export const authService = {
       });
 
       const resetUrl = `${env.corsOrigins[0]}/reset-password?token=${rawToken}`;
-      await emailService.sendEmail({
-        to: user.email,
-        subject: 'Reset your JomDekan password',
-        text: `We received a request to reset your JomDekan password.\n\nReset it here (expires in 1 hour, single use):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
-      });
+      try {
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Reset your JomDekan password',
+          text: `We received a request to reset your JomDekan password.\n\nReset it here (expires in 1 hour, single use):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
+        });
+      } catch (err) {
+        // Best-effort, like the verification email in register(): a
+        // provider outage must not surface as a 500 here, since that
+        // would leak whether the account exists (200 for "no such
+        // email" vs. 500 for "exists but the send failed") — exactly
+        // what this endpoint's constant-response design exists to hide.
+        logger.warn({ userId: user.id, err }, 'Failed to send password reset email');
+      }
 
       await auditLogModel.record({
         actorUserId: user.id,

@@ -9,6 +9,9 @@ import { useUniversities } from '../hooks/useTaxonomy';
 import { FIELDS_OF_STUDY } from '../constants/fieldsOfStudy';
 import { SearchableSelect } from '../components/common/SearchableSelect';
 import { TermsModal } from '../components/common/TermsModal';
+import { PasswordField } from '../components/common/PasswordField';
+import { PasswordRequirementsChecklist } from '../components/common/PasswordRequirements';
+import { fieldClassName } from '../utils/inputStyles';
 
 const CURRENT_SEMESTER_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -20,8 +23,18 @@ export default function Register() {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormValues>({ resolver: zodResolver(registerFormSchema) });
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+    // universityId/fieldOfStudy are Controller-driven with no native input to
+    // default their value, so without this they start out `undefined` — a
+    // type mismatch zod treats as fatal, which silently skips the
+    // password-match refine in authSchemas.ts on every empty first submit.
+    defaultValues: { universityId: '', fieldOfStudy: '' },
+  });
+
+  const passwordValue = watch('password') ?? '';
 
   const {
     data: universities,
@@ -63,7 +76,7 @@ export default function Register() {
             id="displayName"
             type="text"
             autoComplete="name"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={fieldClassName(Boolean(errors.displayName))}
             aria-invalid={Boolean(errors.displayName)}
             {...register('displayName')}
           />
@@ -78,7 +91,7 @@ export default function Register() {
             id="email"
             type="email"
             autoComplete="email"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={fieldClassName(Boolean(errors.email))}
             aria-invalid={Boolean(errors.email)}
             {...register('email')}
           />
@@ -89,16 +102,33 @@ export default function Register() {
           <label htmlFor="password" className="block text-sm font-medium text-slate-700">
             Password
           </label>
-          <input
+          <PasswordField
             id="password"
-            type="password"
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-invalid={Boolean(errors.password)}
+            hasError={Boolean(errors.password)}
+            aria-describedby="password-requirements"
             {...register('password')}
           />
           {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
-          <p className="mt-1 text-xs text-slate-400">At least 8 characters, with 1 uppercase letter, 1 number, and 1 special character.</p>
+          <PasswordRequirementsChecklist id="password-requirements" password={passwordValue} />
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
+            Confirm password
+          </label>
+          <PasswordField
+            id="confirmPassword"
+            autoComplete="new-password"
+            hasError={Boolean(errors.confirmPassword)}
+            aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
+            {...register('confirmPassword')}
+          />
+          {errors.confirmPassword && (
+            <p id="confirmPassword-error" className="mt-1 text-sm text-red-600">
+              {errors.confirmPassword.message}
+            </p>
+          )}
         </div>
 
         <fieldset>

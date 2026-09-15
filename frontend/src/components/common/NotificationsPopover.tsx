@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, Megaphone, ShieldCheck, LifeBuoy, Lightbulb } from "lucide-react";
+import { Bell, Megaphone, PartyPopper, ShieldCheck, LifeBuoy, Lightbulb } from "lucide-react";
 import { useModeration } from "../../hooks/useModeration";
 import { useCurrentUser } from "../../hooks/useAuth";
 import type { Notification } from "../../types/moderation";
@@ -9,6 +9,9 @@ import { adminReportRoute } from "../../utils/adminReportRoute";
 const RECENT_NOTIFICATION_LIMIT = 3;
 
 function popoverStyle(type: string) {
+  if (type === "ACCOUNT_CREATED") {
+    return { icon: PartyPopper, iconClass: "bg-primary-50 text-primary-700", label: "Welcome" };
+  }
   if (type === "ANNOUNCEMENT") {
     return { icon: Megaphone, iconClass: "bg-amber-50 text-amber-700", label: "Announcement" };
   }
