@@ -400,8 +400,11 @@ export default function Resources() {
                 >
                   <ResourceThumbnail resource={r} />
                   <div className="flex flex-1 flex-col p-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${badge.className}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <span
+                        className={`max-w-full break-words rounded-full px-2.5 py-1 text-[11px] font-bold ${badge.className}`}
+                        aria-label={`File type: ${badge.label}`}
+                      >
                         {badge.label}
                       </span>
                       <div className="flex shrink-0 items-center gap-2">

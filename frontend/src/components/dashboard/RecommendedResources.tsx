@@ -56,6 +56,10 @@ export function RecommendedResources({ forceLoading = false }: { forceLoading?: 
         ) : (
           resources.map((r, i) => {
             const badge = fileTypeBadge(r);
+            // This icon-square is too small (36px) for a suffixed badge
+            // like "MULTI-FILE · 3 files" — show just the type here, with
+            // the full text kept for assistive tech via aria-label.
+            const compactLabel = badge.label.split(" · ")[0];
             return (
               <Link
                 key={r.id}
@@ -64,9 +68,10 @@ export function RecommendedResources({ forceLoading = false }: { forceLoading?: 
                 className="group flex items-start gap-3 rounded-xl border border-[#ECEBF7] p-3 transition motion-safe:duration-150 motion-safe:animate-[fadeIn_350ms_ease-out_both] hover:-translate-y-0.5 hover:border-primary-200 hover:bg-primary-50/60 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[10px] font-extrabold tracking-wide transition motion-safe:duration-150 group-hover:scale-105 ${badge.className}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg break-words px-0.5 text-center text-[9px] font-extrabold leading-tight tracking-wide transition motion-safe:duration-150 group-hover:scale-105 ${badge.className}`}
+                  aria-label={`File type: ${badge.label}`}
                 >
-                  {badge.label}
+                  {compactLabel}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-800 transition motion-safe:duration-150 group-hover:text-primary-700">

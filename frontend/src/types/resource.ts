@@ -5,7 +5,8 @@ export type ResourceCategory =
   | "NOTES"
   | "SLIDES"
   | "ARTICLE"
-  | "EXCEL";
+  | "EXCEL"
+  | "EXERCISES";
 
 export const RESOURCE_CATEGORIES: ResourceCategory[] = [
   "PAST_PAPER",
@@ -13,6 +14,7 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
   "SLIDES",
   "ARTICLE",
   "EXCEL",
+  "EXERCISES",
 ];
 
 export const RESOURCE_CATEGORY_LABELS: Record<ResourceCategory, string> = {
@@ -21,6 +23,7 @@ export const RESOURCE_CATEGORY_LABELS: Record<ResourceCategory, string> = {
   SLIDES: "Slides",
   ARTICLE: "Article",
   EXCEL: "Excel",
+  EXERCISES: "Exercises",
 };
 
 export interface Resource {
@@ -40,10 +43,16 @@ export interface Resource {
 
 // The browse-list endpoint carries a bit more than a single-resource
 // fetch: just enough to render a thumbnail without a per-card lookup,
-// plus the uploader's display name for the byline.
+// plus the uploader's display name for the byline. `readyFileCount`/
+// `readyFileTypes`/`fileTypeDisplay` are aggregated across every READY
+// file (not just the first) — optional so a card renders sensibly even
+// against a stale/cached response from before these fields existed.
 export interface ResourceListItem extends Resource {
   readyFileId: string | null;
   readyFileMimeType: string | null;
+  readyFileCount?: number;
+  readyFileTypes?: string[];
+  fileTypeDisplay?: string;
   ownerName: string | null;
 }
 

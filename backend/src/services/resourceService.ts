@@ -392,6 +392,16 @@ export const resourceService = {
     };
   },
 
+  /**
+   * Reuses the same visibility gate as every other resource read, for
+   * services that need the raw row (not the API-shaped one) — currently
+   * only resourceSummaryService, which also needs `owner_id`/`status`
+   * directly rather than the trimmed API shape `getById` returns.
+   */
+  async getVisibleResource(id: string, ctx: ActorContext): Promise<ResourceRow> {
+    return getVisibleOrThrow(id, ctx);
+  },
+
   async getById(id: string, ctx: ActorContext) {
     await getVisibleOrThrow(id, ctx);
     const [withOwner, files] = await Promise.all([

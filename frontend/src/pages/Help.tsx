@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { TermsModal } from '../components/common/TermsModal';
+import { PrivacyNoticeModal, TermsModal } from '../components/common/TermsModal';
 import { useSubmitSupportRequest } from '../hooks/useSupportRequests';
 
 export default function Help() {
   const submitRequest = useSubmitSupportRequest();
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const [supportSubject, setSupportSubject] = useState('');
   const [supportMessage, setSupportMessage] = useState('');
@@ -146,7 +147,18 @@ export default function Help() {
         </div>
       </section>
 
+      <section className="mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-slate-800">Privacy Notice</h2>
+            <p className="mt-1 text-sm text-slate-500">Review how JomDekan handles personal data and AI-related processing.</p>
+          </div>
+          <button type="button" onClick={() => setIsPrivacyOpen(true)} className="h-11 shrink-0 rounded-xl border border-[#E4E3F2] px-5 text-sm font-bold text-slate-700 transition hover:border-primary-300 hover:text-primary-700">View Privacy Notice</button>
+        </div>
+      </section>
+
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+      <PrivacyNoticeModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
     </div>
   );
 }

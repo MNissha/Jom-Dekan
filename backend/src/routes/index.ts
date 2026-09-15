@@ -4,6 +4,8 @@ import authRoutes from "./authRoutes";
 import userRoutes from "./userRoutes";
 import taxonomyRoutes from "./taxonomyRoutes";
 import resourceRoutes from "./resourceRoutes";
+import resourceSummaryRoutes from "./resourceSummaryRoutes";
+import resourceAgentRoutes from "./resourceAgentRoutes";
 import favoriteRoutes from "./favoriteRoutes";
 import forumRoutes from "./forumRoutes";
 
@@ -19,6 +21,8 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/taxonomy", taxonomyRoutes);
 router.use("/resources", resourceRoutes);
+router.use("/resources", resourceSummaryRoutes);
+router.use("/resources", resourceAgentRoutes);
 router.use("/favorites", favoriteRoutes);
 router.use("/forum", forumRoutes);
 

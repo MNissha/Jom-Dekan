@@ -8,6 +8,7 @@ export const RESOURCE_CATEGORIES = [
   "SLIDES",
   "ARTICLE",
   "EXCEL",
+  "EXERCISES",
 ] as const;
 
 const categorySchema = z.enum(RESOURCE_CATEGORIES, {

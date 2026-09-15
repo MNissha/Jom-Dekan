@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +7,6 @@ import {
   useUpdateResource,
   useSetResourceStatus,
   useDeleteResource,
-  useDownloadUrl,
   useFilePreviewUrl,
   useResourceComments,
   useCreateResourceComment,
@@ -19,6 +18,9 @@ import { FavoriteButton } from "../components/common/FavoriteButton";
 import { ReportButton } from "../components/common/ReportButton";
 import { PdfThumbnail } from "../components/common/PdfThumbnail";
 import { UserLink } from "../components/common/UserLink";
+import { AiSummarySection } from "../components/resource/AiSummarySection";
+import { ResourceFileList } from "../components/resource/ResourceFileList";
+import { ResourceAgentPanel } from "../components/resources/ResourceAgentPanel";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 import {
@@ -34,7 +36,6 @@ export default function ResourceDetail() {
   const updateResource = useUpdateResource();
   const setStatus = useSetResourceStatus();
   const deleteResource = useDeleteResource();
-  const downloadUrl = useDownloadUrl();
   const [isEditing, setIsEditing] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -43,6 +44,27 @@ export default function ResourceDetail() {
   const createComment = useCreateResourceComment();
   const updateComment = useUpdateResourceComment();
   const deleteComment = useDeleteResourceComment();
+
+  const [isAgentPanelOpen, setAgentPanelOpen] = useState(false);
+  const agentLauncherRef = useRef<HTMLButtonElement>(null);
+  const summarySectionRef = useRef<HTMLElement>(null);
+  // Explicit AI-source selection for a multi-file resource — lives here
+  // (not inside AiSummarySection) because both the summary card and the
+  // agent panel must read the exact same selection. Undefined means "no
+  // explicit choice yet", which the backend resolves to its own
+  // deterministic recommendation — never an arbitrary/ambiguous file.
+  const [selectedAiFileId, setSelectedAiFileId] = useState<string | undefined>(undefined);
+
+  const handleViewFullSummary = () => {
+    setAgentPanelOpen(false);
+    // Wait a frame so the panel's own close (and any layout it affects)
+    // settles before scrolling, then move both scroll and focus to the
+    // summary card — this never re-fetches or regenerates the summary.
+    requestAnimationFrame(() => {
+      summarySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      summarySectionRef.current?.focus();
+    });
+  };
 
   const { register, handleSubmit, reset } = useForm<EditResourceFormValues>({
     resolver: zodResolver(editResourceFormSchema),
@@ -112,12 +134,6 @@ export default function ResourceDetail() {
       { id: resource.id, data: values },
       { onSuccess: () => setIsEditing(false) },
     );
-  };
-
-  const handleDownload = (fileId: string) => {
-    downloadUrl.mutate(fileId, {
-      onSuccess: (url) => window.open(url, "_blank", "noopener,noreferrer"),
-    });
   };
 
   const handleDelete = () => {
@@ -266,16 +282,6 @@ export default function ResourceDetail() {
             <div className="mt-6 flex flex-wrap gap-2">
               <FavoriteButton targetType="resource" targetId={resource.id} variant="pill" />
               <ReportButton targetType="resource" targetId={resource.id} />
-              {readyFiles.length === 1 && (
-                <button
-                  type="button"
-                  onClick={() => handleDownload(readyFile.id)}
-                  disabled={downloadUrl.isPending}
-                  className="rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
-                >
-                  {downloadUrl.isPending ? "Preparing download…" : "Download"}
-                </button>
-              )}
               {canManage && (
                 <>
                   <button
@@ -313,34 +319,33 @@ export default function ResourceDetail() {
               )}
             </div>
 
-            {readyFiles.length > 1 && (
-              <div className="mt-4 flex flex-col gap-2">
-                <p className="text-xs font-semibold text-slate-500">
-                  {readyFiles.length} files
-                </p>
-                {readyFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[#ECEBF7] bg-[#FBFBFE] px-4 py-2.5"
-                  >
-                    <span className="truncate text-sm text-slate-700">
-                      {file.originalFilename}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(file.id)}
-                      disabled={downloadUrl.isPending}
-                      className="shrink-0 rounded-full bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-60"
-                    >
-                      Download
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </>
         )}
       </div>
+
+      <ResourceFileList files={data.files} />
+
+      <AiSummarySection
+        ref={summarySectionRef}
+        resourceId={resource.id}
+        resourceTitle={resource.title}
+        onOpenAgent={() => setAgentPanelOpen(true)}
+        isAgentOpen={isAgentPanelOpen}
+        launcherButtonRef={agentLauncherRef}
+        resourceFileId={selectedAiFileId}
+        onSelectFileId={setSelectedAiFileId}
+      />
+
+      <ResourceAgentPanel
+        key={`${resource.id}:${selectedAiFileId ?? "default"}`}
+        resourceId={resource.id}
+        resourceTitle={resource.title}
+        isOpen={isAgentPanelOpen}
+        onClose={() => setAgentPanelOpen(false)}
+        launcherButtonRef={agentLauncherRef}
+        resourceFileId={selectedAiFileId}
+        onViewFullSummary={handleViewFullSummary}
+      />
 
       <section className="mt-6">
         <div className="flex items-center justify-between">

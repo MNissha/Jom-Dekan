@@ -12,7 +12,7 @@ Read `docs/implementation-plan.md` for what's built vs. planned, and
 Full beginner walkthrough: **[docs/setup.md](docs/setup.md)**.
 
 ```bash
-docker compose up -d                 # Postgres + Redis
+docker compose up --build -d         # Full stack: frontend + backend + Postgres + Redis
 
 cd backend && cp .env.example .env && npm install
 npm run migrate && npm run seed
@@ -62,7 +62,7 @@ npm run dev                          # http://localhost:5173
      cd frontend
      npm run dev
      ```
-   - Make sure `docker compose up -d` (or a local Postgres) is running
+   - Make sure `docker compose up -d postgres redis` (or a local Postgres) is running when starting Node locally
      first — see step 1 of `docs/setup.md`.
 
 5. **Debugging in VS Code** (optional): a `.vscode/launch.json` is

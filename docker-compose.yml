@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: jomdekan
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - jomdekan_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,12 +22,79 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
+      # Use DB_* values from the private root .env when present (for
+      # example Supabase); otherwise fall back to the local Postgres
+      # service above for a self-contained development stack.
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-jomdekan}
+      DB_SSL: ${DB_SSL:-false}
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-docker-dev-access-secret-change-before-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-docker-dev-refresh-secret-change-before-production}
+      COOKIE_SECRET: ${COOKIE_SECRET:-docker-dev-cookie-secret}
+      STORAGE_PROVIDER: local-fs
+      STORAGE_LOCAL_ROOT: /app/backend/storage/resources
+      STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET:-docker-dev-storage-signing-secret-change-before-production}
+      EMAIL_PROVIDER: console
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_SUMMARY_ENABLED: ${AI_SUMMARY_ENABLED:-true}
+      AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-true}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - ./backend:/app/backend
+      - ./database:/app/database:ro
+      - backend_node_modules:/app/backend/node_modules
+      - jomdekan_resource_files:/app/backend/storage/resources
+    command: sh -c "npm run migrate && npm run dev"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://localhost:${BACKEND_PORT:-3000}/api/v1
+      VITE_API_TIMEOUT: 10000
+      VITE_APP_NAME: JomDekan
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
 volumes:
   jomdekan_postgres_data:
+  jomdekan_resource_files:
+  backend_node_modules:
+  frontend_node_modules:

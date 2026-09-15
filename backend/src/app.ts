@@ -66,7 +66,11 @@ export function createApp(): Express {
       origin: env.corsOrigins,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+      // Idempotency-Key: the "Ask This Resource" agent's duplicate-submit
+      // protection (resourceAgentController) reads this custom header —
+      // without it here, the browser's CORS preflight silently blocks the
+      // real request client-side (it never reaches Express at all).
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "Idempotency-Key"],
     }),
   );
 

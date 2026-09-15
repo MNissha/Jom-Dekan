@@ -24,6 +24,17 @@ body,
   height: 100dvh;
 }
 
+/* Toggled on <body> only while the "Ask This Resource" panel is open on
+   a mobile viewport (ResourceAgentPanel). The app shell never scrolls
+   the document itself (DashboardLayout's own `<main>` does, via
+   `overflow-y-auto`), so locking background scroll behind the
+   full-screen mobile panel means freezing that scroll container, not
+   `body` — this rule is always removed on close/unmount/desktop, never
+   left stuck on. */
+body.agent-panel-mobile-open main {
+  overflow: hidden !important;
+}
+
 /* Used via Tailwind's arbitrary `animate-[fadeIn_150ms_ease-out]` for
    small popovers/dropdowns (sidebar notifications, mobile drawer, etc.)
    — can't add this as a `tailwind.config.ts` keyframe without touching
@@ -58,5 +69,17 @@ body,
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes passwordCheck {
+  0% {
+    transform: scale(0.72);
+  }
+  65% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
   }
 }

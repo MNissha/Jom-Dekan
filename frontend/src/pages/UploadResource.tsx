@@ -3,7 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft, FileText, ClipboardList, Presentation, Newspaper, FileSpreadsheet, UploadCloud, X } from "lucide-react";
+import { ArrowLeft, FileText, ClipboardList, Presentation, Newspaper, FileSpreadsheet, BookOpenCheck, Sparkles, Check, UploadCloud, X } from "lucide-react";
 import {
   uploadResourceFormSchema,
   type UploadResourceFormValues,
@@ -26,6 +26,7 @@ const CATEGORY_ICON: Record<ResourceCategory, typeof FileText> = {
   SLIDES: Presentation,
   ARTICLE: Newspaper,
   EXCEL: FileSpreadsheet,
+  EXERCISES: BookOpenCheck,
 };
 
 export default function UploadResource() {
@@ -168,9 +169,12 @@ export default function UploadResource() {
       <button
         type="button"
         onClick={() => startRequestingTaxonomy(level)}
-        className="mt-1 text-xs font-bold text-primary-600 hover:text-primary-700"
+        className="group mt-1 rounded-sm text-xs font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
       >
-        Can&apos;t find your {label.toLowerCase()}? Request it
+        Can&apos;t find your {label.toLowerCase()}?{" "}
+        <span className="font-extrabold text-primary-600 underline decoration-2 underline-offset-2 transition group-hover:text-primary-800 group-hover:decoration-primary-400">
+          Request it
+        </span>
       </button>
     );
   }
@@ -315,12 +319,20 @@ export default function UploadResource() {
           )}
         </div>
 
-        <div>
-          <span className="block text-sm font-bold text-slate-700">
-            Category<span className="text-red-500"> *</span>
-          </span>
-          <p className="mt-0.5 text-xs text-slate-500">Pick one — this shows on the resource card and can be filtered on.</p>
-          <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <section className="relative overflow-hidden rounded-[20px] border border-[#DDD9F1] bg-[#FAF9FF] p-4 shadow-[0_8px_24px_rgba(67,56,202,0.06)] sm:p-5" aria-labelledby="resource-category-heading">
+          <div className="absolute inset-x-0 top-0 h-1 bg-[#F5C21A]" aria-hidden="true" />
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#4338CA] text-white shadow-sm">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 id="resource-category-heading" className="text-sm font-extrabold text-[#231C57]">
+                Category<span className="text-red-500"> *</span>
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">Choose the type that best describes this resource. It will appear on the resource card and in filters.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {RESOURCE_CATEGORIES.map((c) => {
               const Icon = CATEGORY_ICON[c];
               const active = category === c;
@@ -330,14 +342,17 @@ export default function UploadResource() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => setValue("category", c, { shouldValidate: true })}
-                  className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold transition motion-safe:duration-150 ${
+                  className={`group relative flex min-h-12 items-center gap-2.5 overflow-hidden rounded-xl border px-3.5 py-3 text-sm font-bold shadow-sm transition motion-safe:duration-200 ${
                     active
-                      ? "border-primary-500 bg-primary-50 text-primary-700"
-                      : "border-[#E4E3F2] text-slate-600 hover:-translate-y-0.5 hover:border-primary-200"
+                      ? "border-[#4338CA] bg-[#4338CA] text-white shadow-[0_7px_18px_rgba(67,56,202,0.22)] motion-safe:-translate-y-0.5"
+                      : "border-[#E4E3F2] bg-white text-slate-600 hover:border-primary-300 hover:text-primary-700 hover:shadow-md motion-safe:hover:-translate-y-0.5"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {RESOURCE_CATEGORY_LABELS[c]}
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition motion-safe:duration-200 ${active ? "bg-white/15 text-[#F5C21A]" : "bg-[#EFEEFB] text-[#4338CA] group-hover:bg-primary-100"}`}>
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span className="truncate">{RESOURCE_CATEGORY_LABELS[c]}</span>
+                  {active && <Check className="ml-auto h-4 w-4 shrink-0 text-[#F5C21A] motion-safe:animate-[fadeIn_180ms_ease-out]" aria-hidden="true" />}
                 </button>
               );
             })}
@@ -345,10 +360,10 @@ export default function UploadResource() {
           {errors.category && (
             <p className="mt-1 text-sm text-red-600">{errors.category.message as string}</p>
           )}
-        </div>
+        </section>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
+          <div className={requestingLevel === "university" ? "sm:col-span-2 lg:col-span-2" : undefined}>
             <label htmlFor="universityId" className="block text-sm font-bold text-slate-700">
               University
             </label>
@@ -373,7 +388,7 @@ export default function UploadResource() {
             />
             {!universityId && renderTaxonomyRequestLink("university", "University", "e.g. Universiti Contoh Malaysia")}
           </div>
-          <div>
+          <div className={requestingLevel === "faculty" ? "sm:col-span-2 lg:col-span-2" : undefined}>
             <label htmlFor="facultyId" className="block text-sm font-bold text-slate-700">
               Faculty
             </label>
@@ -398,7 +413,7 @@ export default function UploadResource() {
             {universityId && !facultyId &&
               renderTaxonomyRequestLink("faculty", "Faculty", "e.g. Faculty of Applied Sciences")}
           </div>
-          <div>
+          <div className={requestingLevel === "programme" ? "sm:col-span-2 lg:col-span-2" : undefined}>
             <label htmlFor="programmeId" className="block text-sm font-bold text-slate-700">
               Programme
             </label>
