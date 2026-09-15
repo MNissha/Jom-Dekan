@@ -3,7 +3,19 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft, FileText, ClipboardList, Presentation, Newspaper, FileSpreadsheet, BookOpenCheck, Sparkles, Check, UploadCloud, X } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  ClipboardList,
+  Presentation,
+  Newspaper,
+  FileSpreadsheet,
+  BookOpenCheck,
+  Sparkles,
+  Check,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import {
   uploadResourceFormSchema,
   type UploadResourceFormValues,
@@ -18,7 +30,11 @@ import {
 } from "../hooks/useTaxonomy";
 import { useMyProfile } from "../hooks/useProfile";
 import { SearchableSelect } from "../components/common/SearchableSelect";
-import { RESOURCE_CATEGORIES, RESOURCE_CATEGORY_LABELS, type ResourceCategory } from "../types/resource";
+import {
+  RESOURCE_CATEGORIES,
+  RESOURCE_CATEGORY_LABELS,
+  type ResourceCategory,
+} from "../types/resource";
 
 const CATEGORY_ICON: Record<ResourceCategory, typeof FileText> = {
   PAST_PAPER: FileText,
@@ -54,128 +70,219 @@ export default function UploadResource() {
 
   // Unlike subjects, universities/faculties/programmes have no
   // self-service creation — this just files a request for an admin to
-  // review, so it never creates the picker option on the spot. Each of
-  // University/Faculty/Programme gets its own inline request link right
-  // under its own box; only one can be open at a time, tracked by level.
+  // review. Rather than one request per missing level, a single combined
+  // request can name whichever levels are missing at once — the ones the
+  // user has already picked are simply carried by id, not re-requested.
   const createTaxonomyRequest = useCreateTaxonomyRequest();
-  const [requestingLevel, setRequestingLevel] =
-    useState<"university" | "faculty" | "programme" | null>(null);
-  const [requestName, setRequestName] = useState("");
+  const [isRequestingTaxonomy, setIsRequestingTaxonomy] = useState(false);
+  const [requestUniversityName, setRequestUniversityName] = useState("");
+  const [requestFacultyName, setRequestFacultyName] = useState("");
+  const [requestProgrammeName, setRequestProgrammeName] = useState("");
+  const [requestSubjectCode, setRequestSubjectCode] = useState("");
+  const [requestSubjectName, setRequestSubjectName] = useState("");
   const [requestNote, setRequestNote] = useState("");
-  const [submittedLevel, setSubmittedLevel] =
-    useState<"university" | "faculty" | "programme" | null>(null);
+  const [taxonomyRequestSubmitted, setTaxonomyRequestSubmitted] =
+    useState(false);
 
-  function startRequestingTaxonomy(level: "university" | "faculty" | "programme") {
-    setRequestingLevel(level);
-    setRequestName("");
+  const missingUniversity = !universityId;
+  const missingFaculty = !facultyId;
+  const missingProgramme = !programmeId;
+  const hasMissingTaxonomy =
+    missingUniversity || missingFaculty || missingProgramme;
+
+  function resetTaxonomyRequest() {
+    setIsRequestingTaxonomy(false);
+    setRequestUniversityName("");
+    setRequestFacultyName("");
+    setRequestProgrammeName("");
+    setRequestSubjectCode("");
+    setRequestSubjectName("");
     setRequestNote("");
-    setSubmittedLevel(null);
+    setTaxonomyRequestSubmitted(false);
   }
 
-  function cancelRequestingTaxonomy() {
-    setRequestingLevel(null);
-    setRequestName("");
-    setRequestNote("");
-  }
+  const taxonomyRequestHasContent =
+    (missingUniversity && requestUniversityName.trim().length >= 2) ||
+    (missingFaculty && requestFacultyName.trim().length >= 2) ||
+    (missingProgramme && requestProgrammeName.trim().length >= 2) ||
+    (missingProgramme &&
+      requestSubjectCode.trim().length >= 2 &&
+      requestSubjectName.trim().length >= 2);
 
   function submitTaxonomyRequest() {
-    if (!requestingLevel || requestName.trim().length < 2) return;
+    if (!taxonomyRequestHasContent) return;
     createTaxonomyRequest.mutate(
       {
         universityId: universityId || undefined,
+        requestedUniversityName: missingUniversity
+          ? requestUniversityName.trim() || undefined
+          : undefined,
         facultyId: facultyId || undefined,
-        requestedUniversityName: requestingLevel === "university" ? requestName.trim() : undefined,
-        requestedFacultyName: requestingLevel === "faculty" ? requestName.trim() : undefined,
-        requestedProgrammeName: requestingLevel === "programme" ? requestName.trim() : undefined,
+        requestedFacultyName: missingFaculty
+          ? requestFacultyName.trim() || undefined
+          : undefined,
+        programmeId: programmeId || undefined,
+        requestedProgrammeName: missingProgramme
+          ? requestProgrammeName.trim() || undefined
+          : undefined,
+        requestedSubjectCode:
+          missingProgramme && requestSubjectCode.trim()
+            ? requestSubjectCode.trim()
+            : undefined,
+        requestedSubjectName:
+          missingProgramme && requestSubjectName.trim()
+            ? requestSubjectName.trim()
+            : undefined,
         note: requestNote.trim() || undefined,
       },
       {
         onSuccess: () => {
-          setSubmittedLevel(requestingLevel);
-          setRequestingLevel(null);
-          setRequestName("");
-          setRequestNote("");
+          setIsRequestingTaxonomy(false);
+          setTaxonomyRequestSubmitted(true);
         },
       },
     );
   }
 
-  // Rendered under each of the University/Faculty/Programme boxes —
-  // collapses to a text link, expands into a small inline form when that
-  // box's link is clicked, and shows a confirmation after submitting.
-  function renderTaxonomyRequestLink(
-    level: "university" | "faculty" | "programme",
-    label: string,
-    placeholder: string,
-  ) {
-    if (requestingLevel === level) {
+  // A single combined panel, not one per level — shows an input only for
+  // whichever of university/faculty/programme the user hasn't already
+  // picked, plus a subject code/name pair when the programme itself is
+  // missing (so find-or-create has no programme to attach the subject to).
+  function renderTaxonomyRequestPanel() {
+    if (!hasMissingTaxonomy) return null;
+
+    if (taxonomyRequestSubmitted) {
       return (
-        <div className="mt-2 space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-600">
-              {label} name<span className="text-red-500"> *</span>
-            </label>
-            <input
-              autoFocus
-              value={requestName}
-              onChange={(e) => setRequestName(e.target.value)}
-              placeholder={placeholder}
-              className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600">
-              Note <span className="font-semibold text-slate-400">· optional</span>
-            </label>
-            <textarea
-              rows={2}
-              value={requestNote}
-              onChange={(e) => setRequestNote(e.target.value)}
-              placeholder="Anything that helps an admin add it correctly (campus, official site, etc.)"
-              className="mt-1 w-full resize-y rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          {createTaxonomyRequest.isError && (
-            <p className="text-xs text-red-600">Couldn&apos;t submit that request. Please try again.</p>
-          )}
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={cancelRequestingTaxonomy}
-              className="text-xs font-bold text-slate-500 hover:text-slate-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={requestName.trim().length < 2 || createTaxonomyRequest.isPending}
-              onClick={submitTaxonomyRequest}
-              className="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {createTaxonomyRequest.isPending ? "Submitting…" : "Submit request"}
-            </button>
-          </div>
-        </div>
-      );
-    }
-    if (submittedLevel === level) {
-      return (
-        <p className="mt-1 text-xs font-bold text-emerald-600">
+        <p className="mt-3 text-xs font-bold text-emerald-600">
           Request submitted — an admin will review it shortly.
         </p>
       );
     }
+
+    if (!isRequestingTaxonomy) {
+      return (
+        <button
+          type="button"
+          onClick={() => setIsRequestingTaxonomy(true)}
+          className="mt-3 text-xs font-bold text-primary-600 hover:text-primary-700"
+        >
+          Can&apos;t find your university, faculty, programme, or subject?
+          Request them together
+        </button>
+      );
+    }
+
     return (
-      <button
-        type="button"
-        onClick={() => startRequestingTaxonomy(level)}
-        className="group mt-1 rounded-sm text-xs font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-      >
-        Can&apos;t find your {label.toLowerCase()}?{" "}
-        <span className="font-extrabold text-primary-600 underline decoration-2 underline-offset-2 transition group-hover:text-primary-800 group-hover:decoration-primary-400">
-          Request it
-        </span>
-      </button>
+      <div className="mt-3 space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-4">
+        <p className="text-xs text-slate-500">
+          Fill in whichever of these aren&apos;t in the list yet — anything
+          you&apos;ve already picked above doesn&apos;t need to be retyped.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {missingUniversity && (
+            <div>
+              <label className="block text-xs font-bold text-slate-600">
+                University name
+              </label>
+              <input
+                value={requestUniversityName}
+                onChange={(e) => setRequestUniversityName(e.target.value)}
+                placeholder="e.g. Universiti Contoh Malaysia"
+                className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          )}
+          {missingFaculty && (
+            <div>
+              <label className="block text-xs font-bold text-slate-600">
+                Faculty name
+              </label>
+              <input
+                value={requestFacultyName}
+                onChange={(e) => setRequestFacultyName(e.target.value)}
+                placeholder="e.g. Faculty of Applied Sciences"
+                className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          )}
+          {missingProgramme && (
+            <div>
+              <label className="block text-xs font-bold text-slate-600">
+                Programme name
+              </label>
+              <input
+                value={requestProgrammeName}
+                onChange={(e) => setRequestProgrammeName(e.target.value)}
+                placeholder="e.g. Bachelor of Data Science (Hons)"
+                className="mt-1 w-full rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          )}
+          {missingProgramme && (
+            <div>
+              <label className="block text-xs font-bold text-slate-600">
+                Subject code &amp; name{" "}
+                <span className="font-semibold text-slate-400">
+                  · optional
+                </span>
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={requestSubjectCode}
+                  onChange={(e) => setRequestSubjectCode(e.target.value)}
+                  placeholder="CSC577"
+                  className="w-24 rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <input
+                  value={requestSubjectName}
+                  onChange={(e) => setRequestSubjectName(e.target.value)}
+                  placeholder="Software Engineering"
+                  className="flex-1 rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600">
+            Note{" "}
+            <span className="font-semibold text-slate-400">· optional</span>
+          </label>
+          <textarea
+            rows={2}
+            value={requestNote}
+            onChange={(e) => setRequestNote(e.target.value)}
+            placeholder="Anything that helps an admin add it correctly (campus, official site, etc.)"
+            className="mt-1 w-full resize-y rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+        {createTaxonomyRequest.isError && (
+          <p className="text-xs text-red-600">
+            Couldn&apos;t submit that request. Please try again.
+          </p>
+        )}
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={resetTaxonomyRequest}
+            className="text-xs font-bold text-slate-500 hover:text-slate-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={
+              !taxonomyRequestHasContent || createTaxonomyRequest.isPending
+            }
+            onClick={submitTaxonomyRequest}
+            className="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {createTaxonomyRequest.isPending
+              ? "Submitting…"
+              : "Submit request"}
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -211,7 +318,10 @@ export default function UploadResource() {
 
   const onSubmit = (values: UploadResourceFormValues) => {
     if (isAddingSubject) {
-      if (newSubjectCode.trim().length < 2 || newSubjectName.trim().length < 2) {
+      if (
+        newSubjectCode.trim().length < 2 ||
+        newSubjectName.trim().length < 2
+      ) {
         setNewSubjectError(
           "Enter both a subject code and a subject name (at least 2 characters each).",
         );
@@ -269,10 +379,25 @@ export default function UploadResource() {
 
   return (
     <div className="mx-auto max-w-6xl px-[18px] py-[22px] motion-safe:animate-[fadeIn_300ms_ease-out]">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Upload a resource</h1>
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="group mt-2 mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:text-primary-700"
+      >
+        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 transition-transform motion-safe:duration-150 group-hover:-translate-x-1 group-hover:border-primary-300 group-hover:bg-primary-50">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        </div>
+        Back
+      </button>
+
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        Upload a resource
+      </h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Choose a category and either attach one or more files (PDF, Word, Excel, PowerPoint, JPEG, or PNG, up to 20MB each) or write the
-        content directly as text. Every file is checked by its actual content before it&apos;s accepted — not just its name or extension.
+        Choose a category and either attach one or more files (PDF, Word, Excel,
+        PowerPoint, JPEG, or PNG, up to 20MB each) or write the content directly
+        as text. Every file is checked by its actual content before it&apos;s
+        accepted — not just its name or extension.
       </p>
 
       {profile && (
@@ -284,8 +409,9 @@ export default function UploadResource() {
             {profile.fieldOfStudy && <> · {profile.fieldOfStudy}</>}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Your name and institution are attached to every resource you upload and stay visible to other users. Only
-            upload material you have the right to share.
+            Your name and institution are attached to every resource you upload
+            and stay visible to other users. Only upload material you have the
+            right to share.
           </p>
         </div>
       )}
@@ -305,7 +431,10 @@ export default function UploadResource() {
         )}
 
         <div>
-          <label htmlFor="title" className="block text-sm font-bold text-slate-700">
+          <label
+            htmlFor="title"
+            className="block text-sm font-bold text-slate-700"
+          >
             Title<span className="text-red-500"> *</span>
           </label>
           <input
@@ -358,13 +487,18 @@ export default function UploadResource() {
             })}
           </div>
           {errors.category && (
-            <p className="mt-1 text-sm text-red-600">{errors.category.message as string}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.category.message as string}
+            </p>
           )}
         </section>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className={requestingLevel === "university" ? "sm:col-span-2 lg:col-span-2" : undefined}>
-            <label htmlFor="universityId" className="block text-sm font-bold text-slate-700">
+          <div>
+            <label
+              htmlFor="universityId"
+              className="block text-sm font-bold text-slate-700"
+            >
               University
             </label>
             <SearchableSelect
@@ -381,15 +515,16 @@ export default function UploadResource() {
                 setValue("programmeId", "");
                 setValue("subjectId", "");
                 cancelAddingSubject();
-                cancelRequestingTaxonomy();
-                setSubmittedLevel(null);
+                resetTaxonomyRequest();
               }}
               placeholder="Search for a university…"
             />
-            {!universityId && renderTaxonomyRequestLink("university", "University", "e.g. Universiti Contoh Malaysia")}
           </div>
-          <div className={requestingLevel === "faculty" ? "sm:col-span-2 lg:col-span-2" : undefined}>
-            <label htmlFor="facultyId" className="block text-sm font-bold text-slate-700">
+          <div>
+            <label
+              htmlFor="facultyId"
+              className="block text-sm font-bold text-slate-700"
+            >
               Faculty
             </label>
             <SearchableSelect
@@ -404,17 +539,21 @@ export default function UploadResource() {
                 setValue("programmeId", "");
                 setValue("subjectId", "");
                 cancelAddingSubject();
-                cancelRequestingTaxonomy();
-                setSubmittedLevel(null);
+                resetTaxonomyRequest();
               }}
               disabled={!universityId}
-              placeholder={universityId ? "Search for a faculty…" : "Select a university first"}
+              placeholder={
+                universityId
+                  ? "Search for a faculty…"
+                  : "Select a university first"
+              }
             />
-            {universityId && !facultyId &&
-              renderTaxonomyRequestLink("faculty", "Faculty", "e.g. Faculty of Applied Sciences")}
           </div>
-          <div className={requestingLevel === "programme" ? "sm:col-span-2 lg:col-span-2" : undefined}>
-            <label htmlFor="programmeId" className="block text-sm font-bold text-slate-700">
+          <div>
+            <label
+              htmlFor="programmeId"
+              className="block text-sm font-bold text-slate-700"
+            >
               Programme
             </label>
             <SearchableSelect
@@ -427,24 +566,29 @@ export default function UploadResource() {
                 setProgrammeId(value);
                 setValue("subjectId", "");
                 cancelAddingSubject();
-                cancelRequestingTaxonomy();
-                setSubmittedLevel(null);
+                resetTaxonomyRequest();
               }}
               disabled={!facultyId}
-              placeholder={facultyId ? "Search for a programme…" : "Select a faculty first"}
+              placeholder={
+                facultyId ? "Search for a programme…" : "Select a faculty first"
+              }
             />
-            {facultyId && !programmeId &&
-              renderTaxonomyRequestLink("programme", "Programme", "e.g. Bachelor of Data Science (Hons)")}
           </div>
           <div>
-            <label htmlFor="subjectId" className="block text-sm font-bold text-slate-700">
+            <label
+              htmlFor="subjectId"
+              className="block text-sm font-bold text-slate-700"
+            >
               Subject
             </label>
             {isAddingSubject ? (
               <div className="mt-1.5 space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="newSubjectCode" className="block text-xs font-bold text-slate-600">
+                    <label
+                      htmlFor="newSubjectCode"
+                      className="block text-xs font-bold text-slate-600"
+                    >
                       Subject code<span className="text-red-500"> *</span>
                     </label>
                     <input
@@ -456,7 +600,10 @@ export default function UploadResource() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="newSubjectName" className="block text-xs font-bold text-slate-600">
+                    <label
+                      htmlFor="newSubjectName"
+                      className="block text-xs font-bold text-slate-600"
+                    >
                       Subject name<span className="text-red-500"> *</span>
                     </label>
                     <input
@@ -468,7 +615,10 @@ export default function UploadResource() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="newSubjectSemester" className="block text-xs font-bold text-slate-600">
+                    <label
+                      htmlFor="newSubjectSemester"
+                      className="block text-xs font-bold text-slate-600"
+                    >
                       Semester
                     </label>
                     <select
@@ -486,7 +636,10 @@ export default function UploadResource() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="newSubjectIntakeYear" className="block text-xs font-bold text-slate-600">
+                    <label
+                      htmlFor="newSubjectIntakeYear"
+                      className="block text-xs font-bold text-slate-600"
+                    >
                       Intake / curriculum year
                     </label>
                     <input
@@ -505,8 +658,9 @@ export default function UploadResource() {
                 )}
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">
-                    Not in the catalogue yet — this adds it as a community-submitted
-                    subject that&apos;s ready to use right away. An admin will verify it later.
+                    Not in the catalogue yet — this adds it as a
+                    community-submitted subject that&apos;s ready to use right
+                    away. An admin will verify it later.
                   </p>
                   <button
                     type="button"
@@ -539,7 +693,11 @@ export default function UploadResource() {
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       disabled={!programmeId}
-                      placeholder={programmeId ? "Search for a subject…" : "Select a programme first"}
+                      placeholder={
+                        programmeId
+                          ? "Search for a subject…"
+                          : "Select a programme first"
+                      }
                     />
                   )}
                 />
@@ -561,13 +719,21 @@ export default function UploadResource() {
           </div>
         </div>
 
+        {renderTaxonomyRequestPanel()}
+
         <div>
-          <label htmlFor="file" className="block text-sm font-bold text-slate-700">
-            Files <span className="font-semibold text-slate-400">· optional</span>
+          <label
+            htmlFor="file"
+            className="block text-sm font-bold text-slate-700"
+          >
+            Files{" "}
+            <span className="font-semibold text-slate-400">· optional</span>
           </label>
           <p className="mt-0.5 text-xs text-slate-500">
-            Leave this empty to post as text instead — write the content in the description field below. Attach
-            multiple files (e.g. several scanned pages or slide decks) and they&apos;ll all belong to this one resource.
+            Leave this empty to post as text instead — write the content in the
+            description field below. Attach multiple files (e.g. several scanned
+            pages or slide decks) and they&apos;ll all belong to this one
+            resource.
           </p>
           <Controller
             control={control}
@@ -578,13 +744,18 @@ export default function UploadResource() {
                   htmlFor="file"
                   className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[#E4E3F2] bg-[#FBFBFE] px-4 py-6 text-center transition motion-safe:duration-150 hover:border-primary-300 hover:bg-primary-50/40"
                 >
-                  <UploadCloud className="h-6 w-6 text-primary-500" aria-hidden="true" />
+                  <UploadCloud
+                    className="h-6 w-6 text-primary-500"
+                    aria-hidden="true"
+                  />
                   <span className="text-sm font-semibold text-slate-700">
                     {value && value.length > 0
                       ? `${value.length} file${value.length === 1 ? "" : "s"} selected — click to add more`
                       : "Click to choose one or more files"}
                   </span>
-                  <span className="text-xs text-slate-400">PDF, Word, Excel, PowerPoint, JPEG, or PNG — up to 20MB each</span>
+                  <span className="text-xs text-slate-400">
+                    PDF, Word, Excel, PowerPoint, JPEG, or PNG — up to 20MB each
+                  </span>
                   <input
                     id="file"
                     type="file"
@@ -637,11 +808,22 @@ export default function UploadResource() {
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-bold text-slate-700">
-            Description {hasFile ? <span className="font-semibold text-slate-400">· optional</span> : <span className="text-red-500">*</span>}
+          <label
+            htmlFor="description"
+            className="block text-sm font-bold text-slate-700"
+          >
+            Description{" "}
+            {hasFile ? (
+              <span className="font-semibold text-slate-400">· optional</span>
+            ) : (
+              <span className="text-red-500">*</span>
+            )}
           </label>
           {!hasFile && (
-            <p className="mt-0.5 text-xs text-slate-500">No file attached — this text is the resource&apos;s content (at least 20 characters).</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              No file attached — this text is the resource&apos;s content (at
+              least 20 characters).
+            </p>
           )}
           <textarea
             id="description"
@@ -650,7 +832,9 @@ export default function UploadResource() {
             {...register("description")}
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.description.message}
+            </p>
           )}
         </div>
 
@@ -668,18 +852,13 @@ export default function UploadResource() {
           disabled={isSubmitting || uploadResource.isPending}
           className="rounded-full bg-primary-600 px-5 py-2.5 font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {uploadResource.isPending ? (hasFile ? `Uploading… ${progress}%` : "Posting…") : "Upload"}
+          {uploadResource.isPending
+            ? hasFile
+              ? `Uploading… ${progress}%`
+              : "Posting…"
+            : "Upload"}
         </button>
       </form>
-
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mt-5 flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:-translate-x-0.5 hover:text-primary-700"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back
-      </button>
     </div>
   );
 }

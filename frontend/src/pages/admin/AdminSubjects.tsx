@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive, RotateCcw, Trash2, Check, X } from "lucide-react";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { StatusBanner } from "../../components/common/StatusBanner";
+import { RowAction } from "../../components/common/RowAction";
 import {
   subjectFormSchema,
   type SubjectFormValues,
@@ -16,6 +17,7 @@ import {
   useCreateSubject,
   useUpdateSubject,
   useSetSubjectStatus,
+  useDeleteSubject,
 } from "../../hooks/useTaxonomy";
 import type { Subject } from "../../types/taxonomy";
 
@@ -42,11 +44,13 @@ export default function AdminSubjects({
   const createSubject = useCreateSubject();
   const updateSubject = useUpdateSubject();
   const setStatus = useSetSubjectStatus();
+  const deleteSubject = useDeleteSubject();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Subject | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Subject | null>(null);
   const [banner, setBanner] = useState<{
     type: "success" | "error";
     message: string;
@@ -132,6 +136,21 @@ export default function AdminSubjects({
           }),
       },
     );
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    deleteSubject.mutate(target.id, {
+      onSuccess: () =>
+        setBanner({ type: "success", message: `${target.code} deleted.` }),
+      onError: (err) =>
+        setBanner({
+          type: "error",
+          message: extractErrorMessage(err) ?? "Could not delete subject.",
+        }),
+    });
   };
 
   return (
@@ -250,22 +269,24 @@ export default function AdminSubjects({
                             {s.isActive ? "Active" : "Archived"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(s.id)}
-                            disabled={updateSubject.isPending}
-                            className="mr-3 text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                          >
-                            {updateSubject.isPending ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            className="text-sm font-medium text-slate-500 hover:underline"
-                          >
-                            Cancel
-                          </button>
+                        <td className="px-4 py-2">
+                          <div className="flex justify-end gap-2">
+                            <RowAction
+                              title="Save"
+                              onClick={() => saveEdit(s.id)}
+                              disabled={updateSubject.isPending}
+                              className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                            >
+                              <Check />
+                            </RowAction>
+                            <RowAction
+                              title="Cancel"
+                              onClick={cancelEdit}
+                              className="border-stone-200 text-stone-500 hover:bg-stone-50"
+                            >
+                              <X />
+                            </RowAction>
+                          </div>
                         </td>
                       </>
                     ) : (
@@ -282,25 +303,43 @@ export default function AdminSubjects({
                             {s.isActive ? "Active" : "Archived"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(s)}
-                            className="mr-3 inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline"
-                          >
-                            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              s.isActive ? setArchiveTarget(s) : restore(s)
-                            }
-                            disabled={setStatus.isPending}
-                            className="text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                          >
-                            {s.isActive ? "Archive" : "Restore"}
-                          </button>
+                        <td className="px-4 py-2">
+                          <div className="flex justify-end gap-2">
+                            <RowAction
+                              title="Edit subject"
+                              onClick={() => startEdit(s)}
+                              className="border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                            >
+                              <Pencil />
+                            </RowAction>
+                            {s.isActive ? (
+                              <RowAction
+                                title="Archive subject"
+                                onClick={() => setArchiveTarget(s)}
+                                disabled={setStatus.isPending}
+                                className="border-amber-100 text-amber-600 hover:bg-amber-50"
+                              >
+                                <Archive />
+                              </RowAction>
+                            ) : (
+                              <RowAction
+                                title="Restore subject"
+                                onClick={() => restore(s)}
+                                disabled={setStatus.isPending}
+                                className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                              >
+                                <RotateCcw />
+                              </RowAction>
+                            )}
+                            <RowAction
+                              title="Delete subject"
+                              onClick={() => setDeleteTarget(s)}
+                              disabled={deleteSubject.isPending}
+                              className="border-red-100 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 />
+                            </RowAction>
+                          </div>
                         </td>
                       </>
                     )}
@@ -325,6 +364,16 @@ export default function AdminSubjects({
         isConfirming={setStatus.isPending}
         onConfirm={confirmArchive}
         onCancel={() => setArchiveTarget(null)}
+      />
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Delete subject?"
+        message={`"${deleteTarget?.code} · ${deleteTarget?.name}" will be permanently deleted. This cannot be undone, and only works if it isn't linked to any programme or resource.`}
+        confirmLabel="Delete"
+        destructive
+        isConfirming={deleteSubject.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </AdminPageShell>
   );

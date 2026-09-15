@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Menu, Search, User, UploadCloud, Settings, LogOut, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu, User, UploadCloud, Settings, LogOut, ChevronDown } from "lucide-react";
 import { useCurrentUser, useLogout } from "../../hooks/useAuth";
 import { useMyProfile } from "../../hooks/useProfile";
 import { useDemoLoading } from "../../hooks/useDemoLoading";
@@ -17,7 +17,7 @@ function initialFrom(email: string) {
 // with still-pending items (disabled, "Soon" badge) until a real
 // profile/settings backend exists.
 const MENU_ITEMS = [
-  { label: "My Profile", to: "/profile", icon: User, disabled: false },
+  { label: "My Profile", to: "/profile?section=personal", icon: User, disabled: false },
   { label: "My Uploads", to: "/resources?mine=true", icon: UploadCloud, disabled: false },
   { label: "Settings", to: "/profile", icon: Settings, disabled: false },
 ];
@@ -27,9 +27,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const { data: profile } = useMyProfile();
   const logout = useLogout();
   const isDemoLoading = useDemoLoading();
-  const navigate = useNavigate();
 
-  const [searchValue, setSearchValue] = useState("");
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [isMenuEntered, setMenuEntered] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -59,12 +57,6 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
     };
   }, [isProfileOpen]);
 
-  function handleSearchSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = searchValue.trim();
-    navigate(trimmed ? `/resources?search=${encodeURIComponent(trimmed)}` : "/resources");
-  }
-
   const isAdmin = user?.role === "ADMIN";
   const displayName = isAdmin
     ? "JomDekan Admin"
@@ -85,18 +77,9 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
-      <form onSubmit={handleSearchSubmit} className="min-w-0 flex-1">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Search resources, subjects, tutors…"
-            className="w-full rounded-full border border-[#ECEBF7] bg-[#F8F8FC] py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-500 transition motion-safe:duration-150 focus:border-primary-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 sm:max-w-md dark:border-[#332C63] dark:bg-[#231E4A] dark:text-slate-200 dark:placeholder:text-slate-400 dark:focus:bg-[#2A2455]"
-          />
-        </div>
-      </form>
+      <div className="min-w-0 flex-1">
+        {/* empty */}
+      </div>
 
       <HeaderClock />
 

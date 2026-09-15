@@ -42,10 +42,11 @@ export interface SubjectRow {
 
 /**
  * Parameterized SQL only, no Express req/res — same rule as userModel.
- * "Archive" (setActive false) is used instead of DELETE everywhere here
- * because resources/profiles may reference these rows by id; removing
- * the row outright would either fail the foreign key or silently orphan
- * data. Nothing in this module ever runs a hard DELETE.
+ * "Archive" (setActive false) hides a row from new use without touching
+ * anything that already references it. Hard `delete()` is also available
+ * on each entity below for when an admin wants it gone entirely — the
+ * service layer checks for dependents first and returns a friendly error
+ * instead of letting the FK constraint reject it.
  */
 export const taxonomyModel = {
   universities: {
@@ -59,6 +60,13 @@ export const taxonomyModel = {
       const result = await pool.query<UniversityRow>(
         `SELECT * FROM universities WHERE id = $1`,
         [id],
+      );
+      return result.rows[0] ?? null;
+    },
+    async findBySlug(slug: string): Promise<UniversityRow | null> {
+      const result = await pool.query<UniversityRow>(
+        `SELECT * FROM universities WHERE slug = $1`,
+        [slug],
       );
       return result.rows[0] ?? null;
     },
@@ -93,6 +101,20 @@ export const taxonomyModel = {
       );
       return result.rows[0] ?? null;
     },
+    async countFaculties(id: string): Promise<number> {
+      const result = await pool.query<{ count: string }>(
+        `SELECT COUNT(*) FROM faculties WHERE university_id = $1`,
+        [id],
+      );
+      return Number(result.rows[0].count);
+    },
+    async delete(id: string): Promise<boolean> {
+      const result = await pool.query(
+        `DELETE FROM universities WHERE id = $1`,
+        [id],
+      );
+      return (result.rowCount ?? 0) > 0;
+    },
   },
 
   faculties: {
@@ -109,6 +131,16 @@ export const taxonomyModel = {
         [universityId],
       );
       return result.rows;
+    },
+    async findBySlug(
+      universityId: string,
+      slug: string,
+    ): Promise<FacultyRow | null> {
+      const result = await pool.query<FacultyRow>(
+        `SELECT * FROM faculties WHERE university_id = $1 AND slug = $2`,
+        [universityId, slug],
+      );
+      return result.rows[0] ?? null;
     },
     async create(params: {
       universityId: string;
@@ -138,6 +170,19 @@ export const taxonomyModel = {
       );
       return result.rows[0] ?? null;
     },
+    async countProgrammes(id: string): Promise<number> {
+      const result = await pool.query<{ count: string }>(
+        `SELECT COUNT(*) FROM programmes WHERE faculty_id = $1`,
+        [id],
+      );
+      return Number(result.rows[0].count);
+    },
+    async delete(id: string): Promise<boolean> {
+      const result = await pool.query(`DELETE FROM faculties WHERE id = $1`, [
+        id,
+      ]);
+      return (result.rowCount ?? 0) > 0;
+    },
   },
 
   programmes: {
@@ -154,6 +199,16 @@ export const taxonomyModel = {
         [facultyId],
       );
       return result.rows;
+    },
+    async findBySlug(
+      facultyId: string,
+      slug: string,
+    ): Promise<ProgrammeRow | null> {
+      const result = await pool.query<ProgrammeRow>(
+        `SELECT * FROM programmes WHERE faculty_id = $1 AND slug = $2`,
+        [facultyId, slug],
+      );
+      return result.rows[0] ?? null;
     },
     async create(params: {
       facultyId: string;
@@ -186,6 +241,21 @@ export const taxonomyModel = {
         [id, isActive],
       );
       return result.rows[0] ?? null;
+    },
+    async countDependents(id: string): Promise<number> {
+      const result = await pool.query<{ count: string }>(
+        `SELECT
+           (SELECT COUNT(*) FROM programme_subjects WHERE programme_id = $1) +
+           (SELECT COUNT(*) FROM resources WHERE programme_id = $1) AS count`,
+        [id],
+      );
+      return Number(result.rows[0].count);
+    },
+    async delete(id: string): Promise<boolean> {
+      const result = await pool.query(`DELETE FROM programmes WHERE id = $1`, [
+        id,
+      ]);
+      return (result.rowCount ?? 0) > 0;
     },
   },
 
@@ -258,6 +328,21 @@ export const taxonomyModel = {
         [id, isActive],
       );
       return result.rows[0] ?? null;
+    },
+    async countDependents(id: string): Promise<number> {
+      const result = await pool.query<{ count: string }>(
+        `SELECT
+           (SELECT COUNT(*) FROM programme_subjects WHERE subject_id = $1) +
+           (SELECT COUNT(*) FROM resources WHERE subject_id = $1) AS count`,
+        [id],
+      );
+      return Number(result.rows[0].count);
+    },
+    async delete(id: string): Promise<boolean> {
+      const result = await pool.query(`DELETE FROM subjects WHERE id = $1`, [
+        id,
+      ]);
+      return (result.rowCount ?? 0) > 0;
     },
   },
 

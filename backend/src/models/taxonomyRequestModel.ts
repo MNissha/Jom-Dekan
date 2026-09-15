@@ -21,9 +21,6 @@ export interface TaxonomyRequestRow {
 
 /**
  * Parameterized SQL only — same rule as every other model in this app.
- * No approve/reject/list-all-pending here on purpose: this migration
- * only ships the student-facing submission path, not the admin review
- * screen (see Migration 023's header comment).
  */
 export const taxonomyRequestModel = {
   async create(params: {
@@ -68,6 +65,57 @@ export const taxonomyRequestModel = {
     );
     return result.rows;
   },
+
+  async listPending(): Promise<TaxonomyRequestRow[]> {
+    const result = await pool.query<TaxonomyRequestRow>(
+      `SELECT * FROM taxonomy_requests WHERE status = 'PENDING' ORDER BY created_at ASC`,
+    );
+    return result.rows;
+  },
+
+  async findById(id: string): Promise<TaxonomyRequestRow | null> {
+    const result = await pool.query<TaxonomyRequestRow>(
+      `SELECT * FROM taxonomy_requests WHERE id = $1`,
+      [id],
+    );
+    return result.rows[0] ?? null;
+  },
+
+  // Only transitions a row that is still PENDING — a second admin
+  // reviewing an already-decided request gets no row back rather than
+  // silently overwriting the first decision. On approval the caller may
+  // also pass the university/faculty/programme ids it just resolved
+  // (existing or newly created) so the row reflects what was actually
+  // stood up, not just the free-typed names the student submitted.
+  async review(
+    id: string,
+    params: {
+      status: "APPROVED" | "REJECTED";
+      reviewedBy: string;
+      universityId?: string | null;
+      facultyId?: string | null;
+      programmeId?: string | null;
+    },
+  ): Promise<TaxonomyRequestRow | null> {
+    const result = await pool.query<TaxonomyRequestRow>(
+      `UPDATE taxonomy_requests
+         SET status = $2, reviewed_by = $3, reviewed_at = now(),
+             university_id = COALESCE($4, university_id),
+             faculty_id = COALESCE($5, faculty_id),
+             programme_id = COALESCE($6, programme_id)
+       WHERE id = $1 AND status = 'PENDING'
+       RETURNING *`,
+      [
+        id,
+        params.status,
+        params.reviewedBy,
+        params.universityId ?? null,
+        params.facultyId ?? null,
+        params.programmeId ?? null,
+      ],
+    );
+    return result.rows[0] ?? null;
+  },
 };
 
 export function toApiTaxonomyRequest(row: TaxonomyRequestRow) {
@@ -83,6 +131,8 @@ export function toApiTaxonomyRequest(row: TaxonomyRequestRow) {
     requestedSubjectCode: row.requested_subject_code,
     requestedSubjectName: row.requested_subject_name,
     note: row.note,
+    reviewedBy: row.reviewed_by,
+    reviewedAt: row.reviewed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

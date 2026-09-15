@@ -69,6 +69,15 @@ export function useSetUniversityStatus() {
   });
 }
 
+export function useDeleteUniversity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.deleteUniversity,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["universities"] }),
+  });
+}
+
 // ---- Faculties ----
 export function useCreateFaculty() {
   const queryClient = useQueryClient();
@@ -95,6 +104,14 @@ export function useSetFacultyStatus() {
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       taxonomyService.setFacultyStatus(id, isActive),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["faculties"] }),
+  });
+}
+
+export function useDeleteFaculty() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.deleteFaculty,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["faculties"] }),
   });
 }
@@ -134,6 +151,15 @@ export function useSetProgrammeStatus() {
   });
 }
 
+export function useDeleteProgramme() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.deleteProgramme,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["programmes"] }),
+  });
+}
+
 // ---- Subjects ----
 export function useCreateSubject() {
   const queryClient = useQueryClient();
@@ -157,6 +183,14 @@ export function useSetSubjectStatus() {
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       taxonomyService.setSubjectStatus(id, isActive),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+  });
+}
+
+export function useDeleteSubject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.deleteSubject,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
   });
 }
@@ -210,5 +244,34 @@ export function useMyTaxonomyRequests() {
   return useQuery({
     queryKey: ["taxonomyRequests", "mine"],
     queryFn: taxonomyService.listMyTaxonomyRequests,
+  });
+}
+
+export function usePendingTaxonomyRequests() {
+  return useQuery({
+    queryKey: ["taxonomyRequests", "pending"],
+    queryFn: taxonomyService.listPendingTaxonomyRequests,
+  });
+}
+
+export function useReviewTaxonomyRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      decision,
+    }: {
+      id: string;
+      decision: "APPROVED" | "REJECTED";
+    }) => taxonomyService.reviewTaxonomyRequest(id, decision),
+    // An approval may have just created a university/faculty/programme/
+    // subject, so the pickers need to see it too, not just the requests list.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["taxonomyRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["universities"] });
+      queryClient.invalidateQueries({ queryKey: ["faculties"] });
+      queryClient.invalidateQueries({ queryKey: ["programmes"] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+    },
   });
 }

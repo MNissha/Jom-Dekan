@@ -138,6 +138,10 @@ export const createTaxonomyRequestSchema = z
     },
   );
 
+export const reviewTaxonomyRequestSchema = z
+  .object({ decision: z.enum(["APPROVED", "REJECTED"]) })
+  .strict();
+
 // ---- Programme <-> Subject links ----
 export const linkProgrammeSubjectSchema = z
   .object({

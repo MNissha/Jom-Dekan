@@ -33,7 +33,7 @@ const adminToolLinks = [
   {
     to: "/admin/tutoring",
     label: "Tutoring",
-    icon: GraduationCap,
+    icon: Users,
   },
   {
     to: "/admin/opportunities",

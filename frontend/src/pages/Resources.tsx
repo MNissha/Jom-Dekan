@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { FileText, ImageOff, UploadCloud, Download, Search } from "lucide-react";
+import { FileText, ImageOff, UploadCloud, Download, Search, RotateCcw } from "lucide-react";
 import { useResources, useFilePreviewUrl, useDownloadUrl } from "../hooks/useResources";
 import { useCurrentUser } from "../hooks/useAuth";
 import { FavoriteButton } from "../components/common/FavoriteButton";
@@ -208,6 +208,20 @@ export default function Resources() {
     setPage(1);
   }
 
+  const hasActiveFilters = Boolean(
+    searchInput || universityId || facultyId || programmeId || subjectId,
+  );
+
+  function handleResetFilters() {
+    setSearchInput("");
+    setQ(undefined);
+    setUniversityId(undefined);
+    setFacultyId(undefined);
+    setProgrammeId(undefined);
+    setSubjectId(undefined);
+    setPage(1);
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -265,15 +279,27 @@ export default function Resources() {
           subject) rather than the reference's sample "Year" filter,
           which has no backing data in this schema. */}
       <div className="mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search resources…"
-            className="w-full rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] py-2.5 pl-9 pr-3 text-sm text-slate-700 transition motion-safe:duration-150 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search resources…"
+              className="w-full rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] py-2.5 pl-9 pr-3 text-sm text-slate-700 transition motion-safe:duration-150 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[#E4E3F2] px-3.5 py-2.5 text-sm font-bold text-slate-600 transition motion-safe:duration-150 hover:border-primary-200 hover:text-primary-700"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              Reset
+            </button>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

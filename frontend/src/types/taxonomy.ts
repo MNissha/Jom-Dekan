@@ -44,6 +44,8 @@ export interface TaxonomyRequest {
   requestedSubjectCode: string | null;
   requestedSubjectName: string | null;
   note: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

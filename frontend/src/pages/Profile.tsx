@@ -288,12 +288,24 @@ export default function Profile() {
             {errors.displayName && <span className="text-xs text-red-600">{errors.displayName.message}</span>}
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Student email<span className="text-red-500"> *</span></span>
-            <input type="email" disabled={!isEditing} className={INPUT_CLASS} aria-invalid={Boolean(errors.email)} {...register("email")} />
-            {errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}
-            {isEditing && <span className="text-[11px] text-slate-400">Changing this sends a verification link to the new address.</span>}
-          </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Student email<span className="text-red-500"> *</span>
+              </span>
+              <input
+                type="email"
+                disabled={!isEditing}
+                className="h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                aria-invalid={Boolean(errors.email)}
+                {...register('email')}
+              />
+              {errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}
+              {isEditing && (
+                <span className="text-[11px] text-slate-400">
+                  Changing this sends a new verification link to the new address.
+                </span>
+              )}
+            </label>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Phone number<span className="text-red-500"> *</span></span>
@@ -302,74 +314,113 @@ export default function Profile() {
             <span className="text-[11px] text-slate-400">Used to auto-fill contact details on forms like reports.</span>
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Registering as</span>
-            <select disabled={!isEditing} className={INPUT_CLASS} {...register("academicRole")}>
-              <option value="STUDENT">Student</option>
-              <option value="TUTOR">Tutor</option>
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">University<span className="text-red-500"> *</span></span>
-            <Controller
-              control={control}
-              name="universityId"
-              render={({ field }) => (
-                <SearchableSelect
-                  options={universityOptions}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  disabled={!isEditing || universitiesLoading || universitiesError}
-                  placeholder={universitiesLoading ? "Loading universities…" : universitiesError ? "Could not load universities." : "Search for your university…"}
-                  ariaInvalid={Boolean(errors.universityId)}
-                />
-              )}
-            />
-            {errors.universityId && <span className="text-xs text-red-600">{errors.universityId.message}</span>}
-            {universitiesError && (
-              <span className="text-xs text-red-600">
-                Couldn&apos;t load the list of universities.{" "}
-                <button type="button" onClick={() => refetchUniversities()} className="font-medium underline">Try again</button>
-              </span>
-            )}
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Field of study<span className="text-red-500"> *</span></span>
-            <Controller
-              control={control}
-              name="fieldOfStudy"
-              render={({ field }) => (
-                <SearchableSelect
-                  options={fieldOfStudyOptions}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  placeholder="Search for your field of study…"
-                  ariaInvalid={Boolean(errors.fieldOfStudy)}
+          {profile?.role !== "ADMIN" && (
+            <>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Registering as</span>
+                <select
                   disabled={!isEditing}
+                  className="h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                  {...register('academicRole')}
+                >
+                  <option value="STUDENT">Student</option>
+                  <option value="TUTOR">Tutor</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  University<span className="text-red-500"> *</span>
+                </span>
+                <Controller
+                  control={control}
+                  name="universityId"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      options={universityOptions}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      disabled={!isEditing || universitiesLoading || universitiesError}
+                      placeholder={
+                        universitiesLoading
+                          ? 'Loading universities…'
+                          : universitiesError
+                            ? 'Could not load universities.'
+                            : 'Search for your university…'
+                      }
+                      ariaInvalid={Boolean(errors.universityId)}
+                    />
+                  )}
                 />
-              )}
-            />
-            {errors.fieldOfStudy && <span className="text-xs text-red-600">{errors.fieldOfStudy.message}</span>}
-          </label>
+                {errors.universityId && <span className="text-xs text-red-600">{errors.universityId.message}</span>}
+                {universitiesError && (
+                  <span className="text-xs text-red-600">
+                    Couldn't load the list of universities.{' '}
+                    <button type="button" onClick={() => refetchUniversities()} className="font-medium underline">
+                      Try again
+                    </button>
+                  </span>
+                )}
+              </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Current year</span>
-            <input type="number" disabled={!isEditing} min={1} max={8} className={INPUT_CLASS} aria-invalid={Boolean(errors.currentYear)} {...register("currentYear")} />
-            {errors.currentYear && <span className="text-xs text-red-600">{errors.currentYear.message}</span>}
-          </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Field of study<span className="text-red-500"> *</span>
+                </span>
+                <Controller
+                  control={control}
+                  name="fieldOfStudy"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      options={fieldOfStudyOptions}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      placeholder="Search for your field of study…"
+                      ariaInvalid={Boolean(errors.fieldOfStudy)}
+                      disabled={!isEditing}
+                    />
+                  )}
+                />
+                {errors.fieldOfStudy && <span className="text-xs text-red-600">{errors.fieldOfStudy.message}</span>}
+              </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Current semester</span>
-            <select disabled={!isEditing} className={INPUT_CLASS} aria-invalid={Boolean(errors.currentSemester)} {...register("currentSemester")}>
-              {CURRENT_SEMESTER_OPTIONS.map((semester) => <option key={semester} value={semester}>Semester {semester}</option>)}
-            </select>
-            {errors.currentSemester && <span className="text-xs text-red-600">{errors.currentSemester.message}</span>}
-          </label>
-        </div>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Current year</span>
+                <input
+                  type="number"
+                  disabled={!isEditing}
+                  min={1}
+                  max={8}
+                  className="h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                  aria-invalid={Boolean(errors.currentYear)}
+                  {...register('currentYear')}
+                />
+                {errors.currentYear && <span className="text-xs text-red-600">{errors.currentYear.message}</span>}
+              </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Current semester</span>
+                <select
+                  disabled={!isEditing}
+                  className="h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+                  aria-invalid={Boolean(errors.currentSemester)}
+                  {...register('currentSemester')}
+                >
+                  {CURRENT_SEMESTER_OPTIONS.map((semester) => (
+                    <option key={semester} value={semester}>
+                      Semester {semester}
+                    </option>
+                  ))}
+                </select>
+                {errors.currentSemester && (
+                  <span className="text-xs text-red-600">{errors.currentSemester.message}</span>
+                )}
+              </label>
+            </>
+          )}
+          </div>
 
         {isEditing && (
           <div className="mt-6 flex flex-wrap gap-3 border-t border-[#F1F0F8] pt-5">

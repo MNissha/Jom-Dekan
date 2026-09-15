@@ -201,24 +201,29 @@ export const resourceModel = {
     if (filters.status) {
       if (Array.isArray(filters.status)) {
         values.push(filters.status);
-        conditions.push(`status = ANY($${values.length})`);
+        conditions.push(`r.status = ANY($${values.length})`);
       } else {
-        addCondition("status = ?", filters.status);
+        addCondition("r.status = ?", filters.status);
       }
     }
-    if (filters.ownerId) addCondition("owner_id = ?", filters.ownerId);
+    if (filters.ownerId) addCondition("r.owner_id = ?", filters.ownerId);
+    // Qualified with the `r.` alias — several of these column names
+    // (university_id, programme_id) also exist on user_profiles, which
+    // this query left-joins as `up`, so an unqualified name here is
+    // ambiguous and fails the whole query at runtime, not just at parse
+    // time (the COUNT query below has no join, so it stays unqualified).
     if (filters.universityId)
-      addCondition("university_id = ?", filters.universityId);
-    if (filters.facultyId) addCondition("faculty_id = ?", filters.facultyId);
+      addCondition("r.university_id = ?", filters.universityId);
+    if (filters.facultyId) addCondition("r.faculty_id = ?", filters.facultyId);
     if (filters.programmeId)
-      addCondition("programme_id = ?", filters.programmeId);
-    if (filters.subjectId) addCondition("subject_id = ?", filters.subjectId);
-    if (filters.category) addCondition("category = ?", filters.category);
+      addCondition("r.programme_id = ?", filters.programmeId);
+    if (filters.subjectId) addCondition("r.subject_id = ?", filters.subjectId);
+    if (filters.category) addCondition("r.category = ?", filters.category);
 
     let searchParamIndex: number | null = null;
     if (filters.q) {
       addCondition(
-        "search_vector @@ websearch_to_tsquery('english', ?)",
+        "r.search_vector @@ websearch_to_tsquery('english', ?)",
         filters.q,
       );
       searchParamIndex = values.length;
@@ -239,7 +244,7 @@ export const resourceModel = {
     orderParts.push(SORT_BY_SQL[filters.sortBy]);
 
     const countResult = await pool.query<{ count: string }>(
-      `SELECT COUNT(*) FROM resources ${whereClause}`,
+      `SELECT COUNT(*) FROM resources r ${whereClause}`,
       values,
     );
 

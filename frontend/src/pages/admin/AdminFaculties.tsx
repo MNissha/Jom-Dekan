@@ -3,16 +3,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive, RotateCcw, Trash2, Check, X } from "lucide-react";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { StatusBanner } from "../../components/common/StatusBanner";
+import { RowAction } from "../../components/common/RowAction";
 import {
   useUniversities,
   useFaculties,
   useCreateFaculty,
   useUpdateFaculty,
   useSetFacultyStatus,
+  useDeleteFaculty,
 } from "../../hooks/useTaxonomy";
 import type { Faculty } from "../../types/taxonomy";
 
@@ -47,11 +49,13 @@ export default function AdminFaculties({
   const createFaculty = useCreateFaculty();
   const updateFaculty = useUpdateFaculty();
   const setStatus = useSetFacultyStatus();
+  const deleteFaculty = useDeleteFaculty();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Faculty | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Faculty | null>(null);
   const [banner, setBanner] = useState<{
     type: "success" | "error";
     message: string;
@@ -142,6 +146,21 @@ export default function AdminFaculties({
           }),
       },
     );
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    deleteFaculty.mutate(target.id, {
+      onSuccess: () =>
+        setBanner({ type: "success", message: `${target.name} deleted.` }),
+      onError: (err) =>
+        setBanner({
+          type: "error",
+          message: extractErrorMessage(err) ?? "Could not delete faculty.",
+        }),
+    });
   };
 
   return (
@@ -266,22 +285,24 @@ export default function AdminFaculties({
                                 {f.isActive ? "Active" : "Archived"}
                               </span>
                             </td>
-                            <td className="px-4 py-2 text-right">
-                              <button
-                                type="button"
-                                onClick={() => saveEdit(f.id)}
-                                disabled={updateFaculty.isPending}
-                                className="mr-3 text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                              >
-                                {updateFaculty.isPending ? "Saving…" : "Save"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={cancelEdit}
-                                className="text-sm font-medium text-slate-500 hover:underline"
-                              >
-                                Cancel
-                              </button>
+                            <td className="px-4 py-2">
+                              <div className="flex justify-end gap-2">
+                                <RowAction
+                                  title="Save"
+                                  onClick={() => saveEdit(f.id)}
+                                  disabled={updateFaculty.isPending}
+                                  className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                                >
+                                  <Check />
+                                </RowAction>
+                                <RowAction
+                                  title="Cancel"
+                                  onClick={cancelEdit}
+                                  className="border-stone-200 text-stone-500 hover:bg-stone-50"
+                                >
+                                  <X />
+                                </RowAction>
+                              </div>
                             </td>
                           </>
                         ) : (
@@ -300,28 +321,43 @@ export default function AdminFaculties({
                                 {f.isActive ? "Active" : "Archived"}
                               </span>
                             </td>
-                            <td className="px-4 py-2 text-right">
-                              <button
-                                type="button"
-                                onClick={() => startEdit(f)}
-                                className="mr-3 inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline"
-                              >
-                                <Pencil
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  f.isActive ? setArchiveTarget(f) : restore(f)
-                                }
-                                disabled={setStatus.isPending}
-                                className="text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                              >
-                                {f.isActive ? "Archive" : "Restore"}
-                              </button>
+                            <td className="px-4 py-2">
+                              <div className="flex justify-end gap-2">
+                                <RowAction
+                                  title="Edit faculty"
+                                  onClick={() => startEdit(f)}
+                                  className="border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                                >
+                                  <Pencil />
+                                </RowAction>
+                                {f.isActive ? (
+                                  <RowAction
+                                    title="Archive faculty"
+                                    onClick={() => setArchiveTarget(f)}
+                                    disabled={setStatus.isPending}
+                                    className="border-amber-100 text-amber-600 hover:bg-amber-50"
+                                  >
+                                    <Archive />
+                                  </RowAction>
+                                ) : (
+                                  <RowAction
+                                    title="Restore faculty"
+                                    onClick={() => restore(f)}
+                                    disabled={setStatus.isPending}
+                                    className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                                  >
+                                    <RotateCcw />
+                                  </RowAction>
+                                )}
+                                <RowAction
+                                  title="Delete faculty"
+                                  onClick={() => setDeleteTarget(f)}
+                                  disabled={deleteFaculty.isPending}
+                                  className="border-red-100 text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 />
+                                </RowAction>
+                              </div>
                             </td>
                           </>
                         )}
@@ -348,6 +384,16 @@ export default function AdminFaculties({
         isConfirming={setStatus.isPending}
         onConfirm={confirmArchive}
         onCancel={() => setArchiveTarget(null)}
+      />
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Delete faculty?"
+        message={`"${deleteTarget?.name}" will be permanently deleted. This cannot be undone, and only works if it has no programmes.`}
+        confirmLabel="Delete"
+        destructive
+        isConfirming={deleteFaculty.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </AdminPageShell>
   );

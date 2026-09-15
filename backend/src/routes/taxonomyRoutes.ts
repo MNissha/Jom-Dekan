@@ -21,6 +21,7 @@ import {
   linkProgrammeSubjectSchema,
   unlinkProgrammeSubjectParamsSchema,
   createTaxonomyRequestSchema,
+  reviewTaxonomyRequestSchema,
 } from "../validators/taxonomyValidators";
 
 const router = Router();
@@ -69,6 +70,13 @@ router.patch(
   validate({ params: idParamSchema, body: statusSchema }),
   taxonomyController.setUniversityStatus,
 );
+router.delete(
+  "/universities/:id",
+  authenticate,
+  authorize("ADMIN"),
+  validate({ params: idParamSchema }),
+  taxonomyController.deleteUniversity,
+);
 
 /**
  * @openapi
@@ -111,6 +119,13 @@ router.patch(
   authorize("ADMIN"),
   validate({ params: idParamSchema, body: statusSchema }),
   taxonomyController.setFacultyStatus,
+);
+router.delete(
+  "/faculties/:id",
+  authenticate,
+  authorize("ADMIN"),
+  validate({ params: idParamSchema }),
+  taxonomyController.deleteFaculty,
 );
 
 /**
@@ -155,6 +170,13 @@ router.patch(
   validate({ params: idParamSchema, body: statusSchema }),
   taxonomyController.setProgrammeStatus,
 );
+router.delete(
+  "/programmes/:id",
+  authenticate,
+  authorize("ADMIN"),
+  validate({ params: idParamSchema }),
+  taxonomyController.deleteProgramme,
+);
 
 /**
  * @openapi
@@ -197,6 +219,13 @@ router.patch(
   authorize("ADMIN"),
   validate({ params: idParamSchema, body: statusSchema }),
   taxonomyController.setSubjectStatus,
+);
+router.delete(
+  "/subjects/:id",
+  authenticate,
+  authorize("ADMIN"),
+  validate({ params: idParamSchema }),
+  taxonomyController.deleteSubject,
 );
 
 /**
@@ -284,6 +313,44 @@ router.get(
   "/requests/mine",
   authenticate,
   taxonomyController.listMyTaxonomyRequests,
+);
+
+/**
+ * @openapi
+ * /taxonomy/requests/pending:
+ *   get:
+ *     tags: [Taxonomy]
+ *     summary: List all pending taxonomy requests (ADMIN only)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: List of pending requests }
+ */
+router.get(
+  "/requests/pending",
+  authenticate,
+  authorize("ADMIN"),
+  taxonomyController.listPendingTaxonomyRequests,
+);
+
+/**
+ * @openapi
+ * /taxonomy/requests/{id}/review:
+ *   patch:
+ *     tags: [Taxonomy]
+ *     summary: >
+ *       Approve or reject a pending taxonomy request (ADMIN only). The
+ *       requester is notified of the decision.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Reviewed }
+ *       409: { description: Already reviewed }
+ */
+router.patch(
+  "/requests/:id/review",
+  authenticate,
+  authorize("ADMIN"),
+  validate({ params: idParamSchema, body: reviewTaxonomyRequestSchema }),
+  taxonomyController.reviewTaxonomyRequest,
 );
 
 export default router;

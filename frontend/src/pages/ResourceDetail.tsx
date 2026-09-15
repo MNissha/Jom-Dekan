@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft } from "lucide-react";
 import {
   useResource,
   useUpdateResource,
@@ -14,6 +15,12 @@ import {
   useDeleteResourceComment,
 } from "../hooks/useResources";
 import { useCurrentUser } from "../hooks/useAuth";
+import {
+  useUniversities,
+  useFaculties,
+  useProgrammes,
+  useSubjects,
+} from "../hooks/useTaxonomy";
 import { FavoriteButton } from "../components/common/FavoriteButton";
 import { ReportButton } from "../components/common/ReportButton";
 import { PdfThumbnail } from "../components/common/PdfThumbnail";
@@ -21,12 +28,61 @@ import { UserLink } from "../components/common/UserLink";
 import { AiSummarySection } from "../components/resource/AiSummarySection";
 import { ResourceFileList } from "../components/resource/ResourceFileList";
 import { ResourceAgentPanel } from "../components/resources/ResourceAgentPanel";
+import { SearchableSelect } from "../components/common/SearchableSelect";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 import {
   editResourceFormSchema,
   type EditResourceFormValues,
 } from "../schemas/resourceSchemas";
+
+// Mirrors Resources.tsx's own ResourceTaxonomyLine — same university ·
+// faculty · programme breadcrumb, resolved the same way (each consumer
+// scopes useFaculties/useProgrammes to its own ids rather than a shared
+// filter selection), so a resource reads identically on its card and on
+// this detail page.
+function ResourceTaxonomyLine({
+  universityId,
+  facultyId,
+  programmeId,
+}: {
+  universityId: string | null;
+  facultyId: string | null;
+  programmeId: string | null;
+}) {
+  const { data: universities } = useUniversities();
+  const { data: faculties } = useFaculties(universityId ?? undefined);
+  const { data: programmes } = useProgrammes(facultyId ?? undefined);
+
+  const university = universities?.find((u) => u.id === universityId);
+  const faculty = faculties?.find((f) => f.id === facultyId);
+  const programme = programmes?.find((p) => p.id === programmeId);
+
+  const parts = [university?.name, faculty?.name, programme?.name].filter(Boolean);
+  if (parts.length === 0) return null;
+
+  return <p className="mt-1 text-xs font-semibold text-slate-400">{parts.join(" · ")}</p>;
+}
+
+// Same subject badge as the Resources page card — resolved via
+// useSubjects(programmeId), same scoping the card uses.
+function ResourceSubjectBadge({
+  programmeId,
+  subjectId,
+}: {
+  programmeId: string | null;
+  subjectId: string | null;
+}) {
+  const { data: subjects } = useSubjects(programmeId ?? undefined);
+  const subject = subjects?.find((s) => s.id === subjectId);
+  if (!subject) return null;
+
+  return (
+    <span className="mt-2 inline-block rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700">
+      {subject.code} · {subject.name}
+    </span>
+  );
+}
 
 export default function ResourceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -66,15 +122,39 @@ export default function ResourceDetail() {
     });
   };
 
-  const { register, handleSubmit, reset } = useForm<EditResourceFormValues>({
+  const { register, handleSubmit, reset, control, setValue } = useForm<EditResourceFormValues>({
     resolver: zodResolver(editResourceFormSchema),
     values: data
       ? {
           title: data.resource.title,
           description: data.resource.description ?? undefined,
+          universityId: data.resource.universityId ?? "",
+          facultyId: data.resource.facultyId ?? "",
+          programmeId: data.resource.programmeId ?? "",
+          subjectId: data.resource.subjectId ?? "",
         }
       : undefined,
   });
+
+  // Local, RHF-independent copies of the cascade's own parent ids — the
+  // SearchableSelect options for faculty/programme/subject need to be
+  // scoped to *these*, not the raw form values, so changing university
+  // can reset the lower levels before the next render reads them.
+  const [editUniversityId, setEditUniversityId] = useState("");
+  const [editFacultyId, setEditFacultyId] = useState("");
+  const [editProgrammeId, setEditProgrammeId] = useState("");
+
+  useEffect(() => {
+    if (!data) return;
+    setEditUniversityId(data.resource.universityId ?? "");
+    setEditFacultyId(data.resource.facultyId ?? "");
+    setEditProgrammeId(data.resource.programmeId ?? "");
+  }, [data]);
+
+  const { data: universities } = useUniversities();
+  const { data: editFaculties } = useFaculties(editUniversityId || undefined);
+  const { data: editProgrammes } = useProgrammes(editFacultyId || undefined);
+  const { data: editSubjects } = useSubjects(editProgrammeId || undefined);
 
   const readyFiles = data?.files.filter((f) => f.status === "READY") ?? [];
   const readyFile = readyFiles[0];
@@ -115,9 +195,12 @@ export default function ResourceDetail() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mt-2 inline-block text-sm text-primary-700 hover:underline"
+          className="group mt-2 mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:text-primary-700"
         >
-          ← Back
+          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 transition-transform motion-safe:duration-150 group-hover:-translate-x-1 group-hover:border-primary-300 group-hover:bg-primary-50">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </div>
+          Back
         </button>
       </div>
     );
@@ -131,7 +214,17 @@ export default function ResourceDetail() {
 
   const onSave = (values: EditResourceFormValues) => {
     updateResource.mutate(
-      { id: resource.id, data: values },
+      {
+        id: resource.id,
+        data: {
+          title: values.title,
+          description: values.description,
+          universityId: values.universityId || undefined,
+          facultyId: values.facultyId || undefined,
+          programmeId: values.programmeId || undefined,
+          subjectId: values.subjectId || undefined,
+        },
+      },
       { onSuccess: () => setIsEditing(false) },
     );
   };
@@ -175,9 +268,12 @@ export default function ResourceDetail() {
       <button
         type="button"
         onClick={() => navigate(-1)}
-        className="text-sm text-primary-700 hover:underline"
+        className="group mt-2 mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:text-primary-700"
       >
-        ← Back
+        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 transition-transform motion-safe:duration-150 group-hover:-translate-x-1 group-hover:border-primary-300 group-hover:bg-primary-50">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        </div>
+        Back
       </button>
 
       <div className="mt-4 rounded-2xl border border-[#ECEBF7] bg-white p-6">
@@ -210,6 +306,114 @@ export default function ResourceDetail() {
                 {...register("description")}
               />
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="edit-universityId" className="block text-sm font-medium text-slate-700">
+                  University
+                </label>
+                <Controller
+                  control={control}
+                  name="universityId"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="edit-universityId"
+                      options={(universities ?? [])
+                        .filter((u) => u.isActive)
+                        .map((u) => ({ value: u.id, label: u.name }))}
+                      value={field.value ?? ""}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        setEditUniversityId(value);
+                        setEditFacultyId("");
+                        setEditProgrammeId("");
+                        setValue("facultyId", "");
+                        setValue("programmeId", "");
+                        setValue("subjectId", "");
+                      }}
+                      placeholder="Search for a university…"
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-facultyId" className="block text-sm font-medium text-slate-700">
+                  Faculty
+                </label>
+                <Controller
+                  control={control}
+                  name="facultyId"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="edit-facultyId"
+                      options={(editFaculties ?? [])
+                        .filter((f) => f.isActive)
+                        .map((f) => ({ value: f.id, label: f.name }))}
+                      value={field.value ?? ""}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        setEditFacultyId(value);
+                        setEditProgrammeId("");
+                        setValue("programmeId", "");
+                        setValue("subjectId", "");
+                      }}
+                      disabled={!editUniversityId}
+                      placeholder={editUniversityId ? "Search for a faculty…" : "Select a university first"}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-programmeId" className="block text-sm font-medium text-slate-700">
+                  Programme
+                </label>
+                <Controller
+                  control={control}
+                  name="programmeId"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="edit-programmeId"
+                      options={(editProgrammes ?? [])
+                        .filter((p) => p.isActive)
+                        .map((p) => ({ value: p.id, label: p.name }))}
+                      value={field.value ?? ""}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        setEditProgrammeId(value);
+                        setValue("subjectId", "");
+                      }}
+                      disabled={!editFacultyId}
+                      placeholder={editFacultyId ? "Search for a programme…" : "Select a faculty first"}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-subjectId" className="block text-sm font-medium text-slate-700">
+                  Subject
+                </label>
+                <Controller
+                  control={control}
+                  name="subjectId"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="edit-subjectId"
+                      options={(editSubjects ?? [])
+                        .filter((s) => s.isActive)
+                        .map((s) => ({ value: s.id, label: `${s.code} · ${s.name}` }))}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      disabled={!editProgrammeId}
+                      placeholder={editProgrammeId ? "Search for a subject…" : "Select a programme first"}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -222,6 +426,9 @@ export default function ResourceDetail() {
                 type="button"
                 onClick={() => {
                   reset();
+                  setEditUniversityId(resource.universityId ?? "");
+                  setEditFacultyId(resource.facultyId ?? "");
+                  setEditProgrammeId(resource.programmeId ?? "");
                   setIsEditing(false);
                 }}
                 className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
@@ -258,6 +465,15 @@ export default function ResourceDetail() {
               {" · "}
               {new Date(resource.createdAt).toLocaleDateString()}
             </p>
+            <ResourceTaxonomyLine
+              universityId={resource.universityId}
+              facultyId={resource.facultyId}
+              programmeId={resource.programmeId}
+            />
+            <ResourceSubjectBadge
+              programmeId={resource.programmeId}
+              subjectId={resource.subjectId}
+            />
 
             {resource.description && (
               <p className="mt-2 whitespace-pre-wrap text-slate-600">
@@ -281,7 +497,6 @@ export default function ResourceDetail() {
 
             <div className="mt-6 flex flex-wrap gap-2">
               <FavoriteButton targetType="resource" targetId={resource.id} variant="pill" />
-              <ReportButton targetType="resource" targetId={resource.id} />
               {canManage && (
                 <>
                   <button
@@ -316,6 +531,10 @@ export default function ResourceDetail() {
                     {deleteResource.isPending ? "Deleting…" : "Delete"}
                   </button>
                 </>
+              )}
+
+              {!isOwner && (
+                <ReportButton targetType="resource" targetId={resource.id} />
               )}
             </div>
 

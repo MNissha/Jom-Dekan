@@ -30,6 +30,150 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+// Used only by taxonomyService.requests.review() when approving a
+// combined request — creates the entity the student asked for, or falls
+// back to the existing one by slug if another request (or an admin)
+// already created it in the meantime, so approving never fails just
+// because of a race with itself.
+async function createOrReuseUniversity(
+  name: string,
+  ctx: ActorContext,
+): Promise<string> {
+  const slug = slugify(name);
+  try {
+    const row = await taxonomyModel.universities.create({
+      name,
+      slug,
+      country: "Malaysia",
+    });
+    await auditLogModel.record({
+      actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
+      action: "TAXONOMY_UNIVERSITY_CREATED",
+      targetType: "university",
+      targetId: row.id,
+      requestId: ctx.requestId,
+      ipAddress: ctx.ipAddress,
+    });
+    return row.id;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    const existing = await taxonomyModel.universities.findBySlug(slug);
+    if (!existing) throw err;
+    return existing.id;
+  }
+}
+
+async function createOrReuseFaculty(
+  universityId: string,
+  name: string,
+  ctx: ActorContext,
+): Promise<string> {
+  const slug = slugify(name);
+  try {
+    const row = await taxonomyModel.faculties.create({
+      universityId,
+      name,
+      slug,
+    });
+    await auditLogModel.record({
+      actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
+      action: "TAXONOMY_FACULTY_CREATED",
+      targetType: "faculty",
+      targetId: row.id,
+      requestId: ctx.requestId,
+      ipAddress: ctx.ipAddress,
+    });
+    return row.id;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    const existing = await taxonomyModel.faculties.findBySlug(
+      universityId,
+      slug,
+    );
+    if (!existing) throw err;
+    return existing.id;
+  }
+}
+
+async function createOrReuseProgramme(
+  facultyId: string,
+  name: string,
+  ctx: ActorContext,
+): Promise<string> {
+  const slug = slugify(name);
+  try {
+    const row = await taxonomyModel.programmes.create({
+      facultyId,
+      name,
+      slug,
+      studyLevel: null,
+    });
+    await auditLogModel.record({
+      actorUserId: ctx.actorUserId,
+      actorRole: ctx.actorRole,
+      action: "TAXONOMY_PROGRAMME_CREATED",
+      targetType: "programme",
+      targetId: row.id,
+      requestId: ctx.requestId,
+      ipAddress: ctx.ipAddress,
+    });
+    return row.id;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    const existing = await taxonomyModel.programmes.findBySlug(
+      facultyId,
+      slug,
+    );
+    if (!existing) throw err;
+    return existing.id;
+  }
+}
+
+// Mirrors taxonomyService.subjects.findOrCreateForProgramme, but marks
+// the subject ADMIN_VERIFIED (an admin is the one approving this) and
+// only links it to a programme when one was actually resolved — the
+// request may have named a subject without the programme it belongs to
+// existing yet either.
+async function createOrReuseSubject(
+  code: string,
+  name: string,
+  programmeId: string | null,
+  ctx: ActorContext,
+): Promise<string> {
+  const normalized = normalizeSubjectCode(code);
+  let subject = normalized
+    ? await taxonomyModel.subjects.findByCode(normalized)
+    : null;
+  if (!subject && normalized) {
+    try {
+      subject = await taxonomyModel.subjects.create({
+        code: normalized,
+        name,
+        source: "ADMIN",
+        verificationStatus: "ADMIN_VERIFIED",
+      });
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action: "TAXONOMY_SUBJECT_CREATED",
+        targetType: "subject",
+        targetId: subject.id,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      subject = await taxonomyModel.subjects.findByCode(normalized);
+    }
+  }
+  if (subject && programmeId) {
+    await taxonomyModel.programmeSubjects.link({ programmeId, subjectId: subject.id });
+  }
+  return subject?.id ?? "";
+}
+
 export const taxonomyService = {
   universities: {
     async list() {
@@ -113,6 +257,27 @@ export const taxonomyService = {
         ipAddress: ctx.ipAddress,
       });
       return toApiUniversity(row);
+    },
+
+    async remove(id: string, ctx: ActorContext) {
+      const university = await taxonomyModel.universities.findById(id);
+      if (!university) throw AppError.notFound("University not found.");
+      const facultyCount = await taxonomyModel.universities.countFaculties(id);
+      if (facultyCount > 0) {
+        throw AppError.conflict(
+          "This university still has faculties. Remove or reassign them first.",
+        );
+      }
+      await taxonomyModel.universities.delete(id);
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action: "TAXONOMY_UNIVERSITY_DELETED",
+        targetType: "university",
+        targetId: id,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
     },
   },
 
@@ -205,6 +370,27 @@ export const taxonomyService = {
         ipAddress: ctx.ipAddress,
       });
       return toApiFaculty(row);
+    },
+
+    async remove(id: string, ctx: ActorContext) {
+      const faculty = await taxonomyModel.faculties.findById(id);
+      if (!faculty) throw AppError.notFound("Faculty not found.");
+      const programmeCount = await taxonomyModel.faculties.countProgrammes(id);
+      if (programmeCount > 0) {
+        throw AppError.conflict(
+          "This faculty still has programmes. Remove or reassign them first.",
+        );
+      }
+      await taxonomyModel.faculties.delete(id);
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action: "TAXONOMY_FACULTY_DELETED",
+        targetType: "faculty",
+        targetId: id,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
     },
   },
 
@@ -302,6 +488,27 @@ export const taxonomyService = {
         ipAddress: ctx.ipAddress,
       });
       return toApiProgramme(row);
+    },
+
+    async remove(id: string, ctx: ActorContext) {
+      const programme = await taxonomyModel.programmes.findById(id);
+      if (!programme) throw AppError.notFound("Programme not found.");
+      const dependentCount = await taxonomyModel.programmes.countDependents(id);
+      if (dependentCount > 0) {
+        throw AppError.conflict(
+          "This programme still has linked subjects or resources. Remove them first.",
+        );
+      }
+      await taxonomyModel.programmes.delete(id);
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action: "TAXONOMY_PROGRAMME_DELETED",
+        targetType: "programme",
+        targetId: id,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
     },
   },
 
@@ -460,6 +667,27 @@ export const taxonomyService = {
       });
       return toApiSubject(row);
     },
+
+    async remove(id: string, ctx: ActorContext) {
+      const subject = await taxonomyModel.subjects.findById(id);
+      if (!subject) throw AppError.notFound("Subject not found.");
+      const dependentCount = await taxonomyModel.subjects.countDependents(id);
+      if (dependentCount > 0) {
+        throw AppError.conflict(
+          "This subject is still linked to a programme or resources. Remove them first.",
+        );
+      }
+      await taxonomyModel.subjects.delete(id);
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action: "TAXONOMY_SUBJECT_DELETED",
+        targetType: "subject",
+        targetId: id,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
+    },
   },
 
   programmeSubjects: {
@@ -610,6 +838,115 @@ export const taxonomyService = {
         ctx.actorUserId,
       );
       return rows.map(toApiTaxonomyRequest);
+    },
+
+    async listPending() {
+      const rows = await taxonomyRequestModel.listPending();
+      return rows.map(toApiTaxonomyRequest);
+    },
+
+    async review(
+      id: string,
+      decision: "APPROVED" | "REJECTED",
+      ctx: ActorContext,
+    ) {
+      const existing = await taxonomyRequestModel.findById(id);
+      if (!existing) throw AppError.notFound("Taxonomy request not found.");
+      if (existing.status !== "PENDING") {
+        throw AppError.conflict("This request has already been reviewed.");
+      }
+
+      // Approving used to just flip the status — nothing the student
+      // asked for ever actually showed up in the pickers. Now it stands
+      // up whatever was free-typed (university -> faculty -> programme,
+      // in that dependency order, each skipped if an existing id was
+      // already given instead) so the resource-upload dropdowns have
+      // something to select the moment the admin approves.
+      let universityId = existing.university_id;
+      let facultyId = existing.faculty_id;
+      let programmeId = existing.programme_id;
+
+      if (decision === "APPROVED") {
+        if (!universityId && existing.requested_university_name) {
+          universityId = await createOrReuseUniversity(
+            existing.requested_university_name,
+            ctx,
+          );
+        }
+        if (!facultyId && existing.requested_faculty_name && universityId) {
+          facultyId = await createOrReuseFaculty(
+            universityId,
+            existing.requested_faculty_name,
+            ctx,
+          );
+        }
+        if (!programmeId && existing.requested_programme_name && facultyId) {
+          programmeId = await createOrReuseProgramme(
+            facultyId,
+            existing.requested_programme_name,
+            ctx,
+          );
+        }
+        if (existing.requested_subject_code && existing.requested_subject_name) {
+          await createOrReuseSubject(
+            existing.requested_subject_code,
+            existing.requested_subject_name,
+            programmeId,
+            ctx,
+          );
+        }
+      }
+
+      const row = await taxonomyRequestModel.review(id, {
+        status: decision,
+        reviewedBy: ctx.actorUserId,
+        universityId,
+        facultyId,
+        programmeId,
+      });
+      if (!row) throw AppError.conflict("This request has already been reviewed.");
+
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action:
+          decision === "APPROVED"
+            ? "TAXONOMY_REQUEST_APPROVED"
+            : "TAXONOMY_REQUEST_REJECTED",
+        targetType: "taxonomy_request",
+        targetId: row.id,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
+
+      if (row.requested_by) {
+        const missing = [
+          row.requested_university_name &&
+            `university "${row.requested_university_name}"`,
+          row.requested_faculty_name && `faculty "${row.requested_faculty_name}"`,
+          row.requested_programme_name &&
+            `programme "${row.requested_programme_name}"`,
+          row.requested_subject_code &&
+            `subject "${row.requested_subject_code} - ${row.requested_subject_name}"`,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        await notificationModel.notifyUser(
+          row.requested_by,
+          decision === "APPROVED"
+            ? "TAXONOMY_REQUEST_APPROVED"
+            : "TAXONOMY_REQUEST_REJECTED",
+          {
+            message:
+              decision === "APPROVED"
+                ? `Your request for ${missing} was approved.`
+                : `Your request for ${missing} was rejected.`,
+            taxonomyRequestId: row.id,
+          },
+        );
+      }
+
+      return toApiTaxonomyRequest(row);
     },
   },
 };

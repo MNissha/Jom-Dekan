@@ -62,6 +62,16 @@ export const taxonomyController = {
     }
   },
 
+  async deleteUniversity(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      await taxonomyService.universities.remove(id, ctxFrom(req));
+      res.status(200).json({ message: "University deleted." });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // ---- Faculties ----
   async listFaculties(req: Request, res: Response, next: NextFunction) {
     try {
@@ -116,6 +126,16 @@ export const taxonomyController = {
     }
   },
 
+  async deleteFaculty(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      await taxonomyService.faculties.remove(id, ctxFrom(req));
+      res.status(200).json({ message: "Faculty deleted." });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // ---- Programmes ----
   async listProgrammes(req: Request, res: Response, next: NextFunction) {
     try {
@@ -163,6 +183,16 @@ export const taxonomyController = {
         message: isActive ? "Programme restored." : "Programme archived.",
         data,
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async deleteProgramme(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      await taxonomyService.programmes.remove(id, ctxFrom(req));
+      res.status(200).json({ message: "Programme deleted." });
     } catch (err) {
       next(err);
     }
@@ -250,6 +280,16 @@ export const taxonomyController = {
     }
   },
 
+  async deleteSubject(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      await taxonomyService.subjects.remove(id, ctxFrom(req));
+      res.status(200).json({ message: "Subject deleted." });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // ---- Programme <-> Subject links ----
   async linkProgrammeSubject(req: Request, res: Response, next: NextFunction) {
     try {
@@ -313,6 +353,36 @@ export const taxonomyController = {
     try {
       const data = await taxonomyService.requests.listMine(ctxFrom(req));
       res.status(200).json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
+  async listPendingTaxonomyRequests(
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const data = await taxonomyService.requests.listPending();
+      res.status(200).json({ data });
+    } catch (err) {
+      next(err);
+    }
+  },
+  async reviewTaxonomyRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      const { decision } = req.body as { decision: "APPROVED" | "REJECTED" };
+      const data = await taxonomyService.requests.review(
+        id,
+        decision,
+        ctxFrom(req),
+      );
+      res.status(200).json({
+        message:
+          decision === "APPROVED" ? "Request approved." : "Request rejected.",
+        data,
+      });
     } catch (err) {
       next(err);
     }

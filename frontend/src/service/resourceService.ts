@@ -209,7 +209,14 @@ export const resourceService = {
 
   update: async (
     id: string,
-    data: { title: string; description?: string },
+    data: {
+      title: string;
+      description?: string;
+      universityId?: string;
+      facultyId?: string;
+      programmeId?: string;
+      subjectId?: string;
+    },
   ): Promise<Resource> => {
     const res = await axiosInstance.put<{ data: Resource }>(
       `/resources/${id}`,

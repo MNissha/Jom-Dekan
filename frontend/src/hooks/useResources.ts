@@ -36,7 +36,14 @@ export function useUpdateResource() {
       data,
     }: {
       id: string;
-      data: { title: string; description?: string };
+      data: {
+        title: string;
+        description?: string;
+        universityId?: string;
+        facultyId?: string;
+        programmeId?: string;
+        subjectId?: string;
+      };
     }) => resourceService.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
   });

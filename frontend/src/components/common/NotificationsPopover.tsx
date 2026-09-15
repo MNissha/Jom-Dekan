@@ -73,6 +73,15 @@ export function NotificationsPopover() {
       navigate(adminReportRoute(notification, queue), { state: navigationState });
       return;
     }
+    if (
+      notification.type === "TAXONOMY_REQUEST_SUBMITTED" ||
+      notification.type === "SUBJECT_COMMUNITY_SUBMITTED"
+    ) {
+      setIsOpen(false);
+      if (!notification.read_at) void handleMarkRead(notification.id);
+      navigate("/admin?section=requests");
+      return;
+    }
     if (!notification.read_at) void handleMarkRead(notification.id);
   };
 

@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive, RotateCcw, Trash2, Check, X } from "lucide-react";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { StatusBanner } from "../../components/common/StatusBanner";
+import { RowAction } from "../../components/common/RowAction";
 import {
   universityFormSchema,
   type UniversityFormValues,
@@ -15,6 +16,7 @@ import {
   useCreateUniversity,
   useUpdateUniversity,
   useSetUniversityStatus,
+  useDeleteUniversity,
 } from "../../hooks/useTaxonomy";
 import type { University } from "../../types/taxonomy";
 
@@ -35,11 +37,13 @@ export default function AdminUniversities({
   const createUniversity = useCreateUniversity();
   const updateUniversity = useUpdateUniversity();
   const setStatus = useSetUniversityStatus();
+  const deleteUniversity = useDeleteUniversity();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState({ name: "", country: "" });
   const [editError, setEditError] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<University | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<University | null>(null);
   const [banner, setBanner] = useState<{
     type: "success" | "error";
     message: string;
@@ -129,6 +133,21 @@ export default function AdminUniversities({
           }),
       },
     );
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    deleteUniversity.mutate(target.id, {
+      onSuccess: () =>
+        setBanner({ type: "success", message: `${target.name} deleted.` }),
+      onError: (err) =>
+        setBanner({
+          type: "error",
+          message: extractErrorMessage(err) ?? "Could not delete university.",
+        }),
+    });
   };
 
   return (
@@ -261,22 +280,24 @@ export default function AdminUniversities({
                             {u.isActive ? "Active" : "Archived"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(u.id)}
-                            disabled={updateUniversity.isPending}
-                            className="mr-3 text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                          >
-                            {updateUniversity.isPending ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            className="text-sm font-medium text-slate-500 hover:underline"
-                          >
-                            Cancel
-                          </button>
+                        <td className="px-4 py-2">
+                          <div className="flex justify-end gap-2">
+                            <RowAction
+                              title="Save"
+                              onClick={() => saveEdit(u.id)}
+                              disabled={updateUniversity.isPending}
+                              className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                            >
+                              <Check />
+                            </RowAction>
+                            <RowAction
+                              title="Cancel"
+                              onClick={cancelEdit}
+                              className="border-stone-200 text-stone-500 hover:bg-stone-50"
+                            >
+                              <X />
+                            </RowAction>
+                          </div>
                         </td>
                       </>
                     ) : (
@@ -298,25 +319,43 @@ export default function AdminUniversities({
                             {u.isActive ? "Active" : "Archived"}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(u)}
-                            className="mr-3 inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline"
-                          >
-                            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              u.isActive ? setArchiveTarget(u) : restore(u)
-                            }
-                            disabled={setStatus.isPending}
-                            className="text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                          >
-                            {u.isActive ? "Archive" : "Restore"}
-                          </button>
+                        <td className="px-4 py-2">
+                          <div className="flex justify-end gap-2">
+                            <RowAction
+                              title="Edit university"
+                              onClick={() => startEdit(u)}
+                              className="border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                            >
+                              <Pencil />
+                            </RowAction>
+                            {u.isActive ? (
+                              <RowAction
+                                title="Archive university"
+                                onClick={() => setArchiveTarget(u)}
+                                disabled={setStatus.isPending}
+                                className="border-amber-100 text-amber-600 hover:bg-amber-50"
+                              >
+                                <Archive />
+                              </RowAction>
+                            ) : (
+                              <RowAction
+                                title="Restore university"
+                                onClick={() => restore(u)}
+                                disabled={setStatus.isPending}
+                                className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                              >
+                                <RotateCcw />
+                              </RowAction>
+                            )}
+                            <RowAction
+                              title="Delete university"
+                              onClick={() => setDeleteTarget(u)}
+                              disabled={deleteUniversity.isPending}
+                              className="border-red-100 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 />
+                            </RowAction>
+                          </div>
                         </td>
                       </>
                     )}
@@ -341,6 +380,16 @@ export default function AdminUniversities({
         isConfirming={setStatus.isPending}
         onConfirm={confirmArchive}
         onCancel={() => setArchiveTarget(null)}
+      />
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Delete university?"
+        message={`"${deleteTarget?.name}" will be permanently deleted. This cannot be undone, and only works if it has no faculties.`}
+        confirmLabel="Delete"
+        destructive
+        isConfirming={deleteUniversity.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </AdminPageShell>
   );

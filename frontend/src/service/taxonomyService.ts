@@ -44,6 +44,9 @@ export const taxonomyService = {
     );
     return res.data.data;
   },
+  deleteUniversity: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/taxonomy/universities/${id}`);
+  },
 
   listFaculties: async (universityId: string): Promise<Faculty[]> => {
     const res = await axiosInstance.get<{ data: Faculty[] }>(
@@ -78,6 +81,9 @@ export const taxonomyService = {
       { isActive },
     );
     return res.data.data;
+  },
+  deleteFaculty: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/taxonomy/faculties/${id}`);
   },
 
   listProgrammes: async (facultyId: string): Promise<Programme[]> => {
@@ -118,6 +124,9 @@ export const taxonomyService = {
     );
     return res.data.data;
   },
+  deleteProgramme: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/taxonomy/programmes/${id}`);
+  },
 
   listSubjects: async (programmeId?: string): Promise<Subject[]> => {
     const res = await axiosInstance.get<{ data: Subject[] }>(
@@ -152,6 +161,9 @@ export const taxonomyService = {
       { isActive },
     );
     return res.data.data;
+  },
+  deleteSubject: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/taxonomy/subjects/${id}`);
   },
 
   linkSubjectToProgramme: async (
@@ -194,6 +206,22 @@ export const taxonomyService = {
   listMyTaxonomyRequests: async (): Promise<TaxonomyRequest[]> => {
     const res = await axiosInstance.get<{ data: TaxonomyRequest[] }>(
       "/taxonomy/requests/mine",
+    );
+    return res.data.data;
+  },
+  listPendingTaxonomyRequests: async (): Promise<TaxonomyRequest[]> => {
+    const res = await axiosInstance.get<{ data: TaxonomyRequest[] }>(
+      "/taxonomy/requests/pending",
+    );
+    return res.data.data;
+  },
+  reviewTaxonomyRequest: async (
+    id: string,
+    decision: "APPROVED" | "REJECTED",
+  ): Promise<TaxonomyRequest> => {
+    const res = await axiosInstance.patch<{ data: TaxonomyRequest }>(
+      `/taxonomy/requests/${id}/review`,
+      { decision },
     );
     return res.data.data;
   },

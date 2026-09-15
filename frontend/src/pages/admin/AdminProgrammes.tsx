@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
-import { Pencil } from "lucide-react";
+import { Pencil, Archive, RotateCcw, Trash2, Check, X, ListTree } from "lucide-react";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { StatusBanner } from "../../components/common/StatusBanner";
+import { RowAction } from "../../components/common/RowAction";
 import {
   useUniversities,
   useFaculties,
@@ -14,6 +15,7 @@ import {
   useCreateProgramme,
   useUpdateProgramme,
   useSetProgrammeStatus,
+  useDeleteProgramme,
   useSubjects,
   useLinkSubjectToProgramme,
   useUnlinkSubjectFromProgramme,
@@ -59,6 +61,7 @@ export default function AdminProgrammes({
   const createProgramme = useCreateProgramme();
   const updateProgramme = useUpdateProgramme();
   const setStatus = useSetProgrammeStatus();
+  const deleteProgramme = useDeleteProgramme();
 
   const [manageProgrammeId, setManageProgrammeId] = useState("");
   const { data: allSubjects } = useSubjects();
@@ -75,6 +78,7 @@ export default function AdminProgrammes({
   }>({ name: "", studyLevel: "" });
   const [editError, setEditError] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Programme | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Programme | null>(null);
   const [banner, setBanner] = useState<{
     type: "success" | "error";
     message: string;
@@ -175,6 +179,21 @@ export default function AdminProgrammes({
           }),
       },
     );
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    deleteProgramme.mutate(target.id, {
+      onSuccess: () =>
+        setBanner({ type: "success", message: `${target.name} deleted.` }),
+      onError: (err) =>
+        setBanner({
+          type: "error",
+          message: extractErrorMessage(err) ?? "Could not delete programme.",
+        }),
+    });
   };
 
   const confirmUnlink = () => {
@@ -392,24 +411,24 @@ export default function AdminProgrammes({
                                 {p.isActive ? "Active" : "Archived"}
                               </span>
                             </td>
-                            <td className="px-4 py-2 text-right">
-                              <button
-                                type="button"
-                                onClick={() => saveEdit(p.id)}
-                                disabled={updateProgramme.isPending}
-                                className="mr-3 text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                              >
-                                {updateProgramme.isPending
-                                  ? "Saving…"
-                                  : "Save"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={cancelEdit}
-                                className="text-sm font-medium text-slate-500 hover:underline"
-                              >
-                                Cancel
-                              </button>
+                            <td className="px-4 py-2">
+                              <div className="flex justify-end gap-2">
+                                <RowAction
+                                  title="Save"
+                                  onClick={() => saveEdit(p.id)}
+                                  disabled={updateProgramme.isPending}
+                                  className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                                >
+                                  <Check />
+                                </RowAction>
+                                <RowAction
+                                  title="Cancel"
+                                  onClick={cancelEdit}
+                                  className="border-stone-200 text-stone-500 hover:bg-stone-50"
+                                >
+                                  <X />
+                                </RowAction>
+                              </div>
                             </td>
                           </>
                         ) : (
@@ -431,43 +450,62 @@ export default function AdminProgrammes({
                                 {p.isActive ? "Active" : "Archived"}
                               </span>
                             </td>
-                            <td className="px-4 py-2 text-right">
-                              <button
-                                type="button"
-                                onClick={() => startEdit(p)}
-                                className="mr-3 inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline"
-                              >
-                                <Pencil
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setManageProgrammeId(
-                                    manageProgrammeId === p.id ? "" : p.id,
-                                  )
-                                }
-                                className="mr-3 text-sm font-medium text-primary-700 hover:underline"
-                              >
-                                {manageProgrammeId === p.id
-                                  ? "Hide subjects"
-                                  : "Subjects"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  p.isActive
-                                    ? setArchiveTarget(p)
-                                    : restore(p)
-                                }
-                                disabled={setStatus.isPending}
-                                className="text-sm font-medium text-primary-700 hover:underline disabled:opacity-60"
-                              >
-                                {p.isActive ? "Archive" : "Restore"}
-                              </button>
+                            <td className="px-4 py-2">
+                              <div className="flex justify-end gap-2">
+                                <RowAction
+                                  title="Edit programme"
+                                  onClick={() => startEdit(p)}
+                                  className="border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                                >
+                                  <Pencil />
+                                </RowAction>
+                                <RowAction
+                                  title={
+                                    manageProgrammeId === p.id
+                                      ? "Hide subjects"
+                                      : "Manage subjects"
+                                  }
+                                  onClick={() =>
+                                    setManageProgrammeId(
+                                      manageProgrammeId === p.id ? "" : p.id,
+                                    )
+                                  }
+                                  className={
+                                    manageProgrammeId === p.id
+                                      ? "border-violet-200 bg-violet-50 text-violet-700"
+                                      : "border-violet-100 text-violet-600 hover:bg-violet-50"
+                                  }
+                                >
+                                  <ListTree />
+                                </RowAction>
+                                {p.isActive ? (
+                                  <RowAction
+                                    title="Archive programme"
+                                    onClick={() => setArchiveTarget(p)}
+                                    disabled={setStatus.isPending}
+                                    className="border-amber-100 text-amber-600 hover:bg-amber-50"
+                                  >
+                                    <Archive />
+                                  </RowAction>
+                                ) : (
+                                  <RowAction
+                                    title="Restore programme"
+                                    onClick={() => restore(p)}
+                                    disabled={setStatus.isPending}
+                                    className="border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                                  >
+                                    <RotateCcw />
+                                  </RowAction>
+                                )}
+                                <RowAction
+                                  title="Delete programme"
+                                  onClick={() => setDeleteTarget(p)}
+                                  disabled={deleteProgramme.isPending}
+                                  className="border-red-100 text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 />
+                                </RowAction>
+                              </div>
                             </td>
                           </>
                         )}
@@ -596,6 +634,17 @@ export default function AdminProgrammes({
         isConfirming={setStatus.isPending}
         onConfirm={confirmArchive}
         onCancel={() => setArchiveTarget(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Delete programme?"
+        message={`"${deleteTarget?.name}" will be permanently deleted. This cannot be undone, and only works if it has no linked subjects or resources.`}
+        confirmLabel="Delete"
+        destructive
+        isConfirming={deleteProgramme.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
 
       <ConfirmDialog

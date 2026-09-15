@@ -54,5 +54,9 @@ export type UploadResourceFormValues = z.infer<typeof uploadResourceFormSchema>;
 export const editResourceFormSchema = z.object({
   title: z.string().trim().min(2, "Enter at least 2 characters.").max(200),
   description: z.string().trim().max(2000).optional(),
+  universityId: z.string().uuid().optional().or(z.literal("")),
+  facultyId: z.string().uuid().optional().or(z.literal("")),
+  programmeId: z.string().uuid().optional().or(z.literal("")),
+  subjectId: z.string().uuid().optional().or(z.literal("")),
 });
 export type EditResourceFormValues = z.infer<typeof editResourceFormSchema>;

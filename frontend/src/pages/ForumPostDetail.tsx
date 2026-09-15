@@ -14,6 +14,7 @@ import { VoteButtons } from "../components/common/VoteButtons";
 import { CommentReportButton } from "../components/common/CommentReportButton";
 import { UserLink } from "../components/common/UserLink";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
+import { ArrowLeft } from "lucide-react";
 
 function DiscussionDetailSkeleton() {
   return (
@@ -66,12 +67,16 @@ export default function ForumPostDetail() {
         <p className="text-sm text-red-600">
           This post does not exist, or it has been deleted.
         </p>
-        <Link
-          to="/forum"
-          className="mt-2 inline-block text-sm text-primary-700 hover:underline"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="group mt-2 mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:text-primary-700"
         >
-          Back to discussions
-        </Link>
+          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 transition-transform motion-safe:duration-150 group-hover:-translate-x-1 group-hover:border-primary-300 group-hover:bg-primary-50">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </div>
+          Back
+        </button>
       </div>
     );
 
@@ -136,8 +141,12 @@ export default function ForumPostDetail() {
   return (
     <div className="relative mx-auto max-w-3xl px-[18px] py-[22px] motion-safe:animate-[fadeIn_300ms_ease-out]">
       <div className="pointer-events-none absolute -right-10 top-16 -z-10 h-44 w-44 rounded-full bg-violet-200/30 blur-3xl" aria-hidden="true" />
-      <Link to="/forum" className="text-sm text-primary-700 hover:underline">
-        ← Back to discussions
+
+      <Link to="/forum" className="group mt-2 mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:text-primary-700">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 transition-transform motion-safe:duration-150 group-hover:-translate-x-1 group-hover:border-primary-300 group-hover:bg-primary-50">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        </div>
+        Back
       </Link>
 
       <div className="group mt-4 overflow-hidden rounded-[24px] border border-[#E4E0FA] bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-xl">

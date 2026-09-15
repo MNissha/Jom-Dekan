@@ -4,13 +4,20 @@ import AdminUniversities from "./AdminUniversities";
 import AdminFaculties from "./AdminFaculties";
 import AdminProgrammes from "./AdminProgrammes";
 import AdminSubjects from "./AdminSubjects";
+import AdminTaxonomyRequests from "./AdminTaxonomyRequests";
 
-type TaxonomySection = "universities" | "faculties" | "programmes" | "subjects";
+type TaxonomySection =
+  | "universities"
+  | "faculties"
+  | "programmes"
+  | "subjects"
+  | "requests";
 const sections: { key: TaxonomySection; label: string }[] = [
   { key: "universities", label: "Universities" },
   { key: "faculties", label: "Faculties" },
   { key: "programmes", label: "Programmes" },
   { key: "subjects", label: "Subjects" },
+  { key: "requests", label: "Requests" },
 ];
 
 export default function AdminPanel() {
@@ -19,7 +26,8 @@ export default function AdminPanel() {
   const initialSection: TaxonomySection =
     requested === "faculties" ||
     requested === "programmes" ||
-    requested === "subjects"
+    requested === "subjects" ||
+    requested === "requests"
       ? requested
       : "universities";
   const [section, setSection] = useState<TaxonomySection>(initialSection);
@@ -59,6 +67,7 @@ export default function AdminPanel() {
       {section === "faculties" && <AdminFaculties embedded />}
       {section === "programmes" && <AdminProgrammes embedded />}
       {section === "subjects" && <AdminSubjects embedded />}
+      {section === "requests" && <AdminTaxonomyRequests embedded />}
     </div>
   </div>
 );
