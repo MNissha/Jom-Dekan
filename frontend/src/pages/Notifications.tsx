@@ -1,10 +1,19 @@
-import { Bell, CheckCheck, Megaphone, ShieldCheck } from "lucide-react";
+import { Bell, CheckCheck, Megaphone, PartyPopper, ShieldCheck } from "lucide-react";
 import { useModeration } from "../hooks/useModeration";
 import { EmptyState } from "../components/common/EmptyState";
 import type { Notification } from "../types/moderation";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 function notificationStyle(type: string) {
+  if (type === "ACCOUNT_CREATED") {
+    return {
+      icon: PartyPopper,
+      iconClass: "bg-primary-50 text-primary-700 ring-primary-100",
+      accentClass: "from-primary-400 to-primary-600",
+      badge: "Welcome",
+      badgeClass: "bg-primary-50 text-primary-700",
+    };
+  }
   if (type === "ANNOUNCEMENT") {
     return {
       icon: Megaphone,

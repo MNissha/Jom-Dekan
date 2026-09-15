@@ -4,6 +4,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { resetPasswordFormSchema, type ResetPasswordFormValues } from '../schemas/authSchemas';
 import { useResetPassword } from '../hooks/useAuth';
+import { PasswordField } from '../components/common/PasswordField';
+import { PasswordRequirementsChecklist } from '../components/common/PasswordRequirements';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -12,8 +14,11 @@ export default function ResetPassword() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormValues>({ resolver: zodResolver(resetPasswordFormSchema) });
+
+  const newPasswordValue = watch('newPassword') ?? '';
 
   const onSubmit = (values: ResetPasswordFormValues) => {
     if (!token) return;
@@ -60,31 +65,33 @@ export default function ResetPassword() {
           <label htmlFor="newPassword" className="block text-sm font-medium text-slate-700">
             New password
           </label>
-          <input
+          <PasswordField
             id="newPassword"
-            type="password"
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-invalid={Boolean(errors.newPassword)}
+            hasError={Boolean(errors.newPassword)}
+            aria-describedby="new-password-requirements"
             {...register('newPassword')}
           />
           {errors.newPassword && <p className="mt-1 text-sm text-red-600">{errors.newPassword.message}</p>}
-          <p className="mt-1 text-xs text-slate-400">At least 8 characters, with 1 uppercase letter, 1 number, and 1 special character.</p>
+          <PasswordRequirementsChecklist id="new-password-requirements" password={newPasswordValue} />
         </div>
 
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
             Confirm new password
           </label>
-          <input
+          <PasswordField
             id="confirmPassword"
-            type="password"
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-invalid={Boolean(errors.confirmPassword)}
+            hasError={Boolean(errors.confirmPassword)}
+            aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
             {...register('confirmPassword')}
           />
-          {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>}
+          {errors.confirmPassword && (
+            <p id="confirmPassword-error" className="mt-1 text-sm text-red-600">
+              {errors.confirmPassword.message}
+            </p>
+          )}
         </div>
 
         <button

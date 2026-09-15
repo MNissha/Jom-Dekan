@@ -16,7 +16,7 @@ export const authService = {
     fieldOfStudy: string;
     currentYear: number;
     currentSemester: number;
-    termsAccepted: true;
+    termsAccepted: boolean;
   }): Promise<AuthResponse> => {
     const response = await axiosInstance.post<AuthResponse>('/auth/register', data);
     return response.data;

@@ -197,8 +197,8 @@ export function Header() {
             </>
           ) : (
             <>
-              <NavLink to="/login" className={navLinkClass}>
-                Log in
+              <NavLink to="/register" className={navLinkClass}>
+                Register
               </NavLink>
               <Link
                 to="/register"
