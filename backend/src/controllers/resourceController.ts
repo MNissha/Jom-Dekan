@@ -75,6 +75,18 @@ export const resourceController = {
     }
   },
 
+  async listAdmin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { data, meta } = await resourceService.listAdmin(
+        req.query as unknown as Parameters<typeof resourceService.listAdmin>[0],
+        ctxFrom(req),
+      );
+      res.status(200).json({ data, meta });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params as { id: string };

@@ -45,13 +45,23 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   }
 }
 
-/** Attaches req.user if a valid token is present, but never rejects. */
-export function optionalAuthenticate(req: Request, _res: Response, next: NextFunction): void {
+/**
+ * Attaches req.user if a valid token is present, but never rejects —
+ * anonymous callers just get req.user left undefined. Re-checks
+ * `status === 'ACTIVE'` the same way `authenticate` does (a suspended/
+ * disabled account shouldn't keep its personalized view — e.g. "my
+ * application status" on a public listing — for the rest of its access
+ * token's life just because this path doesn't require login at all).
+ */
+export async function optionalAuthenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     try {
       const decoded = verifyAccessToken(header.slice('Bearer '.length).trim());
-      req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+      const user = await userModel.findById(decoded.sub);
+      if (user && user.status === 'ACTIVE') {
+        req.user = { id: user.id, email: user.email, role: user.role };
+      }
     } catch {
       // Ignore invalid tokens for optional auth — treat as anonymous.
     }

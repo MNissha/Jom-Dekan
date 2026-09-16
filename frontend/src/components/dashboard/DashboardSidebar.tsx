@@ -38,6 +38,7 @@ const linksAfterMessages = links.slice(2);
 
 const adminToolLinks = [
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/resources", label: "Resources", icon: BookOpen },
   {
     to: "/admin/tutor-applications",
     label: "Tutoring",

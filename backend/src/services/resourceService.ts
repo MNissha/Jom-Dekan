@@ -525,11 +525,38 @@ export const resourceService = {
     };
   },
 
+  async listAdmin(
+    filters: {
+      status?: ResourceRow["status"];
+      category?: ResourceCategory;
+      q?: string;
+      sortBy: ResourceSortBy;
+      page: number;
+      pageSize: number;
+    },
+    ctx: ActorContext,
+  ) {
+    if (ctx.actorRole !== "ADMIN") throw AppError.forbidden();
+    const { rows, total } = await resourceModel.list({
+      status: filters.status,
+      category: filters.category,
+      q: filters.q,
+      sortBy: filters.sortBy,
+      limit: filters.pageSize,
+      offset: (filters.page - 1) * filters.pageSize,
+    });
+    return {
+      data: rows.map(toApiResourceListItem),
+      meta: { page: filters.page, pageSize: filters.pageSize, total },
+    };
+  },
+
   async update(
     id: string,
     input: {
       title: string;
       description?: string;
+      category?: ResourceCategory;
       universityId?: string;
       facultyId?: string;
       programmeId?: string;
@@ -545,6 +572,7 @@ export const resourceService = {
     const updated = await resourceModel.update(id, {
       title: input.title,
       description: input.description ?? null,
+      category: input.category ?? resource.category,
       universityId: input.universityId ?? null,
       facultyId: input.facultyId ?? null,
       programmeId: input.programmeId ?? null,

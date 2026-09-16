@@ -137,6 +137,7 @@ export const resourceModel = {
     params: {
       title: string;
       description: string | null;
+      category: ResourceCategory;
       universityId: string | null;
       facultyId: string | null;
       programmeId: string | null;
@@ -145,7 +146,7 @@ export const resourceModel = {
   ): Promise<ResourceRow | null> {
     const result = await pool.query<ResourceRow>(
       `UPDATE resources
-       SET title = $2, description = $3, university_id = $4, faculty_id = $5, programme_id = $6, subject_id = $7
+       SET title = $2, description = $3, university_id = $4, faculty_id = $5, programme_id = $6, subject_id = $7, category = $8
        WHERE id = $1
        RETURNING *`,
       [
@@ -156,6 +157,7 @@ export const resourceModel = {
         params.facultyId,
         params.programmeId,
         params.subjectId,
+        params.category,
       ],
     );
     return result.rows[0] ?? null;

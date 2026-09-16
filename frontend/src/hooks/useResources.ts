@@ -20,6 +20,13 @@ export function useResources(params: {
   });
 }
 
+export function useAdminResources(params: Parameters<typeof resourceService.listAdmin>[0]) {
+  return useQuery({
+    queryKey: ["admin", "resources", params],
+    queryFn: () => resourceService.listAdmin(params),
+  });
+}
+
 export function useResource(id: string | undefined) {
   return useQuery({
     queryKey: ["resources", "detail", id],
@@ -39,13 +46,17 @@ export function useUpdateResource() {
       data: {
         title: string;
         description?: string;
+        category?: ResourceCategory;
         universityId?: string;
         facultyId?: string;
         programmeId?: string;
         subjectId?: string;
       };
     }) => resourceService.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "resources"] });
+    },
   });
 }
 
@@ -59,7 +70,10 @@ export function useSetResourceStatus() {
       id: string;
       action: "ARCHIVE" | "RESTORE";
     }) => resourceService.setStatus(id, action),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "resources"] });
+    },
   });
 }
 
@@ -67,7 +81,10 @@ export function useDeleteResource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => resourceService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "resources"] });
+    },
   });
 }
 

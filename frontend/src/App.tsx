@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import "./App.css";
 import Marketplace from "./pages/Marketplace";
 import AdminPanel from "./pages/admin/AdminPanel";
+import AdminResources from "./pages/admin/AdminResources";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminModerationQueue from "./pages/admin/AdminModerationQueue";
@@ -201,6 +202,16 @@ function App() {
             <ProtectedRoute requireAdmin>
               <DashboardLayout>
                 <AdminPanel />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/resources"
+          element={
+            <ProtectedRoute requireAdmin>
+              <DashboardLayout>
+                <AdminResources />
               </DashboardLayout>
             </ProtectedRoute>
           }

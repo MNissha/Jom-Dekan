@@ -1,4 +1,4 @@
-import { Download, MessageSquare, ShieldAlert, Users } from "lucide-react";
+import { BookOpen, Download, ShieldAlert, Users } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Link } from "react-router-dom";
 import { AdminLayout } from "../../layouts/AdminLayout";
@@ -316,8 +316,8 @@ export function AdminAnalyticsPanel() {
           label="Resources"
           value={data.totals.resources}
           note="Uploaded academic materials"
-          icon={MessageSquare}
-          to="/resources"
+          icon={BookOpen}
+          to="/admin/resources"
         />
         <MetricCard
           label="Freelance activity"

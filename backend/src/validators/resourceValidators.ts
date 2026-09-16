@@ -124,6 +124,7 @@ export const updateResourceSchema = z
       .min(2, "Title must be at least 2 characters.")
       .max(200),
     description: z.string().trim().max(2000).optional(),
+    category: categorySchema.optional(),
     universityId: z.string().uuid().optional(),
     facultyId: z.string().uuid().optional(),
     programmeId: z.string().uuid().optional(),
@@ -153,6 +154,17 @@ export const listResourcesQuerySchema = z
     q: z.string().trim().min(1).max(200).optional(),
     // Allow-listed enum, not a raw column/direction string, so this can
     // only ever map to a fixed, hardcoded SQL fragment in the model.
+    sortBy: z.enum(["newest", "oldest", "title"]).optional().default("newest"),
+    page: z.coerce.number().int().positive().default(1),
+    pageSize: z.coerce.number().int().positive().max(100).default(20),
+  })
+  .strict();
+
+export const listAdminResourcesQuerySchema = z
+  .object({
+    status: z.enum(["PENDING", "READY", "ARCHIVED", "FAILED"]).optional(),
+    category: categorySchema.optional(),
+    q: z.string().trim().min(1).max(200).optional(),
     sortBy: z.enum(["newest", "oldest", "title"]).optional().default("newest"),
     page: z.coerce.number().int().positive().default(1),
     pageSize: z.coerce.number().int().positive().max(100).default(20),

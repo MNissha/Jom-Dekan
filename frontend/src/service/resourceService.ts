@@ -79,7 +79,7 @@ interface CreateTextResourceInput {
   subjectId?: string;
 }
 
-interface ListResourcesParams {
+export interface ListResourcesParams {
   mine?: boolean;
   universityId?: string;
   facultyId?: string;
@@ -175,6 +175,18 @@ export const resourceService = {
     return res.data;
   },
 
+  listAdmin: async (
+    params: Pick<ListResourcesParams, "category" | "q" | "sortBy" | "page" | "pageSize"> & {
+      status?: Resource["status"];
+    },
+  ): Promise<{ data: ResourceListItem[]; meta: ResourceListMeta }> => {
+    const res = await axiosInstance.get<{ data: ResourceListItem[]; meta: ResourceListMeta }>(
+      "/admin/resources",
+      { params },
+    );
+    return res.data;
+  },
+
   getById: async (
     id: string,
   ): Promise<{ resource: ResourceListItem; files: ResourceFile[] }> => {
@@ -222,6 +234,7 @@ export const resourceService = {
     data: {
       title: string;
       description?: string;
+      category?: ResourceCategory;
       universityId?: string;
       facultyId?: string;
       programmeId?: string;

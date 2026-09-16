@@ -8,6 +8,7 @@ import pinoHttp from "pino-http";
 import pino from "pino";
 import { env } from "./config/config/env";
 import { logger } from "./utils/logger";
+import { AppError } from "./types/errors";
 import { requestIdMiddleware } from "./config/middleware/requestIdMiddleware";
 import {
   notFoundMiddleware,
@@ -26,6 +27,7 @@ import adminTutorTagRoutes from "./routes/adminTutorTagRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import supportRequestRoutes from "./routes/supportRequestRoutes";
+import adminResourceRoutes from "./routes/adminResourceRoutes";
 
 export function createApp(): Express {
   const app = express();
@@ -102,6 +104,19 @@ export function createApp(): Express {
   app.use(compression());
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+  // express.json()/urlencoded() throw a SyntaxError (with a `status`/
+  // `body` property Express itself sets) for an unparseable body — left
+  // uncaught, that falls through to errorMiddleware's generic 500 path,
+  // which is wrong (it's a bad request, not a server fault) and pollutes
+  // error-rate monitoring with client mistakes. Catch it here and hand it
+  // to errorMiddleware as a normal 400 instead.
+  app.use((err: unknown, _req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    if (err instanceof SyntaxError && "body" in err) {
+      next(AppError.badRequest("The request body is not valid JSON."));
+      return;
+    }
+    next(err);
+  });
   app.use(cookieParser(env.cookieSecret));
 
   app.use("/api/v1", defaultRateLimiter);
@@ -116,6 +131,7 @@ export function createApp(): Express {
   app.use("/api/v1/opportunities", opportunityRoutes);
   app.use("/api/v1", moderationRoutes);
   app.use("/api/v1/admin/users", adminUserRoutes);
+  app.use("/api/v1/admin/resources", adminResourceRoutes);
   app.use("/api/v1/admin", adminAnalyticsRoutes);
   app.use("/api/v1/admin/tutor-applications", adminTutorRoutes);
   app.use("/api/v1/admin/tutors", adminTutorTagRoutes);

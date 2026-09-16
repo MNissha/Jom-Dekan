@@ -54,9 +54,15 @@ services:
       DB_NAME: ${DB_NAME:-jomdekan}
       DB_SSL: ${DB_SSL:-false}
       REDIS_URL: redis://redis:6379
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-docker-dev-access-secret-change-before-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-docker-dev-refresh-secret-change-before-production}
-      COOKIE_SECRET: ${COOKIE_SECRET:-docker-dev-cookie-secret}
+      # No hardcoded fallback here on purpose: these are real secrets, and
+      # a fallback string checked into source control (this repo is on
+      # GitHub) would be a predictable, public secret for any deployment
+      # that forgot to set .env. Leaving them unset means the container
+      # fails fast at startup instead — see env.ts's min(32)/min(16)
+      # validation — same behavior DB_HOST etc. already have.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
       # Same pattern as DB_* above: uses real Supabase Storage credentials
       # from the private root .env when present, otherwise falls back to
       # the self-contained local-fs adapter (files on the backend volume,
@@ -68,7 +74,8 @@ services:
       STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
       STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-}
       STORAGE_REGION: ${STORAGE_REGION:-auto}
-      STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET:-docker-dev-storage-signing-secret-change-before-production}
+      # Same reasoning as JWT_*/COOKIE_SECRET above — no public fallback.
+      STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET}
       EMAIL_PROVIDER: console
       # Same pattern as DB_*/STORAGE_* above: reads real Google OAuth
       # client credentials from the private root .env when present, so
