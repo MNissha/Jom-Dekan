@@ -43,6 +43,7 @@ export interface TaxonomyRequest {
   requestedProgrammeName: string | null;
   requestedSubjectCode: string | null;
   requestedSubjectName: string | null;
+  subjectId: string | null;
   note: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -52,7 +53,11 @@ export interface TaxonomyRequest {
 
 export interface Subject {
   id: string;
-  code: string;
+  // NULL = "legacy / catalogue-wide" — created before subjects were
+  // scoped per university (or an admin catalogue-wide entry). Never
+  // treated as matching any particular university for dedup purposes.
+  universityId: string | null;
+  code: string | null;
   name: string;
   isActive: boolean;
   // "COMMUNITY" subjects were added inline by a student during upload

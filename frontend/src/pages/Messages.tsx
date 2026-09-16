@@ -11,7 +11,8 @@ import {
 import { useCurrentUser } from "../hooks/useAuth";
 import { EmptyState } from "../components/common/EmptyState";
 import { BookingRequestCard } from "../components/messages/BookingRequestCard";
-import type { Conversation } from "../types/message";
+import type { BookingRequestMetadata, Conversation, Message } from "../types/message";
+import { cardClassName, SkeletonBlock } from "../components/common/cards";
 
 function initialFrom(name: string) {
   return name[0]?.toUpperCase() ?? "?";
@@ -19,6 +20,30 @@ function initialFrom(name: string) {
 
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+}
+
+const LEGACY_RESCHEDULE_PATTERN = /proposed rescheduling to/i;
+
+function legacyRescheduleMessage(messages: Message[], index: number): Message | null {
+  const message = messages[index];
+  if (message.messageType !== "text" || !LEGACY_RESCHEDULE_PATTERN.test(message.body)) return null;
+
+  const bookingMessage = messages
+    .slice(0, index)
+    .reverse()
+    .find((candidate) => candidate.messageType === "booking_request" && candidate.metadata.bookingId);
+  if (!bookingMessage) return null;
+
+  const original = bookingMessage.metadata as Partial<BookingRequestMetadata>;
+  return {
+    ...message,
+    messageType: "booking_request",
+    metadata: {
+      ...original,
+      isReschedule: true,
+      note: "This was a proposed new time. The status shown is the booking's current final state.",
+    },
+  };
 }
 
 function ConversationRow({ conversation, isActive, onClick }: {
@@ -30,22 +55,22 @@ function ConversationRow({ conversation, isActive, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition motion-safe:duration-150 ${
+      className={cardClassName("conversation", `group flex w-full items-center gap-grid-3 rounded-control text-left ${
         isActive
-          ? "bg-primary-50 dark:bg-[#2A2455]"
-          : "hover:bg-slate-50 dark:hover:bg-[#231E4A]"
-      }`}
+          ? "bg-brand-primary-soft ring-1 ring-inset ring-primary-200 dark:ring-primary-400/20"
+          : "hover:bg-surface-muted"
+      }`)}
     >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#4338CA] to-[#6D63E8] text-sm font-semibold text-white">
         {initialFrom(conversation.otherUser.displayName)}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <p className="truncate text-body-sm font-semibold text-content-primary">
             {conversation.otherUser.displayName}
           </p>
           {conversation.lastMessage && (
-            <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
+            <span className="shrink-0 text-caption text-content-muted">
               {new Date(conversation.lastMessage.createdAt).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
@@ -53,7 +78,7 @@ function ConversationRow({ conversation, isActive, onClick }: {
             </span>
           )}
         </div>
-        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-0.5 truncate text-caption text-content-muted">
           {conversation.lastMessage ? conversation.lastMessage.body : "No messages yet"}
         </p>
       </div>
@@ -101,21 +126,34 @@ export default function Messages() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-[18px] py-[22px]">
-      <h1 className="mb-4 shrink-0 text-xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
-        Messages
-      </h1>
+    <div className="page-container page-container-wide flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden py-grid-6">
+      <header className="mb-grid-5 shrink-0">
+        <p className="text-eyebrow uppercase text-brand-primary">Inbox</p>
+        <h1 className="mt-grid-1 text-page-title tracking-tight text-content-primary">Messages</h1>
+        <p className="mt-grid-1 text-body-sm text-content-muted">Keep conversations and booking updates in one place.</p>
+      </header>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[#ECEBF7] bg-white shadow-sm dark:border-[#2E2A54] dark:bg-[#1B1836]">
+      <section className="flex min-h-[32rem] min-w-0 flex-1 overflow-hidden rounded-feature border border-border bg-surface-card shadow-card lg:min-h-[36rem]" aria-label="Messages workspace">
         {/* Conversation list */}
         <div
-          className={`min-h-0 w-full shrink-0 flex-col overflow-y-auto border-[#ECEBF7] dark:border-[#2E2A54] sm:w-[320px] sm:border-r ${
+          className={`min-h-0 w-full shrink-0 flex-col border-border sm:w-[22rem] sm:border-r lg:w-[24rem] ${
             conversationId ? "hidden sm:flex" : "flex"
           }`}
         >
-          <div className="flex flex-col gap-1 p-2">
+          <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-grid-4 py-grid-3">
+            <div>
+              <h2 className="text-card-title text-content-primary">Conversations</h2>
+              <p className="text-caption text-content-muted">{conversations.length} total</p>
+            </div>
+            {conversations.some((conversation) => conversation.unreadCount > 0) && (
+              <span className="rounded-full bg-brand-primary-soft px-grid-2 py-grid-1 text-caption font-semibold text-brand-primary">New activity</span>
+            )}
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-grid-1 overflow-y-auto p-grid-2">
             {isLoadingConversations ? (
-              <p className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">Loading…</p>
+              <div className="space-y-grid-2 p-grid-2" role="status" aria-label="Loading conversations">
+                {[0, 1, 2].map((item) => <SkeletonBlock key={item} className="h-16 rounded-control" />)}
+              </div>
             ) : conversations.length === 0 ? (
               <div className="p-4">
                 <EmptyState
@@ -138,14 +176,16 @@ export default function Messages() {
         </div>
 
         {/* Thread pane */}
-        <div className={`min-h-0 flex-1 flex-col ${conversationId ? "flex" : "hidden sm:flex"}`}>
+        <div className={`min-h-0 min-w-0 flex-1 flex-col bg-surface-page/40 ${conversationId ? "flex" : "hidden sm:flex"}`}>
           {!conversationId ? (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <EmptyState
-                icon={MessageCircle}
-                title="Select a conversation"
-                description="Choose a conversation from the list to start chatting."
-              />
+            <div className="flex flex-1 items-center justify-center p-grid-6 sm:p-grid-10">
+              <div className="flex max-w-sm flex-col items-center text-center">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary-soft text-brand-primary shadow-sm ring-1 ring-inset ring-primary-200 dark:ring-primary-400/20">
+                  <MessageCircle className="h-8 w-8" aria-hidden="true" />
+                </span>
+                <h2 className="mt-grid-5 text-section-title text-content-primary">Select a conversation</h2>
+                <p className="mt-grid-2 text-body-sm leading-relaxed text-content-muted">Choose someone from your conversation list to read messages and continue chatting.</p>
+              </div>
             </div>
           ) : (
             <>
@@ -174,12 +214,15 @@ export default function Messages() {
                     No messages yet — say hello.
                   </p>
                 ) : (
-                  messages.map((message) => {
+                  messages.map((message, index) => {
                     const isMine = message.senderId === currentUser?.id;
-                    if (message.messageType === "booking_request") {
+                    const structuredMessage = message.messageType === "booking_request"
+                      ? message
+                      : legacyRescheduleMessage(messages, index);
+                    if (structuredMessage) {
                       return (
                         <div key={message.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                          <BookingRequestCard message={message} />
+                          <BookingRequestCard message={structuredMessage} />
                         </div>
                       );
                     }
@@ -227,7 +270,7 @@ export default function Messages() {
             </>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

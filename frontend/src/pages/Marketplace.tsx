@@ -12,7 +12,7 @@ export function Marketplace() {
   const listingId = searchParams.get("listing");
 
   return (
-    <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
+    <div className="page-container page-container-standard">
       {type === "TUTORING" ? <TutoringView initialDetailId={listingId} /> : <FreelanceView initialDetailId={listingId} />}
     </div>
   );

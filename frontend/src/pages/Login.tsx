@@ -73,9 +73,9 @@ export default function Login() {
     login.isError && !lockoutJustExpired ? apiError?.message ?? 'Something went wrong. Please try again.' : null;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12 motion-safe:animate-[fadeIn_320ms_ease-out]">
+    <div className="page-container flex min-h-[70vh] max-w-md flex-col justify-center py-grid-12 motion-safe:animate-content-enter">
       <div className="motion-safe:animate-[modalRise_380ms_ease-out_both]">
-        <h1 className="text-2xl font-bold text-slate-900">Log in to JomDekan</h1>
+        <h1 className="text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Log in to JomDekan</h1>
         <p className="mt-1 text-sm text-slate-500">Find past papers, notes, and study help for your course.</p>
       </div>
 

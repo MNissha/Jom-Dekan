@@ -35,6 +35,14 @@ export function useSubjects(programmeId?: string) {
 }
 
 // ---- Universities ----
+export function useFindOrCreateUniversity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.findOrCreateUniversity,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["universities"] }),
+  });
+}
+
 export function useCreateUniversity() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -165,6 +173,25 @@ export function useCreateSubject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: taxonomyService.createSubject,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+  });
+}
+
+// Scoped to a university (and optionally free-text search) rather than a
+// programme — used by pickers that only know "which university", not a
+// full programme, like the tutor application form's subject picker.
+export function useSubjectSearch(universityId: string | undefined, search: string) {
+  return useQuery({
+    queryKey: ["subjects", "search", universityId, search],
+    queryFn: () => taxonomyService.searchSubjects({ universityId, search: search || undefined }),
+    enabled: Boolean(universityId),
+  });
+}
+
+export function useFindOrCreateSubjectStandalone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: taxonomyService.findOrCreateSubjectStandalone,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
   });
 }

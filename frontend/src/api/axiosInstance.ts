@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
+import { hasActiveBrowserSession } from '../utils/browserSession';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 const timeout = Number(import.meta.env.VITE_API_TIMEOUT) || 10000;
@@ -58,7 +59,13 @@ axiosInstance.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as RetryableConfig | undefined;
 
-    if (error.response?.status === 401 && original && !original._retry && !original.url?.includes('/auth/')) {
+    if (
+      error.response?.status === 401
+      && original
+      && !original._retry
+      && !original.url?.includes('/auth/')
+      && hasActiveBrowserSession()
+    ) {
       original._retry = true;
       try {
         const newToken = await refreshAccessToken();

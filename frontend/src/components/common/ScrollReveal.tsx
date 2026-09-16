@@ -6,6 +6,7 @@ export function ScrollReveal({ children, className = '', delayMs = 0 }: { childr
 
   useEffect(() => {
     const node = ref.current;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setVisible(true); return; }
     if (!node || typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) { setVisible(true); observer.disconnect(); }
@@ -14,5 +15,5 @@ export function ScrollReveal({ children, className = '', delayMs = 0 }: { childr
     return () => observer.disconnect();
   }, []);
 
-  return <div ref={ref} style={{ transitionDelay: visible ? `${delayMs}ms` : '0ms' }} className={`${className} transition duration-700 motion-reduce:transform-none motion-reduce:opacity-100 motion-reduce:transition-none ${visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>{children}</div>;
+  return <div ref={ref} style={{ transitionDelay: visible ? `${Math.min(delayMs, 480)}ms` : '0ms' }} className={`${className} motion-safe:transition motion-safe:duration-promo motion-safe:ease-premium motion-reduce:transform-none motion-reduce:opacity-100 motion-reduce:transition-none ${visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>{children}</div>;
 }

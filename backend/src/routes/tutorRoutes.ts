@@ -1,7 +1,9 @@
 import { Router } from "express";
+import multer from "multer";
 import { tutorController } from "../controllers/tutorController";
 import { authenticate } from "../config/middleware/authMiddleware";
 import { validate } from "../config/middleware/validateMiddleware";
+import { verifyStorageTokenMiddleware } from "../config/middleware/storageTokenMiddleware";
 import {
   applyTutorSchema,
   updateTutorProfileSchema,
@@ -10,9 +12,70 @@ import {
   bookingIdParamSchema,
   decideBookingSchema,
   rescheduleBookingSchema,
+  resumeUploadIntentSchema,
+  applicationIdParamSchema,
 } from "../validators/tutorValidators";
 
 const router = Router();
+
+// Matches tutorService's own MAX_RESUME_SIZE_BYTES — kept here too so
+// multer rejects an oversized upload before it's even fully received,
+// not just after.
+const uploadResume = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+/**
+ * @openapi
+ * /tutors/resume-upload-intent:
+ *   post:
+ *     tags: [Tutors]
+ *     summary: Start an upload for a tutor application's resume/CV (returns a one-shot upload URL)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       201: { description: Upload intent created }
+ */
+router.post(
+  "/resume-upload-intent",
+  authenticate,
+  validate({ body: resumeUploadIntentSchema }),
+  tutorController.getResumeUploadIntent,
+);
+
+/**
+ * @openapi
+ * /tutors/resume-upload:
+ *   put:
+ *     tags: [Tutors]
+ *     summary: Upload the file bytes for a pending resume upload intent (token + auth required)
+ *     responses:
+ *       200: { description: Resume uploaded }
+ *       401: { description: Invalid or expired link }
+ */
+router.put(
+  "/resume-upload",
+  verifyStorageTokenMiddleware("upload"),
+  authenticate,
+  uploadResume.single("file"),
+  tutorController.receiveResumeUpload,
+);
+
+/**
+ * @openapi
+ * /tutors/applications/{id}/resume:
+ *   get:
+ *     tags: [Tutors]
+ *     summary: Get a short-lived signed download URL for an application's resume (the applicant or an admin only)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Signed download URL }
+ *       403: { description: Not the applicant or an admin }
+ *       404: { description: Application or resume not found }
+ */
+router.get(
+  "/applications/:id/resume",
+  authenticate,
+  validate({ params: applicationIdParamSchema }),
+  tutorController.getApplicationResumeUrl,
+);
 
 /**
  * @openapi
@@ -98,6 +161,25 @@ router.patch(
   authenticate,
   validate({ params: bookingIdParamSchema, body: rescheduleBookingSchema }),
   tutorController.rescheduleBooking,
+);
+
+/**
+ * @openapi
+ * /tutors/{userId}/resume:
+ *   get:
+ *     tags: [Tutors]
+ *     summary: Get a short-lived signed download URL for a verified tutor's resume (that tutor or an admin only)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Signed download URL }
+ *       403: { description: Not that tutor or an admin }
+ *       404: { description: Not a verified tutor, or no resume on file }
+ */
+router.get(
+  "/:userId/resume",
+  authenticate,
+  validate({ params: tutorUserIdParamSchema }),
+  tutorController.getProfileResumeUrl,
 );
 
 /**

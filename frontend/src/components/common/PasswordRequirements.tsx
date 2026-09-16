@@ -33,9 +33,9 @@ function PasswordRequirementItem({ met, label }: { met: boolean; label: string }
 // drifting apart between them.
 export function PasswordRequirementsChecklist({ password, id }: { password: string; id?: string }) {
   return (
-    <div className="group mt-3 rounded-xl border border-[#E5E2F5] bg-[#FBFAFF] px-3.5 py-3 shadow-sm transition-colors duration-200 focus-within:border-primary-300">
-      <p className="mb-1.5 text-xs font-semibold text-slate-600">Your password must include:</p>
-      <ul id={id} className="space-y-1 text-sm" aria-label="Password requirements" aria-live="polite">
+    <div className="group rounded-xl border border-border bg-surface-muted px-4 py-3.5 shadow-sm transition-colors duration-200 focus-within:border-primary-300">
+      <p className="mb-1.5 text-xs font-semibold text-content-secondary">Your password must include:</p>
+      <ul id={id} className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2" aria-label="Password requirements" aria-live="polite">
         {PASSWORD_REQUIREMENTS.map((requirement) => (
           <PasswordRequirementItem key={requirement.label} label={requirement.label} met={requirement.test(password)} />
         ))}

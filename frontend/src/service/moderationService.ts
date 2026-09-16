@@ -10,6 +10,10 @@ export const moderationService = {
     const { data } = await axiosInstance.patch(`/notifications/${id}/read`);
     return data.data;
   },
+  async markAllNotificationsAsRead() {
+    const { data } = await axiosInstance.patch("/notifications/read-all");
+    return data.data as { updatedCount: number };
+  },
   async sendAnnouncement(input: {
     title: string;
     message: string;

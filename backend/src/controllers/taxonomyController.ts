@@ -31,6 +31,23 @@ export const taxonomyController = {
       next(err);
     }
   },
+  // Any authenticated user (not just ADMIN) — the student/tutor-facing
+  // "type a university that isn't in the list yet" path.
+  async findOrCreateUniversity(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { university, created } = await taxonomyService.universities.findOrCreate(
+        req.body,
+        ctxFrom(req),
+      );
+      res.status(created ? 201 : 200).json({
+        message: created ? "University added." : "Matched an existing university.",
+        data: university,
+        created,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
   async updateUniversity(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params as { id: string };
@@ -201,10 +218,14 @@ export const taxonomyController = {
   // ---- Subjects ----
   async listSubjects(req: Request, res: Response, next: NextFunction) {
     try {
-      const { programmeId } = req.query as { programmeId?: string };
+      const { programmeId, universityId, search } = req.query as {
+        programmeId?: string;
+        universityId?: string;
+        search?: string;
+      };
       const data = programmeId
         ? await taxonomyService.subjects.listByProgramme(programmeId)
-        : await taxonomyService.subjects.list();
+        : await taxonomyService.subjects.list({ universityId, search });
       res.status(200).json({ data });
     } catch (err) {
       next(err);
@@ -242,6 +263,34 @@ export const taxonomyController = {
         message: created
           ? "Subject added and linked to this programme."
           : "Matched an existing subject.",
+        data: subject,
+        created,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  // Same "any authenticated user" self-serve path as findOrCreateSubject,
+  // but for contexts with no programme to attach to (e.g. the tutor
+  // application form).
+  async findOrCreateSubjectStandalone(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const { code, name, universityId } = req.body as {
+        code?: string;
+        name: string;
+        universityId: string;
+      };
+      const { subject, created } =
+        await taxonomyService.subjects.findOrCreateStandalone(
+          { code, name, universityId },
+          ctxFrom(req),
+        );
+      res.status(created ? 201 : 200).json({
+        message: created ? "Subject added." : "Matched an existing subject.",
         data: subject,
         created,
       });

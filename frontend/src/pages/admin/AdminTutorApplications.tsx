@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
-import { Check, GraduationCap, ListChecks, ShieldOff, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Clock3, GraduationCap, ListChecks, ShieldOff, Trash2, X, XCircle } from "lucide-react";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { AdminOpportunities } from "./AdminOpportunities";
 import {
@@ -10,6 +10,7 @@ import {
   useAdminRevokeTutorTag,
   useAdminTutorApplication,
   useAdminTutorApplications,
+  useApplicationResumeUrl,
   useTutorProfile,
 } from "../../hooks/useTutor";
 import { useSubjects } from "../../hooks/useTaxonomy";
@@ -29,8 +30,15 @@ function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => vo
   const { data: tutorProfile } = useTutorProfile(application?.status === "approved" ? application.userId : undefined);
   const deleteApplication = useAdminDeleteTutorApplication();
   const revokeTag = useAdminRevokeTutorTag();
+  const getResumeUrl = useApplicationResumeUrl();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+
+  function downloadResume(applicationId: string) {
+    getResumeUrl.mutate(applicationId, {
+      onSuccess: ({ url }) => window.open(url, "_blank", "noopener,noreferrer"),
+    });
+  }
 
   const subjectNames = (application?.subjects ?? []).map(
     (subjectId) => subjects?.find((s) => s.id === subjectId)?.name ?? subjectId,
@@ -51,12 +59,12 @@ function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => vo
       role="dialog"
       aria-modal="true"
       aria-label="Tutor application detail"
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8"
+      className="overlay-root"
       onClick={onClose}
     >
-      <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog-surface max-w-[560px]" onClick={(e) => e.stopPropagation()}>
         <div
-          className="flex items-start justify-between gap-4 p-[22px] text-white"
+          className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
           style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
         >
           <div className="min-w-0">
@@ -78,7 +86,7 @@ function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => vo
         {isLoading || !application ? (
           <p className="p-[22px] text-sm text-slate-500">Loading…</p>
         ) : (
-          <div className="flex flex-col gap-4 p-[22px]">
+          <div className="dialog-body flex flex-col gap-4 p-[22px]">
             <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Email</span>
@@ -95,6 +103,40 @@ function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => vo
               <div>
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Applied</span>
                 <p className="text-slate-700">{new Date(application.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Open to other universities</span>
+                <p className="text-slate-700">{application.openToOtherUniversities ? "Yes" : "No"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Resume / CV</span>
+                {application.resumeFilename ? (
+                  <button
+                    type="button"
+                    onClick={() => downloadResume(application.id)}
+                    disabled={getResumeUrl.isPending}
+                    className="mt-0.5 block text-left text-primary-700 hover:underline disabled:opacity-60"
+                  >
+                    {getResumeUrl.isPending ? "Preparing…" : application.resumeFilename}
+                  </button>
+                ) : (
+                  <p className="text-slate-500">Not provided</p>
+                )}
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Portfolio</span>
+                {application.portfolioUrl ? (
+                  <a
+                    href={application.portfolioUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-0.5 block break-all text-primary-700 hover:underline"
+                  >
+                    {application.portfolioUrl}
+                  </a>
+                ) : (
+                  <p className="text-slate-500">Not provided</p>
+                )}
               </div>
             </div>
 
@@ -198,6 +240,17 @@ function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => vo
             </div>
           </div>
         )}
+
+        <div className="dialog-footer border-t border-[#F1F0FA] p-[22px] pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E4E3F2] px-4 text-sm font-bold text-slate-700 transition hover:-translate-x-0.5 hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back
+          </button>
+        </div>
       </div>
     </div>,
     document.body,
@@ -209,15 +262,16 @@ function SectionTabs({ section, onChange }: { section: Section; onChange: (secti
     <div className="flex gap-2 border-b border-[#ECEBF7] pb-3">
       {(
         [
-          { value: "applications", label: "Applications", icon: GraduationCap },
           { value: "listings", label: "Listings", icon: ListChecks },
+          { value: "applications", label: "Applications", icon: GraduationCap },
         ] as const
       ).map((tab) => (
         <button
           key={tab.value}
           type="button"
           onClick={() => onChange(tab.value)}
-          className={`flex items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-2 text-sm font-bold transition ${
+          aria-pressed={section === tab.value}
+          className={`nav-item flex min-h-control items-center gap-1.5 border-b-2 px-3 text-sm font-bold ${
             section === tab.value
               ? "border-primary-600 text-primary-700"
               : "border-transparent text-slate-500 hover:text-slate-700"
@@ -263,7 +317,7 @@ export function AdminTutorApplications({ embedded = false }: { embedded?: boolea
   if (section === "listings") {
     return (
       <AdminPageShell embedded={embedded}>
-        <div className="mx-auto max-w-6xl px-[18px] pt-[22px]">
+        <div className="page-container page-container-standard pb-0">
           <SectionTabs section={section} onChange={(next) => setSearchParams(next === "applications" ? {} : { section: next })} />
         </div>
         <AdminOpportunities embedded category="tutoring" />
@@ -273,39 +327,71 @@ export function AdminTutorApplications({ embedded = false }: { embedded?: boolea
 
   return (
     <AdminPageShell embedded={embedded}>
-      <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-slate-900">
-          <GraduationCap className="h-6 w-6 text-primary-600" aria-hidden="true" />
-          Tutoring
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">Review applications to become a verified tutor, and manage live tutoring listings.</p>
-
+      <div className="page-container page-container-standard motion-safe:animate-panel-enter">
         <SectionTabs section={section} onChange={(next) => setSearchParams(next === "applications" ? {} : { section: next })} />
 
-        <div className="mt-5 flex gap-2">
+        <header className="relative mt-5 overflow-hidden rounded-[26px] bg-gradient-to-r from-[#332475] via-[#4338CA] to-[#6558DD] p-6 text-white shadow-lg">
+          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-amber-300/20 blur-2xl" />
+          <div className="relative">
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-[#DDD8FF]">Marketplace administration</p>
+            <h1 className="mt-grid-1 break-words text-2xl font-heading leading-tight sm:text-page-title">Tutor Applications</h1>
+            <p className="mt-1 text-sm text-[#D5D0F7]">Review applicants and manage verified tutor access.</p>
+          </div>
+        </header>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {TABS.map((tab) => (
             <button
               key={tab.value}
               type="button"
               onClick={() => setStatus(tab.value)}
-              className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                status === tab.value ? "bg-primary-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+              aria-pressed={status === tab.value}
+              className={`flex items-center gap-3 rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                status === tab.value
+                  ? "border-primary-300 bg-primary-50 ring-2 ring-primary-100"
+                  : "border-[#E8E5F7] bg-white hover:border-primary-200"
               }`}
             >
-              {tab.label}
+              <span className={`rounded-xl p-2.5 ${
+                tab.value === "pending"
+                  ? "bg-amber-50 text-amber-600"
+                  : tab.value === "approved"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-red-50 text-red-600"
+              }`}>
+                {tab.value === "pending" ? <Clock3 className="h-5 w-5" /> : tab.value === "approved" ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+              </span>
+              <span>
+                <span className="block text-xs font-semibold text-slate-500">{tab.label}</span>
+                <span className="block text-base font-bold text-slate-900">View applications</span>
+              </span>
             </button>
           ))}
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 overflow-hidden rounded-[22px] border border-[#E8E5F7] bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b bg-[#F8F7FD] px-5 py-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{status} applications</p>
+              <p className="mt-0.5 text-sm text-slate-500">Select an applicant to review their full submission.</p>
+            </div>
+            {!isLoading && <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-primary-700 shadow-sm">{(applications ?? []).length}</span>}
+          </div>
           {isLoading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <div className="space-y-3 p-5" role="status" aria-label="Loading applications">
+              {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded-xl bg-slate-100" />)}
+              <span className="sr-only">Loading applications...</span>
+            </div>
           ) : (applications ?? []).length === 0 ? (
-            <p className="text-sm text-slate-500">No {status} applications.</p>
+            <div className="p-10 text-center">
+              <GraduationCap className="mx-auto h-9 w-9 text-slate-300" aria-hidden="true" />
+              <p className="mt-3 text-sm font-semibold text-slate-600">No {status} applications</p>
+              <p className="mt-1 text-xs text-slate-400">Applications will appear here when their status matches this view.</p>
+            </div>
           ) : (
-            <ul className="space-y-4">
+            <ul className="divide-y divide-[#F0EEF8]">
               {(applications ?? []).map((application) => (
-                <li key={application.id} className="rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm">
+                <li key={application.id} className="p-5 transition hover:bg-[#FAF9FF]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <button

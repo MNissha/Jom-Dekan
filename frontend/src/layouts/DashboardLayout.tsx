@@ -35,7 +35,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const currentUser = useCurrentUser();
   const adminSection = new URLSearchParams(location.search).get("section") ?? "";
   const adminDiscussionSection = new URLSearchParams(location.search).get("discussion") ?? "";
-  const adminPageLoading = useDemoLoading(2000, `${pathname}:${adminSection}:${adminDiscussionSection}`);
+  const adminPageLoading = useDemoLoading(600, `${pathname}:${adminSection}:${adminDiscussionSection}`);
   const isAdminPage = pathname.startsWith("/admin") || (pathname === "/dashboard" && currentUser?.role === "ADMIN");
   const queryClient = useQueryClient();
   const mainRef = useRef<HTMLElement>(null);
@@ -94,7 +94,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="h-dvh-with-fallback flex w-full flex-col overflow-hidden bg-[#F6F6FB] transition-colors motion-safe:duration-200 dark:bg-[#15132B]">
+    <div className="h-dvh-with-fallback flex w-full flex-col overflow-hidden bg-surface-page text-content-primary transition-colors motion-safe:duration-standard">
       <IdleTimeoutGuard />
       <DashboardHeader onMenuClick={handleMenuClick} />
 
@@ -120,7 +120,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             ref={mainRef}
             className="min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-color:#4338CA_transparent] [scrollbar-width:thin]"
           >
-            {isAdminPage && adminPageLoading ? <AdminSectionSkeleton /> : children}
+            {isAdminPage && adminPageLoading ? <AdminSectionSkeleton /> : (
+              <div key={`${pathname}:${adminSection}:${adminDiscussionSection}`} className="page-stage min-h-full">
+                {children}
+              </div>
+            )}
           </main>
           <Footer />
         </div>

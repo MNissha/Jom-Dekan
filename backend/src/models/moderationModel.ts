@@ -23,9 +23,14 @@ export class ModerationModel {
                    n.read_at, n.created_at
             FROM notifications n
             LEFT JOIN opportunities o
-              ON n.type = 'REPORT_SUBMITTED'
-             AND n.payload->>'entityType' = 'opportunity'
-             AND o.id::text = n.payload->>'entityId'
+              ON (
+                (n.type = 'REPORT_SUBMITTED'
+                 AND n.payload->>'entityType' = 'opportunity'
+                 AND o.id::text = n.payload->>'entityId')
+                OR
+                (n.type LIKE 'OPPORTUNITY_%'
+                 AND o.id::text = n.payload->>'opportunityId')
+              )
             WHERE n.user_id = $1
             ORDER BY n.created_at DESC
             LIMIT 50
@@ -43,6 +48,17 @@ export class ModerationModel {
         `;
     const result = await pool.query(query, [id, userId]);
     return result.rows[0];
+  }
+
+  static async markAllNotificationsRead(userId: string) {
+    const result = await pool.query(
+      `UPDATE notifications
+       SET read_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND read_at IS NULL
+       RETURNING id, read_at`,
+      [userId],
+    );
+    return result.rows;
   }
 
   static async sendAnnouncement(

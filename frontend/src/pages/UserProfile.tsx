@@ -6,6 +6,7 @@ import { useTutorProfile } from "../hooks/useTutor";
 import { ReportButton } from "../components/common/ReportButton";
 import { MessageButton } from "../components/common/MessageButton";
 import { BookSessionButton } from "../components/common/BookSessionButton";
+import { cardClassName } from "../components/common/cards";
 
 const STUDY_LEVEL_LABELS: Record<string, string> = {
   DIPLOMA: "Diploma",
@@ -29,7 +30,7 @@ export default function UserProfile() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[720px] px-[18px] py-[22px] text-sm text-slate-500">
+      <div className="page-container page-container-reading text-body-sm text-content-muted">
         Loading profile…
       </div>
     );
@@ -37,7 +38,7 @@ export default function UserProfile() {
 
   if (isError || !profile) {
     return (
-      <div className="mx-auto max-w-[720px] px-[18px] py-[22px]">
+      <div className="page-container page-container-reading">
         <p className="text-sm text-red-600">This user could not be found.</p>
         <button
           type="button"
@@ -51,7 +52,7 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="mx-auto max-w-[720px] px-[18px] py-[22px]">
+    <div className="page-container page-container-reading">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -61,7 +62,7 @@ export default function UserProfile() {
       </button>
 
       <div
-        className="mt-4 flex flex-col items-stretch gap-5 rounded-[22px] p-[22px] text-white sm:flex-row sm:items-center sm:justify-between"
+        className="mt-grid-4 flex min-w-0 flex-col items-stretch gap-grid-5 overflow-hidden rounded-feature p-grid-6 text-white shadow-card sm:flex-row sm:items-center sm:justify-between"
         style={{ background: "radial-gradient(120% 140% at 85% 10%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
       >
         <div className="flex min-w-0 items-center gap-4">
@@ -69,9 +70,9 @@ export default function UserProfile() {
             {profile.displayName[0]?.toUpperCase() ?? "?"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-xl font-extrabold tracking-tight">{profile.displayName}</p>
+            <h1 className="break-words text-xl font-extrabold tracking-tight">{profile.displayName}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
-              <p className="truncate text-sm font-medium text-[#C6C2EC]">
+              <p className="break-words text-sm font-medium text-primary-100">
                 {profile.academicRole === "TUTOR" ? "Tutor" : "Student"}
               </p>
               {tutorProfile && (
@@ -96,35 +97,40 @@ export default function UserProfile() {
       </div>
 
       {tutorProfile && (
-        <div className="mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800">Tutoring</h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{tutorProfile.bio}</p>
+        <div className={cardClassName("static", "mt-grid-6")}>
+          <h2 className="text-card-title text-content-primary">Tutoring</h2>
+          <p className="mt-grid-2 whitespace-pre-wrap break-words text-body-sm text-content-secondary">{tutorProfile.bio}</p>
           {tutorProfile.hourlyRate !== null && (
-            <p className="mt-3 text-sm font-semibold text-slate-700">RM {tutorProfile.hourlyRate.toFixed(2)} / hour</p>
+            <p className="mt-grid-3 text-body-sm font-semibold text-content-primary">RM {tutorProfile.hourlyRate.toFixed(2)} / hour</p>
+          )}
+          {tutorProfile.openToOtherUniversities && (
+            <span className="mt-grid-3 inline-block rounded-full bg-emerald-50 px-2.5 py-1 text-caption font-semibold text-emerald-700">
+              Open to students from other universities/programmes
+            </span>
           )}
         </div>
       )}
 
-      <div className="mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-800">About</h2>
+      <div className={cardClassName("static", "mt-grid-6")}>
+        <h2 className="text-card-title text-content-primary">About</h2>
         <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">University</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-700">{profile.university?.name ?? "Not provided"}</dd>
+            <dt className="text-overline uppercase text-content-muted">University</dt>
+            <dd className="mt-grid-1 break-words text-body-sm font-medium text-content-primary">{profile.university?.name ?? "Not provided"}</dd>
           </div>
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">Field of study</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-700">{profile.fieldOfStudy ?? "Not provided"}</dd>
+            <dt className="text-overline uppercase text-content-muted">Field of study</dt>
+            <dd className="mt-grid-1 break-words text-body-sm font-medium text-content-primary">{profile.fieldOfStudy ?? "Not provided"}</dd>
           </div>
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">Study level</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-700">
+            <dt className="text-overline uppercase text-content-muted">Study level</dt>
+            <dd className="mt-grid-1 break-words text-body-sm font-medium text-content-primary">
               {profile.studyLevel ? (STUDY_LEVEL_LABELS[profile.studyLevel] ?? profile.studyLevel) : "Not provided"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-bold uppercase tracking-wide text-slate-400">Member since</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-700">
+            <dt className="text-overline uppercase text-content-muted">Member since</dt>
+            <dd className="mt-grid-1 break-words text-body-sm font-medium text-content-primary">
               {new Date(profile.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
             </dd>
           </div>

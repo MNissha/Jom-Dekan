@@ -30,5 +30,9 @@ export const subjectFormSchema = z.object({
     .min(2, "Enter at least 2 characters.")
     .max(20),
   name: z.string().trim().min(2, "Enter at least 2 characters.").max(200),
+  // Optional: leave unset for a catalogue-wide subject (the historical
+  // behavior), or scope it to one university — same code can then exist
+  // for a different subject at a different university.
+  universityId: z.string().uuid("Choose a university.").optional().or(z.literal("")),
 });
 export type SubjectFormValues = z.infer<typeof subjectFormSchema>;

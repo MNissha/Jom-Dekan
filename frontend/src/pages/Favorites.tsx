@@ -132,7 +132,7 @@ export default function Favorites() {
     opportunities: opportunitiesQuery,
   }[activeTab];
   const activeList = { resources, discussions, tutors, opportunities }[activeTab];
-  const showSkeleton = useMinimumLoading(activeQuery.isLoading, 2000);
+  const showSkeleton = useMinimumLoading(activeQuery.isLoading, 600);
   // Unfiltered count for this tab — decides "nothing saved" vs "no
   // matches for this search", independent of what's currently typed.
   const unfilteredCount = { resources: allResources, discussions: allDiscussions, tutors: allTutors, opportunities: allOpportunities }[
@@ -140,8 +140,8 @@ export default function Favorites() {
   ].length;
 
   return (
-    <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Saved Items</h1>
+    <div className="page-container page-container-standard">
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Saved Items</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Resources, discussions, tutors, and opportunities you've saved for later.
       </p>
@@ -152,7 +152,8 @@ export default function Favorites() {
             key={key}
             type="button"
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-bold transition motion-safe:duration-150 ${
+            aria-pressed={activeTab === key}
+            className={`nav-item flex min-h-control items-center gap-1.5 border-b-2 px-3 text-sm font-bold ${
               activeTab === key
                 ? "border-primary-600 text-primary-700"
                 : "border-transparent text-slate-500 hover:text-primary-600"

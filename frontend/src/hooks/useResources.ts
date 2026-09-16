@@ -164,6 +164,12 @@ interface UploadResourceInput {
   universityId?: string;
   facultyId?: string;
   programmeId?: string;
+  // Set instead of the matching id above when the uploader typed a
+  // university/faculty/programme that isn't in the catalogue yet —
+  // resolved/created server-side as part of this same request.
+  requestedUniversityName?: string;
+  requestedFacultyName?: string;
+  requestedProgrammeName?: string;
   subjectId?: string;
   // Set instead of subjectId when the uploader is naming a subject that
   // isn't in the catalogue yet — only meaningful on the file-upload path
@@ -205,6 +211,9 @@ export function useUploadResource() {
           universityId: input.universityId,
           facultyId: input.facultyId,
           programmeId: input.programmeId,
+          requestedUniversityName: input.requestedUniversityName,
+          requestedFacultyName: input.requestedFacultyName,
+          requestedProgrammeName: input.requestedProgrammeName,
           subjectId: input.subjectId,
         });
       }
@@ -220,6 +229,9 @@ export function useUploadResource() {
           universityId: input.universityId,
           facultyId: input.facultyId,
           programmeId: input.programmeId,
+          requestedUniversityName: input.requestedUniversityName,
+          requestedFacultyName: input.requestedFacultyName,
+          requestedProgrammeName: input.requestedProgrammeName,
           subjectId: input.subjectId,
           subjectCode: input.subjectCode,
           subjectName: input.subjectName,

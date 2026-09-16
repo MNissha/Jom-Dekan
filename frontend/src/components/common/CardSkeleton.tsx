@@ -1,12 +1,15 @@
+import { cardClassName, SkeletonBlock } from "./cards";
+
 export function CardSkeleton() {
   return (
-    <div className="flex animate-pulse flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="aspect-video w-full bg-slate-200" />
-      <div className="flex flex-col gap-3 p-5">
-        <div className="h-4 w-3/4 rounded bg-slate-200" />
-        <div className="h-3 w-full rounded bg-slate-100" />
-        <div className="h-3 w-1/3 rounded bg-slate-100" />
+    <div className={cardClassName("static", "flex flex-col overflow-hidden p-0")} role="status" aria-label="Loading content">
+      <SkeletonBlock className="aspect-video w-full rounded-none" />
+      <div className="flex flex-col gap-grid-3 p-grid-5">
+        <SkeletonBlock className="h-4 w-3/4" />
+        <SkeletonBlock className="h-3 w-full" />
+        <SkeletonBlock className="h-3 w-1/3" />
       </div>
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { SearchableSelect } from '../components/common/SearchableSelect';
 import { PrivacyNoticeModal, TermsModal } from '../components/common/TermsModal';
 import { PasswordField } from '../components/common/PasswordField';
 import { PasswordRequirementsChecklist } from '../components/common/PasswordRequirements';
+import { Checkbox } from '../components/common/forms';
 import { fieldClassName } from '../utils/inputStyles';
 
 const CURRENT_SEMESTER_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -56,20 +57,32 @@ export default function Register() {
         : null;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12 motion-safe:animate-[fadeIn_320ms_ease-out]">
+    <div className="page-container flex min-h-[70vh] max-w-4xl flex-col justify-center py-grid-8 sm:py-grid-12 motion-safe:animate-content-enter">
       <div className="motion-safe:animate-[modalRise_380ms_ease-out_both]">
-        <h1 className="text-2xl font-bold text-slate-900">Create your JomDekan account</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Create your JomDekan account</h1>
+        <p className="mt-grid-1 max-w-2xl text-body-sm text-content-muted sm:text-body">
           For Malaysian university students — past papers, notes, discussions, and legitimate tutoring, all in one place.
         </p>
       </div>
 
-      <form className="mt-8 space-y-5 motion-safe:animate-[notificationRise_440ms_80ms_ease-out_both]" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        className="mt-7 grid min-w-0 grid-cols-1 gap-x-6 gap-y-5 rounded-2xl border border-border bg-surface-card p-4 shadow-sm sm:grid-cols-2 sm:p-6 motion-safe:animate-[notificationRise_440ms_80ms_ease-out_both]"
+        onChange={() => {
+          if (registerAccount.isError) registerAccount.reset();
+        }}
+        onSubmit={handleSubmit(onSubmit, () => registerAccount.reset())}
+        noValidate
+      >
         {serverError && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2 dark:border-red-800 dark:bg-red-950/60 dark:text-red-300">
             {serverError}
           </div>
         )}
+
+        <div className="sm:col-span-2">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-600 dark:text-primary-400">Account details</p>
+          <p className="mt-1 text-sm text-content-muted">Enter your name, email, and a secure password.</p>
+        </div>
 
         <div>
           <label htmlFor="displayName" className="block text-sm font-medium text-slate-700">
@@ -113,7 +126,6 @@ export default function Register() {
             {...register('password')}
           />
           {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
-          <PasswordRequirementsChecklist id="password-requirements" password={passwordValue} />
         </div>
 
         <div>
@@ -134,9 +146,18 @@ export default function Register() {
           )}
         </div>
 
-        <fieldset>
+        <div className="sm:col-span-2">
+          <PasswordRequirementsChecklist id="password-requirements" password={passwordValue} />
+        </div>
+
+        <div className="border-t border-border pt-5 sm:col-span-2">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-600 dark:text-primary-400">Academic details</p>
+          <p className="mt-1 text-sm text-content-muted">Tell us where and what you study so we can personalize JomDekan.</p>
+        </div>
+
+        <fieldset className="sm:col-span-2">
           <legend className="block text-sm font-medium text-slate-700">I am registering as a</legend>
-          <div className="mt-1 flex gap-4">
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="radio" value="STUDENT" {...register('academicRole')} defaultChecked />
               Student
@@ -208,7 +229,7 @@ export default function Register() {
           {errors.fieldOfStudy && <p className="mt-1 text-sm text-red-600">{errors.fieldOfStudy.message}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
           <div>
             <label htmlFor="currentYear" className="block text-sm font-medium text-slate-700">
               Current year of study
@@ -218,7 +239,7 @@ export default function Register() {
               type="number"
               min={1}
               max={8}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={fieldClassName(Boolean(errors.currentYear))}
               aria-invalid={Boolean(errors.currentYear)}
               {...register('currentYear')}
             />
@@ -231,7 +252,7 @@ export default function Register() {
             </label>
             <select
               id="currentSemester"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={fieldClassName(Boolean(errors.currentSemester))}
               aria-invalid={Boolean(errors.currentSemester)}
               {...register('currentSemester')}
             >
@@ -246,15 +267,15 @@ export default function Register() {
           </div>
         </div>
 
-        <div>
-          <label className="flex items-start gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="mt-0.5" {...register('termsAccepted')} />
-            <span>
+        <div className="sm:col-span-2">
+          <div className="flex items-start gap-3">
+            <Checkbox id="termsAccepted" className="mt-0.5" {...register('termsAccepted')} />
+            <label htmlFor="termsAccepted" className="min-w-0 text-sm leading-5 text-slate-700 dark:text-slate-300">
               I agree to the{' '}
               <button
                 type="button"
                 onClick={() => setIsTermsOpen(true)}
-                className="font-medium text-primary-700 underline-offset-2 hover:underline"
+                className="inline min-h-0 p-0 align-baseline font-semibold leading-5 text-primary-700 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-primary-300"
               >
                 Terms &amp; Conditions
               </button>
@@ -262,13 +283,13 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setIsPrivacyOpen(true)}
-                className="font-medium text-primary-700 underline-offset-2 hover:underline"
+                className="inline min-h-0 p-0 align-baseline font-semibold leading-5 text-primary-700 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-primary-300"
               >
                 Privacy Notice
               </button>
-            </span>
-          </label>
-          {errors.termsAccepted && <p className="mt-1 text-sm text-red-600">{errors.termsAccepted.message}</p>}
+            </label>
+          </div>
+          {errors.termsAccepted && <p className="mt-1 pl-8 text-sm text-red-600">{errors.termsAccepted.message}</p>}
         </div>
 
         <TermsModal
@@ -284,7 +305,7 @@ export default function Register() {
         <button
           type="submit"
           disabled={isSubmitting || registerAccount.isPending}
-          className="w-full rounded-full bg-primary-600 px-4 py-2.5 font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 motion-reduce:transform-none"
+          className="w-full rounded-full bg-primary-600 px-4 py-3 font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 sm:col-span-2 motion-reduce:transform-none"
         >
           {registerAccount.isPending ? 'Creating account…' : 'Create account'}
         </button>

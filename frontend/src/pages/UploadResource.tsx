@@ -26,7 +26,6 @@ import {
   useFaculties,
   useProgrammes,
   useSubjects,
-  useCreateTaxonomyRequest,
 } from "../hooks/useTaxonomy";
 import { useMyProfile } from "../hooks/useProfile";
 import { SearchableSelect } from "../components/common/SearchableSelect";
@@ -58,6 +57,14 @@ export default function UploadResource() {
   const { data: programmes } = useProgrammes(facultyId || undefined);
   const { data: subjects } = useSubjects(programmeId || undefined);
 
+  // Whether each SearchableSelect's own dropdown is currently open — the
+  // "Can't find it?" link below each field is hidden while its dropdown
+  // is open, since the dropdown is absolutely positioned (reserves no
+  // layout space) and would otherwise render on top of/behind the link.
+  const [isUniversityOpen, setIsUniversityOpen] = useState(false);
+  const [isFacultyOpen, setIsFacultyOpen] = useState(false);
+  const [isProgrammeOpen, setIsProgrammeOpen] = useState(false);
+
   // "Add a subject" is a separate mode rather than a schema field: it
   // needs a programme picked (local state, not RHF) before it makes
   // sense, and it replaces subjectId rather than adding to it.
@@ -68,21 +75,20 @@ export default function UploadResource() {
   const [newSubjectIntakeYear, setNewSubjectIntakeYear] = useState("");
   const [newSubjectError, setNewSubjectError] = useState<string | null>(null);
 
-  // Unlike subjects, universities/faculties/programmes have no
-  // self-service creation — this just files a request for an admin to
-  // review. Rather than one request per missing level, a single combined
-  // request can name whichever levels are missing at once — the ones the
-  // user has already picked are simply carried by id, not re-requested.
-  const createTaxonomyRequest = useCreateTaxonomyRequest();
+  // Same self-service idea as subjects: naming a university/faculty/
+  // programme that isn't in the catalogue yet doesn't block the upload —
+  // it's created (or reused) as part of submitting this same resource,
+  // and the resource is tagged with it immediately. An admin can still
+  // edit or delete it afterward from the taxonomy admin pages. A single
+  // combined panel can name whichever levels are missing at once — the
+  // ones the user has already picked are simply carried by id, not
+  // retyped.
   const [isRequestingTaxonomy, setIsRequestingTaxonomy] = useState(false);
   const [requestUniversityName, setRequestUniversityName] = useState("");
   const [requestFacultyName, setRequestFacultyName] = useState("");
   const [requestProgrammeName, setRequestProgrammeName] = useState("");
   const [requestSubjectCode, setRequestSubjectCode] = useState("");
   const [requestSubjectName, setRequestSubjectName] = useState("");
-  const [requestNote, setRequestNote] = useState("");
-  const [taxonomyRequestSubmitted, setTaxonomyRequestSubmitted] =
-    useState(false);
 
   const missingUniversity = !universityId;
   const missingFaculty = !facultyId;
@@ -97,51 +103,6 @@ export default function UploadResource() {
     setRequestProgrammeName("");
     setRequestSubjectCode("");
     setRequestSubjectName("");
-    setRequestNote("");
-    setTaxonomyRequestSubmitted(false);
-  }
-
-  const taxonomyRequestHasContent =
-    (missingUniversity && requestUniversityName.trim().length >= 2) ||
-    (missingFaculty && requestFacultyName.trim().length >= 2) ||
-    (missingProgramme && requestProgrammeName.trim().length >= 2) ||
-    (missingProgramme &&
-      requestSubjectCode.trim().length >= 2 &&
-      requestSubjectName.trim().length >= 2);
-
-  function submitTaxonomyRequest() {
-    if (!taxonomyRequestHasContent) return;
-    createTaxonomyRequest.mutate(
-      {
-        universityId: universityId || undefined,
-        requestedUniversityName: missingUniversity
-          ? requestUniversityName.trim() || undefined
-          : undefined,
-        facultyId: facultyId || undefined,
-        requestedFacultyName: missingFaculty
-          ? requestFacultyName.trim() || undefined
-          : undefined,
-        programmeId: programmeId || undefined,
-        requestedProgrammeName: missingProgramme
-          ? requestProgrammeName.trim() || undefined
-          : undefined,
-        requestedSubjectCode:
-          missingProgramme && requestSubjectCode.trim()
-            ? requestSubjectCode.trim()
-            : undefined,
-        requestedSubjectName:
-          missingProgramme && requestSubjectName.trim()
-            ? requestSubjectName.trim()
-            : undefined,
-        note: requestNote.trim() || undefined,
-      },
-      {
-        onSuccess: () => {
-          setIsRequestingTaxonomy(false);
-          setTaxonomyRequestSubmitted(true);
-        },
-      },
-    );
   }
 
   // A single combined panel, not one per level — shows an input only for
@@ -149,35 +110,26 @@ export default function UploadResource() {
   // picked, plus a subject code/name pair when the programme itself is
   // missing (so find-or-create has no programme to attach the subject to).
   function renderTaxonomyRequestPanel() {
-    if (!hasMissingTaxonomy) return null;
-
-    if (taxonomyRequestSubmitted) {
-      return (
-        <p className="mt-3 text-xs font-bold text-emerald-600">
-          Request submitted — an admin will review it shortly.
-        </p>
-      );
-    }
-
-    if (!isRequestingTaxonomy) {
-      return (
-        <button
-          type="button"
-          onClick={() => setIsRequestingTaxonomy(true)}
-          className="mt-3 text-xs font-bold text-primary-600 hover:text-primary-700"
-        >
-          Can&apos;t find your university, faculty, programme, or subject?
-          Request them together
-        </button>
-      );
-    }
+    if (!hasMissingTaxonomy || !isRequestingTaxonomy) return null;
 
     return (
       <div className="mt-3 space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-4">
-        <p className="text-xs text-slate-500">
-          Fill in whichever of these aren&apos;t in the list yet — anything
-          you&apos;ve already picked above doesn&apos;t need to be retyped.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs text-slate-500">
+            Fill in whichever of these aren&apos;t in the list yet —
+            they&apos;ll be created when you submit below and used
+            immediately, no need to wait. An admin can still edit or
+            remove them afterward. Anything you&apos;ve already picked
+            above doesn&apos;t need to be retyped.
+          </p>
+          <button
+            type="button"
+            onClick={resetTaxonomyRequest}
+            className="shrink-0 text-xs font-bold text-slate-500 hover:text-slate-700"
+          >
+            Hide
+          </button>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {missingUniversity && (
             <div>
@@ -243,45 +195,9 @@ export default function UploadResource() {
             </div>
           )}
         </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-600">
-            Note{" "}
-            <span className="font-semibold text-slate-400">· optional</span>
-          </label>
-          <textarea
-            rows={2}
-            value={requestNote}
-            onChange={(e) => setRequestNote(e.target.value)}
-            placeholder="Anything that helps an admin add it correctly (campus, official site, etc.)"
-            className="mt-1 w-full resize-y rounded-lg border border-[#E4E3F2] bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-        {createTaxonomyRequest.isError && (
-          <p className="text-xs text-red-600">
-            Couldn&apos;t submit that request. Please try again.
-          </p>
+        {newSubjectError && (
+          <p className="text-xs text-red-600">{newSubjectError}</p>
         )}
-        <div className="flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={resetTaxonomyRequest}
-            className="text-xs font-bold text-slate-500 hover:text-slate-700"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={
-              !taxonomyRequestHasContent || createTaxonomyRequest.isPending
-            }
-            onClick={submitTaxonomyRequest}
-            className="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {createTaxonomyRequest.isPending
-              ? "Submitting…"
-              : "Submit request"}
-          </button>
-        </div>
       </div>
     );
   }
@@ -338,6 +254,19 @@ export default function UploadResource() {
         return;
       }
     }
+    // Same constraint as above, for a subject typed alongside a missing
+    // programme — that combination only takes effect on the file-upload
+    // path too.
+    if (
+      missingProgramme &&
+      (requestSubjectCode.trim() || requestSubjectName.trim()) &&
+      (!values.files || values.files.length === 0)
+    ) {
+      setNewSubjectError(
+        "Attach a file to add a new subject along with a new programme, or leave the subject blank for a text post.",
+      );
+      return;
+    }
     setNewSubjectError(null);
     setProgress(0);
     uploadResource.mutate(
@@ -348,9 +277,28 @@ export default function UploadResource() {
         universityId,
         facultyId,
         programmeId,
+        requestedUniversityName: missingUniversity
+          ? requestUniversityName.trim() || undefined
+          : undefined,
+        requestedFacultyName:
+          !missingUniversity && missingFaculty
+            ? requestFacultyName.trim() || undefined
+            : undefined,
+        requestedProgrammeName:
+          !missingFaculty && missingProgramme
+            ? requestProgrammeName.trim() || undefined
+            : undefined,
         subjectId: isAddingSubject ? undefined : values.subjectId,
-        subjectCode: isAddingSubject ? newSubjectCode : undefined,
-        subjectName: isAddingSubject ? newSubjectName : undefined,
+        subjectCode: isAddingSubject
+          ? newSubjectCode
+          : missingProgramme
+            ? requestSubjectCode.trim() || undefined
+            : undefined,
+        subjectName: isAddingSubject
+          ? newSubjectName
+          : missingProgramme
+            ? requestSubjectName.trim() || undefined
+            : undefined,
         subjectSemester:
           isAddingSubject && newSubjectSemester
             ? Number(newSubjectSemester)
@@ -378,7 +326,7 @@ export default function UploadResource() {
       : null;
 
   return (
-    <div className="mx-auto max-w-6xl px-[18px] py-[22px] motion-safe:animate-[fadeIn_300ms_ease-out]">
+    <div className="page-container page-container-standard motion-safe:animate-content-enter">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -390,7 +338,7 @@ export default function UploadResource() {
         Back
       </button>
 
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">
         Upload a resource
       </h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -518,7 +466,17 @@ export default function UploadResource() {
                 resetTaxonomyRequest();
               }}
               placeholder="Search for a university…"
+              onOpenChange={setIsUniversityOpen}
+              onCreateNew={(query) => {
+                setRequestUniversityName(query);
+                setIsRequestingTaxonomy(true);
+              }}
             />
+            {missingUniversity && !isUniversityOpen && !isRequestingTaxonomy && (
+              <button type="button" onClick={() => setIsRequestingTaxonomy(true)} className="mt-grid-1 text-caption font-semibold text-brand-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+                Can&apos;t find it? Add a university
+              </button>
+            )}
           </div>
           <div>
             <label
@@ -547,7 +505,21 @@ export default function UploadResource() {
                   ? "Search for a faculty…"
                   : "Select a university first"
               }
+              onOpenChange={setIsFacultyOpen}
+              onCreateNew={
+                universityId
+                  ? (query) => {
+                      setRequestFacultyName(query);
+                      setIsRequestingTaxonomy(true);
+                    }
+                  : undefined
+              }
             />
+            {!missingUniversity && missingFaculty && !isFacultyOpen && !isRequestingTaxonomy && (
+              <button type="button" onClick={() => setIsRequestingTaxonomy(true)} className="mt-grid-1 text-caption font-semibold text-brand-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+                Can&apos;t find it? Add a faculty
+              </button>
+            )}
           </div>
           <div>
             <label
@@ -572,7 +544,21 @@ export default function UploadResource() {
               placeholder={
                 facultyId ? "Search for a programme…" : "Select a faculty first"
               }
+              onOpenChange={setIsProgrammeOpen}
+              onCreateNew={
+                facultyId
+                  ? (query) => {
+                      setRequestProgrammeName(query);
+                      setIsRequestingTaxonomy(true);
+                    }
+                  : undefined
+              }
             />
+            {!missingFaculty && missingProgramme && !isProgrammeOpen && !isRequestingTaxonomy && (
+              <button type="button" onClick={() => setIsRequestingTaxonomy(true)} className="mt-grid-1 text-caption font-semibold text-brand-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
+                Can&apos;t find it? Add a programme
+              </button>
+            )}
           </div>
           <div>
             <label
@@ -683,7 +669,7 @@ export default function UploadResource() {
                         .filter((item) => item.isActive)
                         .map((item) => ({
                           value: item.id,
-                          label: `${item.code} · ${item.name}${
+                          label: `${item.code ? `${item.code} · ${item.name}` : item.name}${
                             item.verificationStatus === "COMMUNITY_SUBMITTED"
                               ? " (community)"
                               : ""
@@ -706,14 +692,15 @@ export default function UploadResource() {
                     No subjects are linked to this programme yet.
                   </p>
                 )}
-                <button
-                  type="button"
-                  disabled={!programmeId}
-                  onClick={startAddingSubject}
-                  className="mt-1 text-xs font-bold text-primary-600 hover:text-primary-700 disabled:cursor-not-allowed disabled:text-slate-400"
-                >
-                  Can&apos;t find it? Add a new subject
-                </button>
+                {programmeId && (
+                  <button
+                    type="button"
+                    onClick={startAddingSubject}
+                    className="mt-grid-1 text-caption font-semibold text-brand-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  >
+                    Can&apos;t find it? Add a new subject
+                  </button>
+                )}
               </>
             )}
           </div>

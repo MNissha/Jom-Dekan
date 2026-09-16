@@ -36,6 +36,33 @@ export function useModeration() {
         queryClient.setQueryData(["notifications"], context.previous);
       }
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: moderationService.markAllNotificationsAsRead,
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const previous = queryClient.getQueryData<Notification[]>(["notifications"]);
+      const readAt = new Date().toISOString();
+      queryClient.setQueryData<Notification[]>(["notifications"], (current = []) =>
+        current.map((notification) => ({
+          ...notification,
+          read_at: notification.read_at ?? readAt,
+        })),
+      );
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["notifications"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   const announcementMutation = useMutation({
@@ -68,12 +95,21 @@ export function useModeration() {
     },
   });
 
+  const markAsRead = (id: string) => {
+    const current = queryClient.getQueryData<Notification[]>(["notifications"]);
+    const notification = current?.find((item) => item.id === id);
+    if (notification?.read_at) return Promise.resolve(notification);
+    return markReadMutation.mutateAsync(id);
+  };
+
   return {
     notifications: notificationsQuery.data || [],
     isLoadingNotifications: notificationsQuery.isLoading,
     queue: queueQuery.data || [],
     isLoadingQueue: queueQuery.isLoading,
-    markAsRead: markReadMutation.mutateAsync,
+    markAsRead,
+    markAllAsRead: markAllReadMutation.mutateAsync,
+    isMarkingAllAsRead: markAllReadMutation.isPending,
     sendAnnouncement: announcementMutation.mutateAsync,
     isSendingAnnouncement: announcementMutation.isPending,
     handleAction: moderationActionMutation.mutateAsync,

@@ -63,16 +63,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={toast.id}
               role="status"
-              className="motion-safe:animate-[notificationRise_200ms_ease-out] pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-2xl border border-[#E4E3F2] bg-white p-4 shadow-2xl"
+              className="pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-card border border-border bg-surface-raised p-grid-4 text-content-primary shadow-popover motion-safe:animate-[notificationRise_var(--motion-standard)_var(--ease-premium)]"
             >
               <span className={`absolute inset-y-0 left-0 w-1 ${style.barClass}`} aria-hidden="true" />
               <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${style.iconClass}`} aria-hidden="true" />
-              <p className="flex-1 text-sm font-medium text-slate-800">{toast.message}</p>
+              <p className="flex-1 break-words text-sm font-medium text-content-primary">{toast.message}</p>
               <button
                 type="button"
                 onClick={() => dismiss(toast.id)}
                 aria-label="Dismiss notification"
-                className="shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="shrink-0 rounded-full p-1 text-content-muted transition-colors hover:bg-surface-muted hover:text-content-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>

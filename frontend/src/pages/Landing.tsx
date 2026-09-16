@@ -14,7 +14,7 @@ import {
 export default function Landing() {
   return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary-900 to-primary-700 px-4 py-20 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary-900 to-primary-700 py-grid-20 text-white">
         {/* Decorative background blobs — pure CSS, no external image assets */}
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -25,11 +25,11 @@ export default function Landing() {
           <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-400/10 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-4xl text-center motion-safe:animate-[modalRise_480ms_ease-out_both]">
-          <h1 className="text-4xl font-bold sm:text-5xl">
+        <div className="relative mx-auto max-w-4xl px-gutter-mobile text-center motion-safe:animate-[modalRise_480ms_ease-out_both] sm:px-gutter-tablet lg:px-gutter-desktop">
+          <h1 className="break-words text-4xl font-display leading-tight sm:text-display">
             All your course resources, in one trusted place
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-primary-100">
+          <p className="mx-auto mt-grid-4 max-w-2xl text-body-lg text-primary-100">
             Past papers, notes, and study help — searchable by university,
             programme, subject, and year. Built for Malaysian university
             students.
@@ -63,7 +63,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
+      <section className="page-container page-container-standard py-grid-16">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Feature
             icon={<BookOpen className="h-6 w-6" aria-hidden="true" />}

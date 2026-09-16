@@ -1,5 +1,7 @@
 import { forwardRef, useState, type InputHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { controlClassName } from './controlStyles';
+import { IconButton } from './ui';
 
 interface PasswordFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   hasError?: boolean;
@@ -12,29 +14,27 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
     const [visible, setVisible] = useState(false);
 
     return (
-      <div className="relative mt-1">
+      <div className="relative mt-1 min-w-0">
         <input
           ref={ref}
           id={id}
           type={visible ? 'text' : 'password'}
           aria-invalid={hasError}
-          className={`w-full rounded-lg border px-3 py-2 pr-10 transition-colors focus:outline-none focus:ring-2 ${
-            hasError
-              ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
-              : 'border-slate-300 focus:border-primary-500 focus:ring-primary-500'
-          } ${className ?? ''}`}
+          className={controlClassName(Boolean(hasError), `password-field-input pr-12 ${className ?? ''}`)}
           {...props}
         />
-        <button
-          type="button"
-          onClick={() => setVisible((prev) => !prev)}
-          className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 transition-colors hover:text-slate-600"
-          aria-label={visible ? 'Hide password' : 'Show password'}
-          aria-pressed={visible}
-          tabIndex={-1}
-        >
-          {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-        </button>
+        <span className="absolute inset-y-0 right-0 flex items-center">
+          <IconButton
+            onClick={() => setVisible((prev) => !prev)}
+            variant="ghost"
+            className="h-full rounded-l-none rounded-r-control text-content-muted shadow-none hover:bg-surface-muted hover:text-content-primary"
+            aria-label={visible ? 'Hide password' : 'Show password'}
+            aria-pressed={visible}
+            tabIndex={-1}
+          >
+            {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </IconButton>
+        </span>
       </div>
     );
   },

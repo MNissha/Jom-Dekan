@@ -15,8 +15,8 @@ export default function ForgotPassword() {
   const onSubmit = (values: ForgotPasswordFormValues) => forgotPassword.mutate(values);
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
-      <h1 className="text-2xl font-bold text-slate-900">Reset your password</h1>
+    <div className="page-container flex min-h-[70vh] max-w-md flex-col justify-center py-grid-12">
+      <h1 className="text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Reset your password</h1>
       <p className="mt-1 text-sm text-slate-500">
         Enter the email on your account and we'll send you a link to reset your password.
       </p>

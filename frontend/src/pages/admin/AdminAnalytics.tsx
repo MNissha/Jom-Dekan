@@ -7,6 +7,7 @@ import type {
   AdminAnalytics as AdminAnalyticsData,
   AnalyticsCount,
 } from "../../types/adminAnalytics";
+import { cardClassName } from "../../components/common/cards";
 
 const chartColors = ["#0f766e", "#f59e0b", "#2563eb", "#e11d48", "#64748b"];
 
@@ -33,7 +34,7 @@ function MetricCard({
   return (
     <Link
       to={to}
-      className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      className={cardClassName("interactive", "block")}
       aria-label={`Open ${label} management`}
     >
       <div className="flex items-start justify-between">
@@ -286,7 +287,7 @@ export function AdminAnalyticsPanel() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">
             Admin overview
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="mt-grid-1 break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">
             Analytics
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">

@@ -24,6 +24,18 @@ export const taxonomyService = {
     );
     return res.data.data;
   },
+  // Any authenticated user — resolves an existing university by name or
+  // creates a new one, usable immediately. Same self-serve idea as
+  // subjects' standalone find-or-create.
+  findOrCreateUniversity: async (data: {
+    name: string;
+  }): Promise<{ university: University; created: boolean }> => {
+    const res = await axiosInstance.post<{ data: University; created: boolean }>(
+      "/taxonomy/universities/find-or-create",
+      data,
+    );
+    return { university: res.data.data, created: res.data.created };
+  },
   updateUniversity: async (
     id: string,
     data: { name: string; country?: string },
@@ -135,15 +147,46 @@ export const taxonomyService = {
     );
     return res.data.data;
   },
+  // Scoped/free-text variant of listSubjects, used by the "search
+  // subjects for this university" pickers (e.g. the tutor application
+  // form) instead of the programme-scoped or catalogue-wide list.
+  searchSubjects: async (params: {
+    universityId?: string;
+    search?: string;
+  }): Promise<Subject[]> => {
+    const res = await axiosInstance.get<{ data: Subject[] }>(
+      "/taxonomy/subjects",
+      { params },
+    );
+    return res.data.data;
+  },
   createSubject: async (data: {
     code: string;
     name: string;
+    universityId?: string;
   }): Promise<Subject> => {
     const res = await axiosInstance.post<{ data: Subject }>(
       "/taxonomy/subjects",
       data,
     );
     return res.data.data;
+  },
+  // Any authenticated user — resolves an existing subject by code (or,
+  // when no code is given, by matching name) within a university, or
+  // creates a new COMMUNITY_SUBMITTED one scoped to it, usable
+  // immediately (no programme to attach to, unlike the resource-upload
+  // equivalent). Matching/dedup is scoped to universityId — the same
+  // code can mean a different subject at a different university.
+  findOrCreateSubjectStandalone: async (data: {
+    code?: string;
+    name: string;
+    universityId: string;
+  }): Promise<{ subject: Subject; created: boolean }> => {
+    const res = await axiosInstance.post<{ data: Subject; created: boolean }>(
+      "/taxonomy/subjects/find-or-create",
+      data,
+    );
+    return { subject: res.data.data, created: res.data.created };
   },
   updateSubject: async (
     id: string,

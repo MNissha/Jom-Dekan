@@ -76,8 +76,8 @@ export function Header() {
   const displayName = user?.email ? user.email.split("@")[0] : "";
 
   return (
-    <header className="sticky top-0 z-30 shrink-0 border-b border-[#E7E6F3] bg-white/[.92] backdrop-blur-[8px]">
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-[18px] py-3">
+    <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-surface-card/95 backdrop-blur-[8px]">
+      <div className="mx-auto flex w-full max-w-dashboard min-w-0 items-center justify-between gap-grid-3 px-gutter-mobile py-grid-3 sm:px-gutter-tablet lg:px-gutter-desktop">
         <Link
           to="/"
           className="flex shrink-0 items-center gap-2 font-semibold text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
@@ -134,7 +134,7 @@ export function Header() {
                     {isProfileOpen && (
                       <div
                         role="menu"
-                        className={`absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg transition motion-safe:duration-150 ${
+                        className={`menu-surface absolute right-0 z-50 mt-2 w-56 origin-top-right p-1.5 transition motion-safe:duration-fast ${
                           isMenuEntered
                             ? "opacity-100 translate-y-0 scale-100"
                             : "opacity-0 -translate-y-1 scale-95"
@@ -154,7 +154,7 @@ export function Header() {
                               to={to}
                               role="menuitem"
                               onClick={() => setProfileOpen(false)}
-                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-600 transition motion-safe:duration-150 hover:bg-primary-50 hover:text-primary-700"
+                              className="menu-item flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-content-secondary"
                             >
                               <Icon className="h-4 w-4" aria-hidden="true" />
                               {label}
@@ -166,7 +166,7 @@ export function Header() {
                               disabled
                               title="Coming soon"
                               role="menuitem"
-                              className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-400"
+                              className="menu-item flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-content-muted"
                             >
                               <Icon className="h-4 w-4" aria-hidden="true" />
                               {label}
@@ -184,7 +184,7 @@ export function Header() {
                             setProfileOpen(false);
                             logout.mutate();
                           }}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition motion-safe:duration-150 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                          className="menu-item flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 focus-visible:outline-none dark:hover:bg-red-950/40"
                         >
                           <LogOut className="h-4 w-4" aria-hidden="true" />
                           Log out

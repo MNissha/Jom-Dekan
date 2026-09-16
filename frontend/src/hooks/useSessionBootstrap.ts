@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import axios from 'axios';
 import { refreshAccessToken } from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
+import { hasActiveBrowserSession } from '../utils/browserSession';
 
 const RETRY_DELAY_MS = 800;
 const MAX_RETRIES = 2;
@@ -37,6 +38,14 @@ export function useSessionBootstrap(): void {
 
   useEffect(() => {
     if (isInitialized) return;
+
+    // Refreshes in the same tab retain sessionStorage; reopening JomDekan
+    // after closing its tab does not. Do not silently revive that old login
+    // from the longer-lived HTTP-only refresh cookie in a new tab.
+    if (!hasActiveBrowserSession()) {
+      setInitialized();
+      return;
+    }
     let cancelled = false;
 
     async function attempt(retriesLeft: number): Promise<void> {

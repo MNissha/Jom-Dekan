@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
   getModerationQueue,
   handleModerationAction,
@@ -31,6 +32,12 @@ const router = Router();
  */
 
 router.get("/notifications", authenticate, getNotifications);
+
+router.patch(
+  "/notifications/read-all",
+  authenticate,
+  markAllNotificationsRead,
+);
 
 /**
  * @openapi

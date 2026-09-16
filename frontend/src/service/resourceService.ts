@@ -35,6 +35,13 @@ interface UploadIntentInput {
   universityId?: string;
   facultyId?: string;
   programmeId?: string;
+  // Set instead of the matching id above when the uploader typed a
+  // university/faculty/programme that isn't in the catalogue yet — the
+  // backend resolves/creates it as part of this same request, the same
+  // way subjectCode/subjectName below already do for subjects.
+  requestedUniversityName?: string;
+  requestedFacultyName?: string;
+  requestedProgrammeName?: string;
   subjectId?: string;
   // Set instead of subjectId when the uploader typed a subject that
   // isn't in the catalogue yet — the backend resolves/creates it as
@@ -66,6 +73,9 @@ interface CreateTextResourceInput {
   universityId?: string;
   facultyId?: string;
   programmeId?: string;
+  requestedUniversityName?: string;
+  requestedFacultyName?: string;
+  requestedProgrammeName?: string;
   subjectId?: string;
 }
 

@@ -8,6 +8,7 @@ import {
   statusSchema,
   createUniversitySchema,
   updateUniversitySchema,
+  findOrCreateUniversitySchema,
   createFacultySchema,
   updateFacultySchema,
   listFacultiesQuerySchema,
@@ -18,6 +19,7 @@ import {
   updateSubjectSchema,
   listSubjectsQuerySchema,
   findOrCreateSubjectSchema,
+  findOrCreateSubjectStandaloneSchema,
   linkProgrammeSubjectSchema,
   unlinkProgrammeSubjectParamsSchema,
   createTaxonomyRequestSchema,
@@ -55,6 +57,27 @@ router.post(
   authorize("ADMIN"),
   validate({ body: createUniversitySchema }),
   taxonomyController.createUniversity,
+);
+/**
+ * @openapi
+ * /taxonomy/universities/find-or-create:
+ *   post:
+ *     tags: [Taxonomy]
+ *     summary: >
+ *       Resolve a university by name (any authenticated user) — reuses a
+ *       matching one if it exists, otherwise creates it. Used by pickers
+ *       that let a student/tutor name a university that isn't in the
+ *       catalogue yet, e.g. the tutor application form.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Matched an existing university }
+ *       201: { description: Created a new university }
+ */
+router.post(
+  "/universities/find-or-create",
+  authenticate,
+  validate({ body: findOrCreateUniversitySchema }),
+  taxonomyController.findOrCreateUniversity,
 );
 router.put(
   "/universities/:id",
@@ -205,6 +228,28 @@ router.post(
   authorize("ADMIN"),
   validate({ body: createSubjectSchema }),
   taxonomyController.createSubject,
+);
+/**
+ * @openapi
+ * /taxonomy/subjects/find-or-create:
+ *   post:
+ *     tags: [Taxonomy]
+ *     summary: >
+ *       Resolve a subject by code with no programme to attach to (any
+ *       authenticated user) — reuses a matching subject if one exists,
+ *       otherwise creates a COMMUNITY_SUBMITTED one. Used by the tutor
+ *       application form, which only asks which university a subject
+ *       belongs to, not a full programme/semester.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Matched an existing subject }
+ *       201: { description: Created a new subject }
+ */
+router.post(
+  "/subjects/find-or-create",
+  authenticate,
+  validate({ body: findOrCreateSubjectStandaloneSchema }),
+  taxonomyController.findOrCreateSubjectStandalone,
 );
 router.put(
   "/subjects/:id",

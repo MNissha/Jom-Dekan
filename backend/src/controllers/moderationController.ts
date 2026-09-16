@@ -16,6 +16,10 @@ export class ModerationService {
     return await ModerationModel.markNotificationRead(id, userId);
   }
 
+  static async markAllRead(userId: string) {
+    return await ModerationModel.markAllNotificationsRead(userId);
+  }
+
   static async sendAnnouncement(
     adminId: string,
     input: { title: string; message: string; sendToAll: boolean; userIds: string[] },
@@ -159,6 +163,22 @@ export const markNotificationRead = async (
           error: { code: "NOT_FOUND", message: "Notification not found." },
         });
     return res.json({ message: "Notification marked as read", data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const markAllNotificationsRead = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const data = await ModerationService.markAllRead(req.user!.id);
+    return res.json({
+      message: "All notifications marked as read",
+      data: { updatedCount: data.length },
+    });
   } catch (error) {
     return next(error);
   }

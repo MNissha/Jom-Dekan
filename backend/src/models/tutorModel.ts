@@ -10,6 +10,12 @@ export interface TutorApplicationRow {
   subjects: string[];
   experience: string;
   hourly_rate: string | null;
+  open_to_other_universities: boolean;
+  resume_storage_key: string | null;
+  resume_original_filename: string | null;
+  resume_mime_type: string | null;
+  resume_size_bytes: number | null;
+  portfolio_url: string | null;
   status: TutorApplicationStatus;
   reviewed_by: string | null;
   reviewed_at: Date | null;
@@ -30,6 +36,12 @@ export interface TutorProfileRow {
   subjects: string[];
   hourly_rate: string | null;
   experience: string | null;
+  open_to_other_universities: boolean;
+  resume_storage_key: string | null;
+  resume_original_filename: string | null;
+  resume_mime_type: string | null;
+  resume_size_bytes: number | null;
+  portfolio_url: string | null;
   is_active: boolean;
   verified_at: Date;
   google_calendar_connected: boolean;
@@ -49,6 +61,7 @@ export interface TutorBookingRow {
   duration_minutes: number;
   message: string | null;
   status: TutorBookingStatus;
+  reschedule_proposed_by: string | null;
   google_calendar_event_id: string | null;
   created_at: Date;
   updated_at: Date;
@@ -71,13 +84,38 @@ export const tutorModel = {
   applications: {
     async create(
       userId: string,
-      data: { bio: string; subjects: string[]; experience: string; hourlyRate?: number },
+      data: {
+        bio: string;
+        subjects: string[];
+        experience: string;
+        hourlyRate?: number;
+        openToOtherUniversities?: boolean;
+        resumeStorageKey: string;
+        resumeOriginalFilename: string;
+        resumeMimeType: string;
+        resumeSizeBytes: number;
+        portfolioUrl?: string;
+      },
     ): Promise<TutorApplicationRow> {
       const result = await pool.query<TutorApplicationRow>(
-        `INSERT INTO tutor_applications (user_id, bio, subjects, experience, hourly_rate)
-         VALUES ($1, $2, $3::jsonb, $4, $5)
+        `INSERT INTO tutor_applications
+           (user_id, bio, subjects, experience, hourly_rate, open_to_other_universities,
+            resume_storage_key, resume_original_filename, resume_mime_type, resume_size_bytes, portfolio_url)
+         VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
-        [userId, data.bio, JSON.stringify(data.subjects), data.experience, data.hourlyRate ?? null],
+        [
+          userId,
+          data.bio,
+          JSON.stringify(data.subjects),
+          data.experience,
+          data.hourlyRate ?? null,
+          data.openToOtherUniversities ?? false,
+          data.resumeStorageKey,
+          data.resumeOriginalFilename,
+          data.resumeMimeType,
+          data.resumeSizeBytes,
+          data.portfolioUrl ?? null,
+        ],
       );
       return result.rows[0];
     },
@@ -176,15 +214,30 @@ export const tutorModel = {
         subjects: string[];
         experience: string;
         hourlyRate?: number | null;
+        openToOtherUniversities?: boolean;
+        resumeStorageKey?: string | null;
+        resumeOriginalFilename?: string | null;
+        resumeMimeType?: string | null;
+        resumeSizeBytes?: number | null;
+        portfolioUrl?: string | null;
         sourceApplicationId: string | null;
       },
     ): Promise<TutorProfileRow> {
       const result = await pool.query<TutorProfileRow>(
-        `INSERT INTO tutor_profiles (user_id, bio, subjects, experience, hourly_rate, source_application_id)
-         VALUES ($1, $2, $3::jsonb, $4, $5, $6)
+        `INSERT INTO tutor_profiles
+           (user_id, bio, subjects, experience, hourly_rate, open_to_other_universities,
+            resume_storage_key, resume_original_filename, resume_mime_type, resume_size_bytes,
+            portfolio_url, source_application_id)
+         VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (user_id) DO UPDATE SET
            bio = EXCLUDED.bio, subjects = EXCLUDED.subjects, experience = EXCLUDED.experience,
-           hourly_rate = EXCLUDED.hourly_rate, is_active = true, verified_at = now(),
+           hourly_rate = EXCLUDED.hourly_rate, open_to_other_universities = EXCLUDED.open_to_other_universities,
+           resume_storage_key = EXCLUDED.resume_storage_key,
+           resume_original_filename = EXCLUDED.resume_original_filename,
+           resume_mime_type = EXCLUDED.resume_mime_type,
+           resume_size_bytes = EXCLUDED.resume_size_bytes,
+           portfolio_url = EXCLUDED.portfolio_url,
+           is_active = true, verified_at = now(),
            source_application_id = EXCLUDED.source_application_id
          RETURNING *`,
         [
@@ -193,6 +246,12 @@ export const tutorModel = {
           JSON.stringify(data.subjects),
           data.experience,
           data.hourlyRate ?? null,
+          data.openToOtherUniversities ?? false,
+          data.resumeStorageKey ?? null,
+          data.resumeOriginalFilename ?? null,
+          data.resumeMimeType ?? null,
+          data.resumeSizeBytes ?? null,
+          data.portfolioUrl ?? null,
           data.sourceApplicationId,
         ],
       );
@@ -217,7 +276,19 @@ export const tutorModel = {
 
     async update(
       userId: string,
-      data: { bio?: string; subjects?: string[]; hourlyRate?: number | null; experience?: string; isActive?: boolean },
+      data: {
+        bio?: string;
+        subjects?: string[];
+        hourlyRate?: number | null;
+        experience?: string;
+        isActive?: boolean;
+        openToOtherUniversities?: boolean;
+        resumeStorageKey?: string;
+        resumeOriginalFilename?: string;
+        resumeMimeType?: string;
+        resumeSizeBytes?: number;
+        portfolioUrl?: string | null;
+      },
     ): Promise<TutorProfileRow | null> {
       const result = await pool.query<TutorProfileRow>(
         `UPDATE tutor_profiles SET
@@ -225,7 +296,13 @@ export const tutorModel = {
            subjects = COALESCE($3::jsonb, subjects),
            hourly_rate = COALESCE($4, hourly_rate),
            experience = COALESCE($5, experience),
-           is_active = COALESCE($6, is_active)
+           is_active = COALESCE($6, is_active),
+           open_to_other_universities = COALESCE($7, open_to_other_universities),
+           resume_storage_key = COALESCE($8, resume_storage_key),
+           resume_original_filename = COALESCE($9, resume_original_filename),
+           resume_mime_type = COALESCE($10, resume_mime_type),
+           resume_size_bytes = COALESCE($11, resume_size_bytes),
+           portfolio_url = COALESCE($12, portfolio_url)
          WHERE user_id = $1
          RETURNING *`,
         [
@@ -235,6 +312,12 @@ export const tutorModel = {
           data.hourlyRate ?? null,
           data.experience ?? null,
           data.isActive ?? null,
+          data.openToOtherUniversities ?? null,
+          data.resumeStorageKey ?? null,
+          data.resumeOriginalFilename ?? null,
+          data.resumeMimeType ?? null,
+          data.resumeSizeBytes ?? null,
+          data.portfolioUrl ?? null,
         ],
       );
       return result.rows[0] ?? null;
@@ -365,7 +448,10 @@ export const tutorModel = {
 
     async updateStatus(id: string, status: "accepted" | "declined"): Promise<TutorBookingRow | null> {
       const result = await pool.query<TutorBookingRow>(
-        `UPDATE tutor_bookings SET status = $2 WHERE id = $1 RETURNING *`,
+        `UPDATE tutor_bookings
+         SET status = $2, reschedule_proposed_by = NULL
+         WHERE id = $1
+         RETURNING *`,
         [id, status],
       );
       return result.rows[0] ?? null;
@@ -385,17 +471,18 @@ export const tutorModel = {
      */
     async reschedule(
       id: string,
-      data: { requestedStartAt: Date; durationMinutes: number; resetToPending: boolean },
+      data: { requestedStartAt: Date; durationMinutes: number; proposedBy: string },
     ): Promise<TutorBookingRow | null> {
       const result = await pool.query<TutorBookingRow>(
         `UPDATE tutor_bookings SET
            requested_start_at = $2,
            duration_minutes = $3,
-           status = CASE WHEN $4 THEN 'pending' ELSE status END,
-           google_calendar_event_id = CASE WHEN $4 THEN NULL ELSE google_calendar_event_id END
+           status = 'pending',
+           google_calendar_event_id = NULL,
+           reschedule_proposed_by = $4
          WHERE id = $1
          RETURNING *`,
-        [id, data.requestedStartAt, data.durationMinutes, data.resetToPending],
+        [id, data.requestedStartAt, data.durationMinutes, data.proposedBy],
       );
       return result.rows[0] ?? null;
     },

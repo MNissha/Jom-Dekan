@@ -404,6 +404,32 @@ describe("Resources API", () => {
     expect(res.body.data[0].title).toContain("Quantum Mechanics Notes");
   });
 
+  it("finds case-insensitive word fragments in resource titles and descriptions", async () => {
+    if (skip) return;
+    const unique = Date.now();
+    await uploadAndConfirm(ownerAToken, PDF_BUFFER, {
+      title: `SCS Software Engineering ${unique}`,
+    });
+    await uploadAndConfirm(ownerAToken, PDF_BUFFER, {
+      title: `Study Guide ${unique}`,
+      description: `An introduction to computational neuroscience ${unique}`,
+    });
+
+    const titleResult = await request(app)
+      .get("/api/v1/resources")
+      .set("Authorization", `Bearer ${ownerBToken}`)
+      .query({ q: "scs soft" });
+    const descriptionResult = await request(app)
+      .get("/api/v1/resources")
+      .set("Authorization", `Bearer ${ownerBToken}`)
+      .query({ q: "putational neuro" });
+
+    expect(titleResult.status).toBe(200);
+    expect(titleResult.body.data.some((resource: { title: string }) => resource.title.includes(String(unique)))).toBe(true);
+    expect(descriptionResult.status).toBe(200);
+    expect(descriptionResult.body.data.some((resource: { title: string }) => resource.title.includes(String(unique)))).toBe(true);
+  });
+
   it("orders by relevance rank ahead of the explicit sortBy, using it only as a tiebreaker", async () => {
     if (skip) return;
     const unique = Date.now();

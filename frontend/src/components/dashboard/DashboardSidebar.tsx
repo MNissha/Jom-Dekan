@@ -390,14 +390,14 @@ export function DashboardSidebar({
       {/* Mobile drawer — always full-width/full-nav regardless of the
           desktop collapse state. */}
       {isOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 overflow-hidden lg:hidden">
           <button
             type="button"
             aria-label="Close menu"
             onClick={onClose}
             className="absolute inset-0 bg-slate-900/40 motion-safe:transition-opacity motion-safe:duration-200"
           />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-gradient-to-b from-[#2A2166] to-[#211A52] shadow-xl motion-safe:transition-transform motion-safe:duration-200">
+          <div className="absolute inset-y-0 left-0 flex w-[min(16rem,calc(100vw-2rem))] max-w-full flex-col overflow-hidden bg-gradient-to-b from-[#2A2166] to-[#211A52] shadow-xl motion-safe:animate-panel-enter">
             <div className="flex items-center justify-between border-b border-white/10 py-3 pl-4 pr-2">
               <div className="flex items-center gap-2 text-white">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F5C21A] text-[#231C57]">
@@ -414,7 +414,7 @@ export function DashboardSidebar({
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               <nav className="flex flex-col gap-1 p-3 text-sm">
                 {isAdmin ? (
                   <NavRows

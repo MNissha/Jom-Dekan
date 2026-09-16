@@ -31,6 +31,16 @@ export const createUploadIntentSchema = z
     universityId: z.string().uuid().optional(),
     facultyId: z.string().uuid().optional(),
     programmeId: z.string().uuid().optional(),
+    // Set instead of the matching id above when the uploader is naming a
+    // university/faculty/programme that isn't in the catalogue yet —
+    // resourceService stands each one up (or reuses a matching one) via
+    // the same createOrReuse* helpers the admin-approval path uses,
+    // before the resource row is created. Each only takes effect when
+    // its own id is absent, and cascades top-down (a faculty name is
+    // only used once a university id is resolved, same for programme).
+    requestedUniversityName: z.string().trim().min(2).max(200).optional(),
+    requestedFacultyName: z.string().trim().min(2).max(200).optional(),
+    requestedProgrammeName: z.string().trim().min(2).max(200).optional(),
     subjectId: z.string().uuid().optional(),
     // Present when this is the 2nd+ file of a multi-file upload — attaches
     // this file to an already-created resource instead of creating a new
@@ -71,10 +81,13 @@ export const createUploadIntentSchema = z
     message: "subjectName is required when adding a new subject by code.",
     path: ["subjectName"],
   })
-  .refine((data) => !data.subjectCode || Boolean(data.programmeId), {
-    message: "Select a programme before adding a new subject.",
-    path: ["programmeId"],
-  });
+  .refine(
+    (data) => !data.subjectCode || Boolean(data.programmeId || data.requestedProgrammeName),
+    {
+      message: "Select or name a programme before adding a new subject.",
+      path: ["programmeId"],
+    },
+  );
 
 // A file-less resource has no bytes to carry the content, so unlike the
 // upload-intent path above (where description is optional — the file
@@ -96,6 +109,9 @@ export const createTextResourceSchema = z
     universityId: z.string().uuid().optional(),
     facultyId: z.string().uuid().optional(),
     programmeId: z.string().uuid().optional(),
+    requestedUniversityName: z.string().trim().min(2).max(200).optional(),
+    requestedFacultyName: z.string().trim().min(2).max(200).optional(),
+    requestedProgrammeName: z.string().trim().min(2).max(200).optional(),
     subjectId: z.string().uuid().optional(),
   })
   .strict();

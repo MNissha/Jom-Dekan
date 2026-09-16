@@ -15,7 +15,7 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { updateProfileFormSchema, type UpdateProfileFormValues } from "../schemas/profileSchemas";
 import { useMyProfile, useMyStats, useUpdateProfile } from "../hooks/useProfile";
 import { useForgotPassword } from "../hooks/useAuth";
@@ -28,6 +28,7 @@ import { TermsModal } from "../components/common/TermsModal";
 import { RescheduleBookingButton } from "../components/common/RescheduleBookingButton";
 import { TutorSection } from "../components/profile/TutorSection";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
+import { controlClassName } from "../components/common/controlStyles";
 
 const CURRENT_SEMESTER_OPTIONS = Array.from({ length: 10 }, (_, index) => index + 1);
 
@@ -53,8 +54,8 @@ const SECTION_TITLES: Record<SettingsSection, string> = {
 };
 
 const CARD_CLASS = "mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm sm:p-6";
-const INPUT_CLASS = "h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";
-const TEXTAREA_CLASS = "rounded-xl border border-[#E4E3F2] px-3 py-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500";
+const INPUT_CLASS = controlClassName(false);
+const TEXTAREA_CLASS = controlClassName(false, "min-h-24 resize-y");
 
 function isSettingsSection(value: string | null): value is SettingsSection {
   return Boolean(value && value in SECTION_TITLES);
@@ -62,7 +63,7 @@ function isSettingsSection(value: string | null): value is SettingsSection {
 
 function ProfileSkeleton() {
   return (
-    <div className="mx-auto max-w-6xl animate-pulse px-[18px] py-[22px]" aria-label="Loading profile and settings">
+    <div className="page-container page-container-standard animate-pulse" aria-label="Loading profile and settings">
       <div className="h-7 w-52 rounded bg-violet-100" />
       <div className="mt-2 h-4 w-80 max-w-full rounded bg-slate-100" />
       <div className="mt-6 flex items-center gap-4 rounded-[22px] bg-[#332475] p-6">
@@ -125,17 +126,41 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
   );
 }
 
-function DetailHeader({ title, onBack }: { title: string; onBack: () => void }) {
+function DetailHeader({
+  title,
+  onBack,
+  onPageBack,
+}: {
+  title: string;
+  onBack: () => void;
+  // Some sections (e.g. Tutoring) can be reached from outside Profile &
+  // Settings entirely (Marketplace's "Apply to tutor" button) — for those,
+  // also offer a plain "Back" that returns to wherever the user came from,
+  // instead of only the "Profile & Settings" link back to the section list.
+  onPageBack?: () => void;
+}) {
   return (
     <div>
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl pr-3 text-sm font-bold text-primary-700 transition hover:text-primary-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Profile &amp; Settings
-      </button>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        {onPageBack && (
+          <button
+            type="button"
+            onClick={onPageBack}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl pr-3 text-sm font-bold text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl pr-3 text-sm font-bold text-primary-700 transition hover:text-primary-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Profile &amp; Settings
+        </button>
+      </div>
       <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h1>
     </div>
   );
@@ -191,6 +216,7 @@ function MyBookingsSection() {
 }
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const activeSection = isSettingsSection(requestedSection) ? requestedSection : null;
@@ -205,7 +231,7 @@ export default function Profile() {
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
   const [suggestionMessage, setSuggestionMessage] = useState("");
-  const showSkeleton = useMinimumLoading(isLoading || statsLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading || statsLoading, 600);
 
   const {
     register,
@@ -306,7 +332,7 @@ export default function Profile() {
 
   if (showSkeleton) return <ProfileSkeleton />;
   if (isLoading || !profile) {
-    return <div className="mx-auto max-w-6xl px-[18px] py-[22px] text-sm text-slate-500">Loading profile…</div>;
+    return <div className="page-container page-container-standard text-body-sm text-content-muted">Loading profile…</div>;
   }
 
   function openSection(section: SettingsSection) {
@@ -358,7 +384,7 @@ export default function Profile() {
               />
               {errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}
               {isEditing && (
-                <span className="text-[11px] text-slate-400">
+                <span className="text-caption text-content-muted">
                   Changing this sends a new verification link to the new address.
                 </span>
               )}
@@ -368,7 +394,7 @@ export default function Profile() {
             <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Phone number<span className="text-red-500"> *</span></span>
             <input type="tel" disabled={!isEditing} placeholder="+60 12-345 6789" className={INPUT_CLASS} aria-invalid={Boolean(errors.phone)} {...register("phone")} />
             {errors.phone && <span className="text-xs text-red-600">{errors.phone.message}</span>}
-            <span className="text-[11px] text-slate-400">Used to auto-fill contact details on forms like reports.</span>
+            <span className="text-caption text-content-muted">Used to auto-fill contact details on forms like reports.</span>
           </label>
 
           {profile?.role !== "ADMIN" && (
@@ -612,15 +638,19 @@ export default function Profile() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
+    <div className="page-container page-container-standard">
       {activeSection ? (
         <>
-          <DetailHeader title={SECTION_TITLES[activeSection]} onBack={() => setSearchParams({})} />
+          <DetailHeader
+            title={SECTION_TITLES[activeSection]}
+            onBack={() => setSearchParams({})}
+            onPageBack={activeSection === "tutor" ? () => navigate(-1) : undefined}
+          />
           {renderDetail()}
         </>
       ) : (
         <>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Profile &amp; Settings</h1>
+          <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Profile &amp; Settings</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your account, security and support in one place.</p>
 
           <section
@@ -656,7 +686,7 @@ export default function Profile() {
               ].map(({ label, value }, index) => (
                 <div key={label} className={"flex min-w-0 flex-col items-center gap-1 px-2 py-3 " + (index > 0 ? "border-l border-white/10 " : "") + (index >= 3 ? "border-t border-white/10 sm:border-t-0" : "")}>
                   <span className="text-lg font-extrabold leading-none">{value}</span>
-                  <span className="max-w-full truncate text-[10px] font-bold uppercase tracking-wide text-[#B9B4E4]">{label}</span>
+                  <span className="max-w-full truncate text-caption font-heading uppercase tracking-wide text-[#B9B4E4]">{label}</span>
                 </div>
               ))}
             </div>

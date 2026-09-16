@@ -68,12 +68,12 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
     // `position: sticky`) is what keeps this row fixed while `main`
     // scrolls beneath it, matching the reference's `position: relative`
     // header inside a fixed grid row.
-    <header className="relative z-30 flex shrink-0 items-center gap-3 border-b border-[#E7E6F3] bg-white px-[18px] py-3 transition-colors motion-safe:duration-200 dark:border-[#2E2A54] dark:bg-[#1B1836]">
+    <header className="relative z-30 flex min-w-0 shrink-0 items-center gap-grid-3 border-b border-border bg-surface-card px-gutter-mobile py-grid-3 transition-colors motion-safe:duration-standard sm:px-gutter-tablet lg:px-gutter-desktop">
       <button
         type="button"
         onClick={onMenuClick}
         aria-label="Toggle menu"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#ECEBF7] text-slate-500 transition motion-safe:duration-150 hover:scale-105 hover:bg-slate-50 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:scale-95 dark:border-[#332C63] dark:text-slate-300 dark:hover:bg-[#231E4A] dark:hover:text-white"
+        className="nav-item flex h-10 w-10 shrink-0 items-center justify-center border border-border focus-visible:outline-none"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -111,11 +111,8 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
               </span>
               <span className="hidden min-w-0 flex-col items-start leading-tight sm:flex">
                 <span className="max-w-[9rem] truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{displayName}</span>
-                {/* No programme/university field exists on the user record
-                    yet — an honest placeholder instead of inventing one.
-                    Admin accounts aren't students, so skip it for them. */}
                 <span className="max-w-[9rem] truncate text-xs text-slate-500 dark:text-slate-400">
-                  {isAdmin ? "Administrator" : "Programme not set"}
+                  {isAdmin ? "Administrator" : profile?.fieldOfStudy || "Programme not set"}
                 </span>
               </span>
               <ChevronDown
@@ -127,7 +124,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
             {isProfileOpen && (
               <div
                 role="menu"
-                className={`absolute right-0 z-50 mt-2 w-60 origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg transition motion-safe:duration-150 dark:border-[#332C63] dark:bg-[#231E4A] ${
+                className={`menu-surface absolute right-0 z-50 mt-2 w-60 origin-top-right p-1.5 transition motion-safe:duration-fast ${
                   isMenuEntered ? "opacity-100 translate-y-0 scale-100" : "opacity-0 -translate-y-1 scale-95"
                 }`}
               >
@@ -142,7 +139,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                     to={to}
                     role="menuitem"
                     onClick={() => setProfileOpen(false)}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-600 transition motion-safe:duration-150 hover:bg-primary-50 hover:text-primary-700 dark:text-slate-300 dark:hover:bg-[#2A2455] dark:hover:text-primary-300"
+                    className="menu-item flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-content-secondary"
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
                     {label}
@@ -156,7 +153,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                     setProfileOpen(false);
                     logout.mutate();
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition motion-safe:duration-150 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:hover:bg-red-500/10"
+                  className="menu-item flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 focus-visible:outline-none dark:hover:bg-red-500/10"
                 >
                   <LogOut className="h-4 w-4" aria-hidden="true" />
                   Log out

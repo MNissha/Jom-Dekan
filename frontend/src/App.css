@@ -4,12 +4,123 @@
 
 :root {
   color-scheme: light;
+  /* Brand colours: preserve the established indigo, purple, gold and teal. */
+  --brand-primary: 71 64 201;
+  --brand-primary-hover: 58 52 163;
+  --brand-primary-soft: 238 241 255;
+  --brand-secondary: 35 28 87;
+  --brand-accent: 245 194 26;
+  --brand-teal: 13 148 136;
+
+  /* Surfaces and content: semantic roles switch as one unit in dark mode. */
+  --surface-page: 246 246 251;
+  --surface-card: 255 255 255;
+  --surface-raised: 255 255 255;
+  --surface-muted: 251 251 254;
+  --surface-selected: 238 241 255;
+  --surface-inverse: 35 28 87;
+  --border-subtle: 244 243 251;
+  --border-default: 231 230 243;
+  --border-strong: 221 217 241;
+  --border-emphasis: 196 202 255;
+  --border-focus: 71 64 201;
+  --text-primary: 30 41 59;
+  --text-secondary: 71 85 105;
+  --text-muted: 100 116 139;
+  --text-inverse: 255 255 255;
+
+  /* Feedback colours are foreground values; use alpha for soft surfaces. */
+  --success: 22 163 74;
+  --warning: 217 119 6;
+  --danger: 220 38 38;
+  --info: 37 99 235;
+
+  /* Layout dimensions follow a 4px grid. */
+  --page-gutter-mobile: 1rem;
+  --page-gutter-tablet: 1.5rem;
+  --page-gutter-desktop: 2rem;
+  --container-reading: 48rem;
+  --container-standard: 72rem;
+  --container-wide: 80rem;
+  --container-dashboard: 90rem;
+  --control-height-sm: 2.25rem;
+  --control-height: 2.75rem;
+  --control-height-lg: 3rem;
+  --touch-target-min: 2.75rem;
+
+  /* Shape and elevation preserve the rounded university-card language. */
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-feature: 1.25rem;
+  --shadow-card: 0 1px 2px rgb(30 27 75 / 0.04), 0 8px 24px rgb(30 27 75 / 0.04);
+  --shadow-raised: 0 8px 24px rgb(30 27 75 / 0.10);
+  --shadow-popover: 0 12px 32px rgb(30 27 75 / 0.16);
+  --shadow-modal: 0 24px 64px rgb(15 23 42 / 0.24);
+  --shadow-focus: 0 0 0 3px rgb(var(--brand-primary) / 0.22);
+
+  /* Motion uses one premium easing curve and named duration tiers. */
+  --motion-fast: 160ms;
+  --motion-standard: 200ms;
+  --motion-panel: 240ms;
+  --motion-content: 320ms;
+  --motion-promo: 500ms;
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  color-scheme: dark;
+  /* Dark values preserve role and contrast rather than literal hue parity. */
+  --brand-primary: 160 166 251;
+  --brand-primary-hover: 196 202 255;
+  --brand-primary-soft: 42 36 85;
+  --brand-secondary: 237 233 254;
+  --brand-accent: 251 191 36;
+  --brand-teal: 45 212 191;
+  --surface-page: 21 19 43;
+  --surface-card: 27 24 54;
+  --surface-raised: 35 30 74;
+  --surface-muted: 31 27 64;
+  --surface-selected: 42 36 85;
+  --surface-inverse: 248 250 252;
+  --border-subtle: 39 35 73;
+  --border-default: 46 42 84;
+  --border-strong: 59 53 100;
+  --border-emphasis: 82 75 139;
+  --border-focus: 160 166 251;
+  --text-primary: 248 250 252;
+  --text-secondary: 203 213 225;
+  --text-muted: 148 163 184;
+  --text-inverse: 30 27 75;
+  --success: 74 222 128;
+  --warning: 251 191 36;
+  --danger: 248 113 113;
+  --info: 96 165 250;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.18), 0 8px 24px rgb(0 0 0 / 0.16);
+  --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.28);
+  --shadow-popover: 0 12px 32px rgb(0 0 0 / 0.36);
+  --shadow-modal: 0 24px 64px rgb(0 0 0 / 0.48);
+  --shadow-focus: 0 0 0 3px rgb(var(--brand-primary) / 0.3);
 }
 
 html,
 body,
 #root {
   height: 100%;
+  min-width: 0;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
 }
 
 /* Tailwind emits `.h-dvh` before `.h-screen` in its generated stylesheet,
@@ -33,6 +144,285 @@ body,
    left stuck on. */
 body.agent-panel-mobile-open main {
   overflow: hidden !important;
+}
+
+body {
+  background: rgb(var(--surface-page));
+  color: rgb(var(--text-primary));
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(var(--brand-primary) / 0.2);
+}
+
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--border-focus));
+  outline-offset: 2px;
+}
+
+/* A low-specificity baseline keeps legacy and feature-local controls in the
+   same motion language while allowing Tailwind utilities to override it. */
+:where(button, a[href], [role="button"], input, textarea, select, summary) {
+  transition-duration: var(--motion-standard);
+  transition-timing-function: var(--ease-premium);
+}
+
+:where(button, [role="button"]):not(:disabled) {
+  touch-action: manipulation;
+}
+
+/* Native control floor. Explicit component sizing can grow these targets but
+   never shrink interactive buttons below 40px. */
+:where(button) {
+  min-height: 2.5rem;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select) {
+  min-height: var(--control-height);
+}
+
+/* Shared password fields provide their own accessible visibility toggle. */
+.password-field-input::-ms-reveal,
+.password-field-input::-ms-clear {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(button, a[href], [role="button"]):not(:disabled):active {
+    scale: 0.98;
+  }
+}
+
+:where(button, input, textarea, select):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none !important;
+  scale: none !important;
+}
+
+.page-stage {
+  animation: content-enter var(--motion-content) var(--ease-premium) both;
+}
+
+.interactive-control {
+  transition: color var(--motion-standard), background-color var(--motion-standard),
+    border-color var(--motion-standard), box-shadow var(--motion-standard),
+    transform var(--motion-fast);
+}
+
+.interactive-control:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.surface-card {
+  border: 1px solid rgb(var(--border-default));
+  background: rgb(var(--surface-card));
+  color: rgb(var(--text-primary));
+  box-shadow: var(--shadow-card);
+}
+
+@layer components {
+  /* Shared page shells: one gutter contract with explicit content-width modes. */
+  .page-container {
+    width: 100%;
+    min-width: 0;
+    margin-inline: auto;
+    padding: 1.5rem var(--page-gutter-mobile);
+    overflow-x: clip;
+  }
+
+  @media (min-width: 640px) {
+    .page-container { padding-inline: var(--page-gutter-tablet); }
+  }
+
+  @media (min-width: 1024px) {
+    .page-container { padding-inline: var(--page-gutter-desktop); }
+  }
+
+  @media (min-width: 1280px) {
+    .page-container { padding-inline: var(--page-gutter-desktop); }
+  }
+
+  .page-container-reading { max-width: var(--container-reading); }
+  .page-container-standard { max-width: var(--container-standard); }
+  .page-container-wide { max-width: var(--container-wide); }
+  .page-container-dashboard { max-width: var(--container-dashboard); }
+  .page-container-full { max-width: none; }
+
+  /* Card taxonomy: static surfaces never move; interactive surfaces use
+     border/elevation feedback and a shared keyboard focus treatment. */
+  .card-base {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    border: 1px solid rgb(var(--border-default));
+    border-radius: var(--radius-card);
+    background: rgb(var(--surface-card));
+    color: rgb(var(--text-primary));
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-static { padding: 1rem; }
+  .card-interactive {
+    padding: 1rem;
+    transition: border-color var(--motion-standard) var(--ease-premium),
+      background-color var(--motion-standard) var(--ease-premium),
+      box-shadow var(--motion-standard) var(--ease-premium);
+  }
+  .card-interactive:hover {
+    border-color: rgb(var(--border-emphasis));
+    box-shadow: var(--shadow-raised);
+  }
+  .card-interactive:focus-visible,
+  .card-interactive:focus-within {
+    outline: 2px solid rgb(var(--border-focus));
+    outline-offset: 2px;
+  }
+  .card-stat, .card-admin-summary { padding: 1.125rem; }
+  .card-resource, .card-forum-post, .card-tutor, .card-opportunity { padding: 1.125rem; }
+  .card-comment, .card-booking, .card-conversation { padding: 1rem; }
+  .card-conversation {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .card-conversation:hover { box-shadow: none; }
+  .admin-table-container { padding: 0; overflow: hidden; }
+
+  /* Dense administrative rows use colour and borders, never movement or
+     staggered row animation, so long tables remain stable and fast. */
+  .admin-table-container tbody tr {
+    transition: background-color var(--motion-fast) var(--ease-premium),
+      box-shadow var(--motion-fast) var(--ease-premium);
+    transform: none !important;
+    animation: none !important;
+  }
+  .admin-table-container tbody tr:hover {
+    background: rgb(var(--surface-muted));
+    box-shadow: inset 3px 0 0 rgb(var(--brand-primary));
+  }
+
+  /* Navigation and overlays share state feedback without prescribing layout. */
+  .nav-item {
+    border-radius: var(--radius-control);
+    color: rgb(var(--text-secondary));
+    transition: color var(--motion-fast) var(--ease-premium),
+      background-color var(--motion-fast) var(--ease-premium),
+      border-color var(--motion-fast) var(--ease-premium);
+  }
+  .nav-item:hover { background: rgb(var(--surface-muted)); color: rgb(var(--text-primary)); }
+  .nav-item[aria-current="page"], .nav-item[aria-selected="true"], .nav-item[aria-pressed="true"] {
+    background: rgb(var(--brand-primary-soft));
+    color: rgb(var(--brand-primary));
+  }
+  .nav-item:focus-visible, .menu-item:focus-visible, .filter-chip:focus-visible {
+    outline: 2px solid rgb(var(--border-focus));
+    outline-offset: 2px;
+  }
+  .nav-item:disabled, .menu-item:disabled, .filter-chip:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .menu-surface {
+    max-width: calc(100vw - 1.5rem);
+    max-height: min(32rem, calc(100dvh - 5rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid rgb(var(--border-default));
+    border-radius: var(--radius-card);
+    background: rgb(var(--surface-raised));
+    color: rgb(var(--text-primary));
+    box-shadow: var(--shadow-popover);
+  }
+  .menu-item {
+    border-radius: var(--radius-control);
+    transition: color var(--motion-fast) var(--ease-premium), background-color var(--motion-fast) var(--ease-premium);
+  }
+  .menu-item:hover, .menu-item[aria-selected="true"] { background: rgb(var(--surface-muted)); color: rgb(var(--brand-primary)); }
+  .filter-chip {
+    min-height: 2.5rem;
+    border: 1px solid rgb(var(--border-default));
+    border-radius: 9999px;
+    background: rgb(var(--surface-card));
+    color: rgb(var(--text-secondary));
+    transition: color var(--motion-fast) var(--ease-premium), background-color var(--motion-fast) var(--ease-premium), border-color var(--motion-fast) var(--ease-premium);
+  }
+  .filter-chip:hover { border-color: rgb(var(--border-emphasis)); background: rgb(var(--surface-muted)); }
+  .filter-chip[aria-pressed="true"], .filter-chip[aria-selected="true"] {
+    border-color: rgb(var(--brand-primary));
+    background: rgb(var(--brand-primary));
+    color: white;
+  }
+  .overlay-root {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: rgb(15 23 42 / 0.6);
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+  .overlay-backdrop { position: absolute; inset: 0; backdrop-filter: blur(2px); }
+  .dialog-surface {
+    position: relative;
+    display: flex;
+    width: 100%;
+    max-height: calc(100dvh - 2rem);
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgb(var(--border-default));
+    border-radius: var(--radius-feature);
+    background: rgb(var(--surface-raised));
+    color: rgb(var(--text-primary));
+    box-shadow: var(--shadow-modal);
+    animation: modalRise var(--motion-standard) var(--ease-premium) both;
+  }
+  .dialog-header, .dialog-footer { flex: none; }
+  .dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+  .dialog-footer { border-top: 1px solid rgb(var(--border-default)); background: rgb(var(--surface-raised)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dialog-surface { animation: none; }
+  }
+
+  @media (min-width: 640px) {
+    .card-static, .card-interactive { padding: 1.5rem; }
+    .card-stat, .card-admin-summary, .card-resource, .card-forum-post,
+    .card-comment, .card-tutor, .card-opportunity, .card-conversation,
+    .card-booking { padding: 1.25rem; }
+    .card-conversation { padding: 0.75rem; }
+    .admin-table-container { padding: 0; }
+  }
+}
+
+@layer utilities {
+  /* Opt-in long-content guard for shared cards and composed sections. */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+}
+
+/* Map legacy public-page neutrals to the semantic dark palette while
+   retaining deliberate promotional and category colours. */
+.dark .public-shell .bg-white { background-color: rgb(var(--surface-card)); }
+.dark .public-shell .bg-slate-50 { background-color: rgb(var(--surface-muted)); }
+.dark .public-shell .text-slate-900,
+.dark .public-shell .text-slate-800,
+.dark .public-shell .text-slate-700 { color: rgb(var(--text-primary)); }
+.dark .public-shell .text-slate-600,
+.dark .public-shell .text-slate-500,
+.dark .public-shell .text-slate-400 { color: rgb(var(--text-muted)); }
+.dark .public-shell .border-slate-100,
+.dark .public-shell .border-slate-200,
+.dark .public-shell .border-slate-300 { border-color: rgb(var(--border-default)); }
+
+@keyframes content-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Used via Tailwind's arbitrary `animate-[fadeIn_150ms_ease-out]` for
@@ -81,5 +471,36 @@ body.agent-panel-mobile-open main {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+  .page-stage { animation: none !important; }
+  :where(*, *::before, *::after) {
+    translate: none !important;
+    rotate: none !important;
+    scale: none !important;
+  }
+  :where(*:hover, *:active, .group:hover *) {
+    transform: none !important;
+  }
+}
+
+/* Touch browsers can retain :hover after a tap. Keep semantic colour and
+   border feedback, but remove movement that would otherwise appear stuck. */
+@media (hover: none) {
+  :where(*:hover, *:active, .group:hover *) {
+    transform: none !important;
+    translate: none !important;
+    rotate: none !important;
+    scale: none !important;
   }
 }

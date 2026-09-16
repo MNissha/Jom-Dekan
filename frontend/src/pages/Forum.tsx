@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { MessageSquare, Search, Plus, ChevronUp, ChevronDown, X, CheckCircle2, Circle } from "lucide-react";
+import { MessageSquare, Search, Plus, Heart, X, CheckCircle2, Circle } from "lucide-react";
 import { usePosts, useCreatePost, useCastVote, useRemoveVote, useSetPostSolved } from "../hooks/useForum";
 import { useCurrentUser } from "../hooks/useAuth";
 import { EmptyState } from "../components/common/EmptyState";
@@ -10,6 +10,7 @@ import { ForumPostSkeleton } from "../components/forum/ForumPostSkeleton";
 import { UserLink } from "../components/common/UserLink";
 import type { ForumPostListItem } from "../types/forum";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
+import { cardClassName } from "../components/common/cards";
 
 const PAGE_SIZE = 12;
 const EMPTY_POSTS: ForumPostListItem[] = [];
@@ -59,8 +60,8 @@ function ForumVoteBox({
   const displayScore = optimistic?.voteScore ?? voteScore;
   const displayMyVote = optimistic?.myVote ?? myVote;
 
-  const handleVote = (value: 1 | -1) => {
-    const nextMyVote = displayMyVote === value ? 0 : value;
+  const handleLike = () => {
+    const nextMyVote = displayMyVote === 1 ? 0 : 1;
     setOptimistic({
       voteScore: Math.max(0, displayScore + (nextMyVote === 1 ? 1 : 0) - (displayMyVote === 1 ? 1 : 0)),
       myVote: nextMyVote,
@@ -70,44 +71,34 @@ function ForumVoteBox({
       removeVote.mutate({ targetType: "forum_post", targetId }, { onError: () => setOptimistic(null) });
     } else {
       castVote.mutate(
-        { targetType: "forum_post", targetId, value },
+        { targetType: "forum_post", targetId, value: 1 },
         { onError: () => setOptimistic(null) },
       );
     }
   };
 
   return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="group/vote flex w-[72px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border border-[#ECEBF7] bg-[#FAFAFD] py-2 transition motion-safe:duration-150 hover:border-primary-200"
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleLike();
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      disabled={isPending}
+      aria-label={displayMyVote === 1 ? "Remove like" : "Like this discussion"}
+      aria-pressed={displayMyVote === 1}
+      className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-caption font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+        displayMyVote === 1
+          ? "border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-400/30 dark:bg-rose-950/30 dark:text-rose-300"
+          : "border-border bg-surface-card text-content-muted hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-400/30 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
+      }`}
     >
-      <button
-        type="button"
-        onClick={() => handleVote(1)}
-        disabled={isPending}
-        aria-label="Upvote"
-        className={`flex h-5 w-5 items-center justify-center rounded opacity-0 transition motion-safe:duration-150 hover:bg-primary-50 focus-visible:opacity-100 focus-visible:outline-none group-hover/vote:opacity-100 ${
-          displayMyVote === 1 ? "text-primary-600 opacity-100" : "text-slate-400"
-        }`}
-      >
-        <ChevronUp className="h-4 w-4" aria-hidden="true" />
-      </button>
-      <span className={`text-xl font-extrabold leading-none ${displayScore > 0 ? "text-primary-700" : "text-slate-800"}`}>
-        {displayScore}
-      </span>
-      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Likes</span>
-      <button
-        type="button"
-        onClick={() => handleVote(-1)}
-        disabled={isPending}
-        aria-label="Downvote"
-        className={`flex h-5 w-5 items-center justify-center rounded opacity-0 transition motion-safe:duration-150 hover:bg-red-50 focus-visible:opacity-100 focus-visible:outline-none group-hover/vote:opacity-100 ${
-          displayMyVote === -1 ? "text-red-600 opacity-100" : "text-slate-400"
-        }`}
-      >
-        <ChevronDown className="h-4 w-4" aria-hidden="true" />
-      </button>
-    </div>
+      <Heart className={`h-4 w-4 ${displayMyVote === 1 ? "fill-current" : ""}`} aria-hidden="true" />
+      <span>{displayScore}</span>
+      <span className="sr-only">likes</span>
+    </button>
   );
 }
 
@@ -208,7 +199,7 @@ export default function Forum() {
     unanswered: activeTab === "unanswered" ? true : undefined,
     solved: activeTab === "solved" ? true : undefined,
   });
-  const showSkeleton = useMinimumLoading(isLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading, 600);
   const createPost = useCreatePost();
   const allPosts = data?.data ?? EMPTY_POSTS;
   const total = data?.meta.total ?? 0;
@@ -240,22 +231,17 @@ export default function Forum() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Discussions</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Ask questions, share discussion, and help each other out.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 font-medium text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New post
-        </button>
+    <div className="page-container page-container-standard">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-content-primary">Discussions</h1>
+            <p className="mt-1 max-w-2xl text-sm text-content-secondary">
+              Ask questions, share ideas, and help other students.
+            </p>
+          </div>
+          <button type="button" onClick={() => setIsCreating(true)} className="inline-flex min-h-control items-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-bold text-white transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2">
+            <Plus className="h-4 w-4" aria-hidden="true" />New post
+          </button>
       </div>
 
       {/* New-post modal — same gradient-header treatment as the
@@ -342,9 +328,8 @@ export default function Forum() {
             key={key}
             type="button"
             onClick={() => changeTab(key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-bold transition motion-safe:duration-150 ${
-              activeTab === key ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
+            aria-pressed={activeTab === key}
+            className="filter-chip px-4 text-sm font-bold"
           >
             {label}
           </button>
@@ -391,9 +376,8 @@ export default function Forum() {
               key={post.id}
               to={`/forum/${post.id}`}
               style={{ animationDelay: `${i * 40}ms` }}
-              className="group flex items-center gap-4 rounded-2xl border border-[#ECEBF7] bg-white p-5 shadow-sm transition motion-safe:duration-150 motion-safe:animate-[fadeIn_300ms_ease-out_both] hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
+              className={cardClassName("forum-post", "group flex items-start gap-4 text-left motion-safe:animate-[fadeIn_300ms_ease-out_both]")}
             >
-              <ForumVoteBox targetId={post.id} voteScore={post.voteScore} myVote={post.myVote} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <SolvedBadge
@@ -407,31 +391,46 @@ export default function Forum() {
                     </span>
                   )}
                 </div>
-                <h2 className="mt-2 truncate text-[16.5px] font-bold text-slate-900 transition motion-safe:duration-150 group-hover:text-primary-700">
+                <h2 className="mt-grid-2 break-words text-subsection-title text-content-primary transition motion-safe:duration-fast group-hover:text-brand-primary">
                   {post.title}
                 </h2>
-                <p className="mt-1 text-xs font-semibold text-slate-400">
+                <p className="mt-grid-1 line-clamp-2 max-w-3xl break-words text-body-sm leading-relaxed text-content-secondary">{post.body}</p>
+                <div className="mt-grid-3 flex flex-wrap items-center gap-grid-3">
+                  <ForumVoteBox targetId={post.id} voteScore={post.voteScore} myVote={post.myVote} />
+                  <p className="text-caption font-semibold text-content-muted">
                   <UserLink userId={post.authorId} name={post.authorName} className="font-semibold text-slate-500 hover:text-primary-700 hover:underline" />
                   {" · "}
                   {new Date(post.createdAt).toLocaleDateString()} · {post.commentCount}{" "}
                   {post.commentCount === 1 ? "reply" : "replies"}
-                </p>
+                  </p>
+                </div>
               </div>
-              <FavoriteButton targetType="forum_post" targetId={post.id} />
-              <ReportButton targetType="forum_post" targetId={post.id} />
-              <span className="hidden shrink-0 rounded-xl border border-[#E4E3F2] px-5 py-2.5 text-sm font-bold text-slate-700 transition motion-safe:duration-150 group-hover:border-primary-300 group-hover:bg-primary-50 group-hover:text-primary-700 sm:inline-flex">
-                Open thread
-              </span>
+              <div className="flex shrink-0 items-center gap-grid-1">
+                <FavoriteButton targetType="forum_post" targetId={post.id} />
+                <ReportButton targetType="forum_post" targetId={post.id} />
+              </div>
             </Link>
           ))
         ) : (
           <EmptyState
             icon={MessageSquare}
-            title={search || activeTab !== "all" ? "No matching posts" : "No posts yet"}
+            title={
+              search
+                ? "No matching posts"
+                : activeTab === "mine"
+                  ? "You haven't posted any threads yet"
+                  : activeTab !== "all"
+                    ? "No matching posts"
+                    : "No posts yet"
+            }
             description={
-              search || activeTab !== "all"
+              search
                 ? "Try a different search or switch tabs."
-                : "Be the first to start a discussion in this forum."
+                : activeTab === "mine"
+                  ? "Start a discussion and it'll show up here."
+                  : activeTab !== "all"
+                    ? "Try a different search or switch tabs."
+                    : "Be the first to start a discussion in this forum."
             }
           />
         )}

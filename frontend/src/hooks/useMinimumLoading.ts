@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
  * component mounts. If the request takes longer, the skeleton remains until
  * the request finishes.
  */
-export function useMinimumLoading(isLoading: boolean, minimumMs = 2000) {
+export function useMinimumLoading(isLoading: boolean, minimumMs = 600) {
   const [minimumElapsed, setMinimumElapsed] = useState(false);
 
   useEffect(() => {

@@ -22,8 +22,8 @@ function summarize(req: TaxonomyRequest): string {
       req.requestedUniversityName && `University: "${req.requestedUniversityName}"`,
       req.requestedFacultyName && `Faculty: "${req.requestedFacultyName}"`,
       req.requestedProgrammeName && `Programme: "${req.requestedProgrammeName}"`,
-      req.requestedSubjectCode &&
-        `Subject: "${req.requestedSubjectCode} - ${req.requestedSubjectName}"`,
+      req.requestedSubjectName &&
+        `Subject: "${req.requestedSubjectCode ? `${req.requestedSubjectCode} - ` : ""}${req.requestedSubjectName}"`,
     ]
       .filter(Boolean)
       .join(", ") || "No details provided."
@@ -69,7 +69,7 @@ export default function AdminTaxonomyRequests({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">
         Taxonomy requests
       </h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -85,7 +85,7 @@ export default function AdminTaxonomyRequests({
         />
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="card-base admin-table-container mt-6 overflow-x-auto">
         {isLoading ? (
           <p className="p-4 text-sm text-slate-500">Loading…</p>
         ) : isError ? (

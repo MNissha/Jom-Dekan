@@ -12,6 +12,7 @@ export interface TaxonomyRequestRow {
   requested_programme_name: string | null;
   requested_subject_code: string | null;
   requested_subject_name: string | null;
+  subject_id: string | null;
   note: string | null;
   reviewed_by: string | null;
   reviewed_at: Date | null;
@@ -33,14 +34,15 @@ export const taxonomyRequestModel = {
     requestedProgrammeName?: string | null;
     requestedSubjectCode?: string | null;
     requestedSubjectName?: string | null;
+    subjectId?: string | null;
     note?: string | null;
   }): Promise<TaxonomyRequestRow> {
     const result = await pool.query<TaxonomyRequestRow>(
       `INSERT INTO taxonomy_requests
          (requested_by, university_id, requested_university_name, faculty_id,
           requested_faculty_name, programme_id, requested_programme_name,
-          requested_subject_code, requested_subject_name, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          requested_subject_code, requested_subject_name, subject_id, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         params.requestedBy,
@@ -52,6 +54,7 @@ export const taxonomyRequestModel = {
         params.requestedProgrammeName ?? null,
         params.requestedSubjectCode ?? null,
         params.requestedSubjectName ?? null,
+        params.subjectId ?? null,
         params.note ?? null,
       ],
     );
@@ -130,6 +133,7 @@ export function toApiTaxonomyRequest(row: TaxonomyRequestRow) {
     requestedProgrammeName: row.requested_programme_name,
     requestedSubjectCode: row.requested_subject_code,
     requestedSubjectName: row.requested_subject_name,
+    subjectId: row.subject_id,
     note: row.note,
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,

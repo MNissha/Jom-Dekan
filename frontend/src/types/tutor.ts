@@ -8,6 +8,9 @@ export interface TutorApplication {
   subjects: string[];
   experience: string;
   hourlyRate: number | null;
+  openToOtherUniversities: boolean;
+  resumeFilename: string | null;
+  portfolioUrl: string | null;
   status: TutorApplicationStatus;
   rejectionReason: string | null;
   createdAt: string;
@@ -23,6 +26,9 @@ export interface TutorProfile {
   subjects: string[];
   hourlyRate: number | null;
   experience: string | null;
+  openToOtherUniversities: boolean;
+  resumeFilename: string | null;
+  portfolioUrl: string | null;
   isActive: boolean;
   verifiedAt: string;
   googleCalendarConnected: boolean;
@@ -50,6 +56,7 @@ export interface TutorBooking {
   durationMinutes: number;
   message: string | null;
   status: TutorBookingStatus;
+  rescheduleProposedBy: string | null;
   googleCalendarEventId: string | null;
   createdAt: string;
 }

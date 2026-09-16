@@ -18,6 +18,17 @@ export const createUniversitySchema = z
   })
   .strict();
 export const updateUniversitySchema = createUniversitySchema;
+// Any authenticated user — looser than createUniversitySchema (no
+// country field, since this is filled in on the fly, not an admin form).
+export const findOrCreateUniversitySchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Name must be at least 2 characters.")
+      .max(200),
+  })
+  .strict();
 
 // ---- Faculties ----
 export const createFacultySchema = z
@@ -74,13 +85,21 @@ export const createSubjectSchema = z
       .trim()
       .min(2, "Name must be at least 2 characters.")
       .max(200),
+    // Optional so the existing catalogue-wide admin create form keeps
+    // working unchanged; when given, the subject is scoped to that
+    // university and duplicate-checked against it instead of globally.
+    universityId: z.string().uuid("universityId must be a valid id.").optional(),
   })
   .strict();
 export const updateSubjectSchema = z
   .object({ name: z.string().trim().min(2).max(200) })
   .strict();
 export const listSubjectsQuerySchema = z
-  .object({ programmeId: z.string().uuid("programmeId must be a valid id.").optional() })
+  .object({
+    programmeId: z.string().uuid("programmeId must be a valid id.").optional(),
+    universityId: z.string().uuid("universityId must be a valid id.").optional(),
+    search: z.string().trim().min(1).max(100).optional(),
+  })
   .strict();
 
 // Deliberately looser than createSubjectSchema (no .toUpperCase() here —
@@ -103,6 +122,33 @@ export const findOrCreateSubjectSchema = z
     // since this call ends up creating the same programme_subjects row.
     curriculumYear: z.coerce.number().int().min(2000).max(2100).optional(),
     recommendedSemester: z.coerce.number().int().min(1).max(10).optional(),
+    // Optional — when the caller has a university in hand (e.g. the
+    // resource being uploaded already has one), the subject is scoped
+    // and duplicate-checked against it instead of staying catalogue-wide.
+    universityId: z.string().uuid("universityId must be a valid id.").optional(),
+  })
+  .strict();
+
+// Same relaxed shape as findOrCreateSubjectSchema (no programme to attach
+// to here — used by contexts like the tutor application form that never
+// collect a programme/semester). universityId is required and genuinely
+// scopes/persists the subject (see migration 041) — unlike
+// findOrCreateSubjectSchema, code is optional here since this is the
+// primary "University *, Subject Code, Subject Name *" tutor flow.
+export const findOrCreateSubjectStandaloneSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(2, "Code must be at least 2 characters.")
+      .max(20)
+      .optional(),
+    name: z
+      .string()
+      .trim()
+      .min(2, "Name must be at least 2 characters.")
+      .max(200),
+    universityId: z.string().uuid("universityId must be a valid id."),
   })
   .strict();
 

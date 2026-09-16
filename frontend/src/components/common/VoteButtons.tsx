@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { Heart, ThumbsDown } from "lucide-react";
 import { useCastVote, useRemoveVote } from "../../hooks/useForum";
 import type { VoteTargetType } from "../../types/forum";
 
@@ -73,14 +73,15 @@ export function VoteButtons({
         type="button"
         onClick={() => handleVote(1)}
         disabled={isPending}
-        aria-label="Upvote"
-        className={`rounded p-1 hover:bg-slate-100 disabled:opacity-60 ${
-          displayMyVote === 1 ? "text-primary-600" : "text-slate-400"
+        aria-label={displayMyVote === 1 ? "Remove like" : "Like"}
+        aria-pressed={displayMyVote === 1}
+        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+          displayMyVote === 1 ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300" : "text-content-muted hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
         }`}
       >
-        <ThumbsUp className="h-4 w-4" aria-hidden="true" />
+        <Heart className={`h-4 w-4 ${displayMyVote === 1 ? "fill-current" : ""}`} aria-hidden="true" />
       </button>
-      <span className="min-w-[1.5rem] text-center text-sm font-medium text-slate-700">
+      <span className="min-w-5 text-center text-sm font-semibold text-content-secondary">
         {displayScore}
       </span>
       <button
@@ -89,8 +90,8 @@ export function VoteButtons({
         disabled={isPending}
         aria-label={targetType === "forum_comment" ? "Hide this comment" : "Dislike"}
         title={targetType === "forum_comment" ? "Hide this comment from your view" : "Dislike"}
-        className={`rounded p-1 hover:bg-slate-100 disabled:opacity-60 ${
-          displayMyVote === -1 ? "text-red-600" : "text-slate-400"
+        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+          displayMyVote === -1 ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-300" : "text-content-muted hover:bg-surface-muted"
         }`}
       >
         <ThumbsDown className="h-4 w-4" aria-hidden="true" />

@@ -3,6 +3,7 @@ import { useResources } from "../../hooks/useResources";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { fileTypeBadge } from "../../utils/fileTypeBadge";
 import { RESOURCE_CATEGORY_LABELS } from "../../types/resource";
+import { cardClassName, SkeletonBlock } from "../common/cards";
 
 // Matches the exact row shape rendered below (icon badge + two text
 // lines in a bordered row) — the shared ResourceCardSkeleton is for the
@@ -11,11 +12,11 @@ import { RESOURCE_CATEGORY_LABELS } from "../../types/resource";
 // on reveal.
 function RecommendedResourceRowSkeleton() {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-[#ECEBF7] p-3 motion-safe:animate-pulse" aria-hidden="true">
-      <div className="h-9 w-9 shrink-0 rounded-lg bg-slate-200" />
+    <div className={cardClassName("static", "flex items-start gap-3 p-grid-3")} aria-hidden="true">
+      <SkeletonBlock className="h-9 w-9 shrink-0 rounded-lg" />
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="h-3.5 w-3/4 rounded bg-slate-200" />
-        <div className="h-3 w-1/3 rounded bg-slate-100" />
+        <SkeletonBlock className="h-3.5 w-3/4" />
+        <SkeletonBlock className="h-3 w-1/3" />
       </div>
     </div>
   );
@@ -31,7 +32,7 @@ export function RecommendedResources({ forceLoading = false }: { forceLoading?: 
   const showSkeleton = forceLoading || isLoading;
 
   return (
-    <div className="rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm" aria-busy={showSkeleton}>
+    <div className={cardClassName("static")} aria-busy={showSkeleton}>
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-slate-800">Recommended resources</h2>
         <Link to="/resources" className="text-sm font-medium text-primary-700 transition motion-safe:duration-150 hover:text-primary-800">
@@ -65,7 +66,7 @@ export function RecommendedResources({ forceLoading = false }: { forceLoading?: 
                 key={r.id}
                 to={`/resources/${r.id}`}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className="group flex items-start gap-3 rounded-xl border border-[#ECEBF7] p-3 transition motion-safe:duration-150 motion-safe:animate-[fadeIn_350ms_ease-out_both] hover:-translate-y-0.5 hover:border-primary-200 hover:bg-primary-50/60 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                className={cardClassName("resource", "group flex items-start gap-3 p-grid-3 motion-safe:animate-[fadeIn_350ms_ease-out_both]")}
               >
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg break-words px-0.5 text-center text-[9px] font-extrabold leading-tight tracking-wide transition motion-safe:duration-150 group-hover:scale-105 ${badge.className}`}

@@ -19,7 +19,12 @@ import {
 import { env } from "../config/config/env";
 import { AppError } from "../types/errors";
 import { taxonomyModel } from "../models/taxonomyModel";
-import { taxonomyService } from "./taxonomyService";
+import {
+  taxonomyService,
+  createOrReuseUniversity,
+  createOrReuseFaculty,
+  createOrReuseProgramme,
+} from "./taxonomyService";
 
 interface ActorContext {
   actorUserId: string;
@@ -106,6 +111,60 @@ async function validateTaxonomy(input: {
       "The programme does not belong to the selected faculty.",
     );
   }
+  // A legacy subject (university_id NULL, pre-dates migration 041) is
+  // allowed anywhere — only a subject that's actually scoped to a
+  // specific university gets cross-checked, so a UM resource can never
+  // silently attach a UiTM-scoped subject.
+  if (
+    subject &&
+    subject.university_id &&
+    input.universityId &&
+    subject.university_id !== input.universityId
+  ) {
+    throw AppError.badRequest(
+      "The selected subject does not belong to the selected university.",
+    );
+  }
+}
+
+/**
+ * Lets a student name a university/faculty/programme that isn't in the
+ * catalogue yet, right on the upload form, instead of being blocked
+ * until an admin creates it first — same self-serve idea as subjects
+ * (taxonomyService.subjects.findOrCreateForProgramme), reusing the
+ * exact same createOrReuse* helpers the admin-approval path already
+ * uses. Nothing here is gated behind ADMIN; an admin can still edit or
+ * delete the result afterward from the existing taxonomy admin pages.
+ * Cascades top-down — a faculty can only be created once its university
+ * is resolved, a programme only once its faculty is resolved — so a
+ * request naming all three in one go still works in one call.
+ */
+async function resolveRequestedTaxonomy(
+  input: {
+    universityId?: string;
+    facultyId?: string;
+    programmeId?: string;
+    requestedUniversityName?: string;
+    requestedFacultyName?: string;
+    requestedProgrammeName?: string;
+  },
+  ctx: ActorContext,
+): Promise<{ universityId?: string; facultyId?: string; programmeId?: string }> {
+  let universityId = input.universityId;
+  let facultyId = input.facultyId;
+  let programmeId = input.programmeId;
+
+  if (!universityId && input.requestedUniversityName) {
+    universityId = await createOrReuseUniversity(input.requestedUniversityName, ctx);
+  }
+  if (!facultyId && input.requestedFacultyName && universityId) {
+    facultyId = await createOrReuseFaculty(universityId, input.requestedFacultyName, ctx);
+  }
+  if (!programmeId && input.requestedProgrammeName && facultyId) {
+    programmeId = await createOrReuseProgramme(facultyId, input.requestedProgrammeName, ctx);
+  }
+
+  return { universityId, facultyId, programmeId };
 }
 
 /**
@@ -132,6 +191,12 @@ export const resourceService = {
       universityId?: string;
       facultyId?: string;
       programmeId?: string;
+      // A student typing a university/faculty/programme that isn't in
+      // the catalogue yet — see resolveRequestedTaxonomy. Each only
+      // takes effect when its own id above is absent.
+      requestedUniversityName?: string;
+      requestedFacultyName?: string;
+      requestedProgrammeName?: string;
       subjectId?: string;
       subjectCode?: string;
       subjectName?: string;
@@ -174,21 +239,25 @@ export const resourceService = {
         );
       }
     } else {
-      await validateTaxonomy(input);
+      // A student typed a university/faculty/programme that isn't in the
+      // catalogue yet — stand it up (or reuse a matching one) before
+      // validating, so the upload never has to wait on an admin.
+      const resolved = await resolveRequestedTaxonomy(input, ctx);
+      await validateTaxonomy({ ...input, ...resolved });
 
-      // A student typed a subject that isn't in the catalogue yet — stand
-      // it up (or reuse a matching one) before the resource row exists, so
-      // the resource is never left pointing at a subjectId that doesn't
-      // exist yet.
+      // Same idea for a subject typed on the fly — stand it up (or reuse
+      // a matching one) before the resource row exists, so the resource
+      // is never left pointing at a subjectId that doesn't exist yet.
       let subjectId = input.subjectId ?? null;
-      if (!subjectId && input.subjectCode) {
+      if (!subjectId && input.subjectCode && resolved.programmeId) {
         const { subject } = await taxonomyService.subjects.findOrCreateForProgramme(
           {
-            programmeId: input.programmeId!,
+            programmeId: resolved.programmeId,
             code: input.subjectCode,
             name: input.subjectName!,
             curriculumYear: input.subjectCurriculumYear,
             recommendedSemester: input.subjectSemester,
+            universityId: resolved.universityId,
           },
           {
             actorUserId: ctx.actorUserId,
@@ -205,9 +274,9 @@ export const resourceService = {
         title: input.title,
         description: input.description ?? null,
         category: input.category,
-        universityId: input.universityId ?? null,
-        facultyId: input.facultyId ?? null,
-        programmeId: input.programmeId ?? null,
+        universityId: resolved.universityId ?? null,
+        facultyId: resolved.facultyId ?? null,
+        programmeId: resolved.programmeId ?? null,
         subjectId,
       });
     }
@@ -257,20 +326,24 @@ export const resourceService = {
       universityId?: string;
       facultyId?: string;
       programmeId?: string;
+      requestedUniversityName?: string;
+      requestedFacultyName?: string;
+      requestedProgrammeName?: string;
       subjectId?: string;
     },
     ctx: ActorContext,
   ) {
-    await validateTaxonomy(input);
+    const resolved = await resolveRequestedTaxonomy(input, ctx);
+    await validateTaxonomy({ ...input, ...resolved });
 
     const resource = await resourceModel.create({
       ownerId: ctx.actorUserId,
       title: input.title,
       description: input.description,
       category: input.category,
-      universityId: input.universityId ?? null,
-      facultyId: input.facultyId ?? null,
-      programmeId: input.programmeId ?? null,
+      universityId: resolved.universityId ?? null,
+      facultyId: resolved.facultyId ?? null,
+      programmeId: resolved.programmeId ?? null,
       subjectId: input.subjectId ?? null,
     });
 

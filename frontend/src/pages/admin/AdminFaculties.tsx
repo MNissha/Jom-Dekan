@@ -165,7 +165,7 @@ export default function AdminFaculties({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Faculties</h1>
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Faculties</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Pick a university to manage its faculties. Only admins can create, edit,
         or archive.
@@ -244,7 +244,7 @@ export default function AdminFaculties({
             </button>
           </form>
 
-          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="card-base admin-table-container mt-6 overflow-x-auto">
             {isLoading ? (
               <p className="p-4 text-sm text-slate-500">Loading…</p>
             ) : isError ? (

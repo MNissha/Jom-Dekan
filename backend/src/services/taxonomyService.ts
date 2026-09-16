@@ -14,6 +14,7 @@ import { auditLogModel } from "../models/auditLogModel";
 import { slugify } from "../utils/slug";
 import { normalizeSubjectCode } from "../utils/subjectCode";
 import { AppError } from "../types/errors";
+import { logger } from "../utils/logger";
 
 interface ActorContext {
   actorUserId: string;
@@ -30,12 +31,14 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
-// Used only by taxonomyService.requests.review() when approving a
-// combined request — creates the entity the student asked for, or falls
-// back to the existing one by slug if another request (or an admin)
-// already created it in the meantime, so approving never fails just
-// because of a race with itself.
-async function createOrReuseUniversity(
+// Used by taxonomyService.requests.review() when an admin approves a
+// combined request, and by resourceService's upload flow (self-serve
+// immediate creation — see createOrReuseUniversity's export below) —
+// creates the entity the caller asked for, or falls back to the
+// existing one by slug if another request (or an admin) already created
+// it in the meantime, so neither path ever fails just because of a race
+// with itself.
+export async function createOrReuseUniversity(
   name: string,
   ctx: ActorContext,
 ): Promise<string> {
@@ -55,6 +58,26 @@ async function createOrReuseUniversity(
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });
+    // This helper is shared with the admin-approval path (review()),
+    // where an admin creating it *is* the review — only notify when a
+    // regular user's self-serve action created it (universities.findOrCreate
+    // / resourceService's resolveRequestedTaxonomy), same visibility a
+    // community-submitted subject already gets, so it isn't only
+    // discoverable by digging through the audit log.
+    if (ctx.actorRole !== "ADMIN") {
+      await notificationModel.notifyAdmins("TAXONOMY_UNIVERSITY_COMMUNITY_SUBMITTED", {
+        message: `New university added: ${row.name} (not yet reviewed).`,
+        universityId: row.id,
+      });
+      // Shows up in Admin > Taxonomy > Requests, same as a free-typed
+      // request — reviewing it approves (just a sign-off, it's already
+      // live) or rejects (deletes this exact row, see requests.review()).
+      await taxonomyRequestModel.create({
+        requestedBy: ctx.actorUserId,
+        universityId: row.id,
+        requestedUniversityName: row.name,
+      });
+    }
     return row.id;
   } catch (err) {
     if (!isUniqueViolation(err)) throw err;
@@ -64,7 +87,7 @@ async function createOrReuseUniversity(
   }
 }
 
-async function createOrReuseFaculty(
+export async function createOrReuseFaculty(
   universityId: string,
   name: string,
   ctx: ActorContext,
@@ -85,6 +108,19 @@ async function createOrReuseFaculty(
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });
+    if (ctx.actorRole !== "ADMIN") {
+      await notificationModel.notifyAdmins("TAXONOMY_FACULTY_COMMUNITY_SUBMITTED", {
+        message: `New faculty added: ${row.name} (not yet reviewed).`,
+        facultyId: row.id,
+        universityId,
+      });
+      await taxonomyRequestModel.create({
+        requestedBy: ctx.actorUserId,
+        universityId,
+        facultyId: row.id,
+        requestedFacultyName: row.name,
+      });
+    }
     return row.id;
   } catch (err) {
     if (!isUniqueViolation(err)) throw err;
@@ -97,7 +133,7 @@ async function createOrReuseFaculty(
   }
 }
 
-async function createOrReuseProgramme(
+export async function createOrReuseProgramme(
   facultyId: string,
   name: string,
   ctx: ActorContext,
@@ -119,6 +155,19 @@ async function createOrReuseProgramme(
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });
+    if (ctx.actorRole !== "ADMIN") {
+      await notificationModel.notifyAdmins("TAXONOMY_PROGRAMME_COMMUNITY_SUBMITTED", {
+        message: `New programme added: ${row.name} (not yet reviewed).`,
+        programmeId: row.id,
+        facultyId,
+      });
+      await taxonomyRequestModel.create({
+        requestedBy: ctx.actorUserId,
+        facultyId,
+        programmeId: row.id,
+        requestedProgrammeName: row.name,
+      });
+    }
     return row.id;
   } catch (err) {
     if (!isUniqueViolation(err)) throw err;
@@ -135,22 +184,25 @@ async function createOrReuseProgramme(
 // the subject ADMIN_VERIFIED (an admin is the one approving this) and
 // only links it to a programme when one was actually resolved — the
 // request may have named a subject without the programme it belongs to
-// existing yet either.
+// existing yet either. universityId scopes the lookup/creation the same
+// way it does everywhere else subjects are resolved (see migration 041).
 async function createOrReuseSubject(
   code: string,
   name: string,
   programmeId: string | null,
+  universityId: string | null,
   ctx: ActorContext,
 ): Promise<string> {
   const normalized = normalizeSubjectCode(code);
   let subject = normalized
-    ? await taxonomyModel.subjects.findByCode(normalized)
+    ? await taxonomyModel.subjects.findByCode(normalized, universityId)
     : null;
   if (!subject && normalized) {
     try {
       subject = await taxonomyModel.subjects.create({
         code: normalized,
         name,
+        universityId,
         source: "ADMIN",
         verificationStatus: "ADMIN_VERIFIED",
       });
@@ -165,7 +217,7 @@ async function createOrReuseSubject(
       });
     } catch (err) {
       if (!isUniqueViolation(err)) throw err;
-      subject = await taxonomyModel.subjects.findByCode(normalized);
+      subject = await taxonomyModel.subjects.findByCode(normalized, universityId);
     }
   }
   if (subject && programmeId) {
@@ -179,6 +231,23 @@ export const taxonomyService = {
     async list() {
       const rows = await taxonomyModel.universities.list();
       return rows.map(toApiUniversity);
+    },
+
+    /**
+     * Any-authenticated-user counterpart to `create` — same self-serve
+     * idea as subjects.findOrCreateStandalone and resourceService's
+     * resolveRequestedTaxonomy: naming a university that isn't in the
+     * catalogue yet doesn't need to wait on ADMIN. Reuses
+     * createOrReuseUniversity, the same helper the admin-approval path
+     * uses, so a race between two callers naming the same university
+     * resolves to one row either way.
+     */
+    async findOrCreate(input: { name: string }, ctx: ActorContext) {
+      const existing = await taxonomyModel.universities.findBySlug(slugify(input.name));
+      const id = await createOrReuseUniversity(input.name, ctx);
+      const row = await taxonomyModel.universities.findById(id);
+      if (!row) throw AppError.internal("University creation failed unexpectedly.");
+      return { university: toApiUniversity(row), created: !existing };
     },
 
     async create(input: { name: string; country?: string }, ctx: ActorContext) {
@@ -513,8 +582,8 @@ export const taxonomyService = {
   },
 
   subjects: {
-    async list() {
-      const rows = await taxonomyModel.subjects.list();
+    async list(filters?: { universityId?: string; search?: string }) {
+      const rows = await taxonomyModel.subjects.list(filters);
       return rows.map(toApiSubject);
     },
 
@@ -525,15 +594,27 @@ export const taxonomyService = {
       return rows.map(toApiSubject);
     },
 
-    async create(input: { code: string; name: string }, ctx: ActorContext) {
+    async create(
+      input: { code: string; name: string; universityId?: string },
+      ctx: ActorContext,
+    ) {
       const code = normalizeSubjectCode(input.code);
       if (!code) throw AppError.badRequest("Subject code is required.");
+      const universityId = input.universityId ?? null;
+      if (universityId) {
+        const university = await taxonomyModel.universities.findById(universityId);
+        if (!university) throw AppError.badRequest("University not found.");
+      }
       let row;
       try {
-        row = await taxonomyModel.subjects.create({ code, name: input.name });
+        row = await taxonomyModel.subjects.create({ code, name: input.name, universityId });
       } catch (err) {
         if (isUniqueViolation(err))
-          throw AppError.conflict("A subject with this code already exists.");
+          throw AppError.conflict(
+            universityId
+              ? "A subject with this code already exists for this university."
+              : "A subject with this code already exists.",
+          );
         throw err;
       }
       await auditLogModel.record({
@@ -567,6 +648,11 @@ export const taxonomyService = {
         name: string;
         curriculumYear?: number;
         recommendedSemester?: number;
+        // The resource's own university, if the caller has one (resource
+        // uploads always do). Optional so existing callers that don't
+        // pass one keep working — the subject just stays scoped as
+        // "legacy" (university_id NULL) in that case.
+        universityId?: string;
       },
       ctx: ActorContext,
     ) {
@@ -578,14 +664,16 @@ export const taxonomyService = {
       }
       const code = normalizeSubjectCode(input.code);
       if (!code) throw AppError.badRequest("Subject code is required.");
+      const universityId = input.universityId ?? null;
 
-      let subject = await taxonomyModel.subjects.findByCode(code);
+      let subject = await taxonomyModel.subjects.findByCode(code, universityId);
       let created = false;
       if (!subject) {
         try {
           subject = await taxonomyModel.subjects.create({
             code,
             name: input.name,
+            universityId,
             source: "COMMUNITY",
             verificationStatus: "COMMUNITY_SUBMITTED",
             createdBy: ctx.actorUserId,
@@ -593,7 +681,7 @@ export const taxonomyService = {
           created = true;
         } catch (err) {
           if (!isUniqueViolation(err)) throw err;
-          subject = await taxonomyModel.subjects.findByCode(code);
+          subject = await taxonomyModel.subjects.findByCode(code, universityId);
           if (!subject) throw err;
         }
       }
@@ -625,12 +713,101 @@ export const taxonomyService = {
       // point. This just gives admins visibility into new
       // COMMUNITY_SUBMITTED subjects so they can review/merge/clean them
       // up later; there is no approval gate here.
-      if (created) {
+      if (created && ctx.actorRole !== "ADMIN") {
         await notificationModel.notifyAdmins("SUBJECT_COMMUNITY_SUBMITTED", {
           message: `New community subject: ${subject.code} - ${subject.name} (not yet admin-verified)`,
           subjectId: subject.id,
           programmeId: input.programmeId,
         });
+        await taxonomyRequestModel.create({
+          requestedBy: ctx.actorUserId,
+          programmeId: input.programmeId,
+          requestedSubjectCode: subject.code,
+          requestedSubjectName: subject.name,
+          subjectId: subject.id,
+        });
+      }
+
+      return { subject: toApiSubject(subject), created };
+    },
+
+    /**
+     * Same crowdsourcing idea as findOrCreateForProgramme, but for
+     * contexts with no programme to attach to (e.g. the tutor application
+     * form, which only asks which university a subject belongs to, not
+     * a full programme/semester). Never blocks the caller on ADMIN
+     * review — the subject is usable immediately as COMMUNITY_SUBMITTED.
+     *
+     * universityId is required and now genuinely persisted on the
+     * subject (migration 041) — matching/dedup is scoped to it, so the
+     * same code can mean a different subject at a different university.
+     * Code is optional; when omitted, dedup falls back to
+     * (university, normalized name) instead.
+     */
+    async findOrCreateStandalone(
+      input: { code?: string; name: string; universityId: string },
+      ctx: ActorContext,
+    ) {
+      if (!input.universityId) {
+        throw AppError.badRequest("University is required.");
+      }
+      const university = await taxonomyModel.universities.findById(input.universityId);
+      if (!university || !university.is_active) {
+        throw AppError.badRequest("University not found or inactive.");
+      }
+
+      const code = input.code ? normalizeSubjectCode(input.code) : null;
+      if (input.code && !code) throw AppError.badRequest("Subject code is invalid.");
+
+      let subject = code
+        ? await taxonomyModel.subjects.findByCode(code, input.universityId)
+        : await taxonomyModel.subjects.findByNormalizedName(input.name, input.universityId);
+      let created = false;
+      if (!subject) {
+        try {
+          subject = await taxonomyModel.subjects.create({
+            code,
+            name: input.name,
+            universityId: input.universityId,
+            source: "COMMUNITY",
+            verificationStatus: "COMMUNITY_SUBMITTED",
+            createdBy: ctx.actorUserId,
+          });
+          created = true;
+        } catch (err) {
+          if (!isUniqueViolation(err)) throw err;
+          subject = code
+            ? await taxonomyModel.subjects.findByCode(code, input.universityId)
+            : await taxonomyModel.subjects.findByNormalizedName(input.name, input.universityId);
+          if (!subject) throw err;
+        }
+      }
+
+      if (created) {
+        await auditLogModel.record({
+          actorUserId: ctx.actorUserId,
+          actorRole: ctx.actorRole,
+          action: "TAXONOMY_SUBJECT_COMMUNITY_SUBMITTED",
+          targetType: "subject",
+          targetId: subject.id,
+          metadata: { universityId: input.universityId },
+          requestId: ctx.requestId,
+          ipAddress: ctx.ipAddress,
+        });
+        if (ctx.actorRole !== "ADMIN") {
+          await notificationModel.notifyAdmins("SUBJECT_COMMUNITY_SUBMITTED", {
+            message: `New community subject: ${subject.code ? `${subject.code} - ` : ""}${subject.name} (for ${university.name}, not yet admin-verified)`,
+            subjectId: subject.id,
+            universityId: input.universityId,
+          });
+          await taxonomyRequestModel.create({
+            requestedBy: ctx.actorUserId,
+            universityId: input.universityId,
+            requestedSubjectCode: subject.code,
+            requestedSubjectName: subject.name,
+            subjectId: subject.id,
+          });
+        }
       }
 
       return { subject: toApiSubject(subject), created };
@@ -887,11 +1064,22 @@ export const taxonomyService = {
             ctx,
           );
         }
-        if (existing.requested_subject_code && existing.requested_subject_name) {
+        // Skip when subject_id is already set — this request's subject
+        // was already created for real by the self-serve flow that
+        // filed it (see findOrCreateForProgramme/findOrCreateStandalone),
+        // so there's nothing left to stand up; approving it here is just
+        // a sign-off. Only the old-style, name-only request (no id yet)
+        // needs createOrReuseSubject to actually create it.
+        if (
+          !existing.subject_id &&
+          existing.requested_subject_code &&
+          existing.requested_subject_name
+        ) {
           await createOrReuseSubject(
             existing.requested_subject_code,
             existing.requested_subject_name,
             programmeId,
+            universityId,
             ctx,
           );
         }
@@ -905,6 +1093,38 @@ export const taxonomyService = {
         programmeId,
       });
       if (!row) throw AppError.conflict("This request has already been reviewed.");
+
+      if (decision === "REJECTED") {
+        // Best-effort cleanup of whatever this specific request stood up
+        // itself — both the real id AND the free-typed name are set,
+        // never just a pre-existing entity the student merely
+        // referenced. The rejection decision above is already
+        // persisted, so a cleanup failure here (e.g. something else
+        // started depending on it in the meantime) doesn't undo it —
+        // the admin can finish removing it manually from the taxonomy
+        // admin pages. Leaf-to-root order so a whole self-created chain
+        // (university -> faculty -> programme) can actually clear.
+        if (existing.subject_id) {
+          await taxonomyService.subjects
+            .remove(existing.subject_id, ctx)
+            .catch((err) => logger.warn({ err, requestId: id }, "Could not delete rejected subject"));
+        }
+        if (existing.programme_id && existing.requested_programme_name) {
+          await taxonomyService.programmes
+            .remove(existing.programme_id, ctx)
+            .catch((err) => logger.warn({ err, requestId: id }, "Could not delete rejected programme"));
+        }
+        if (existing.faculty_id && existing.requested_faculty_name) {
+          await taxonomyService.faculties
+            .remove(existing.faculty_id, ctx)
+            .catch((err) => logger.warn({ err, requestId: id }, "Could not delete rejected faculty"));
+        }
+        if (existing.university_id && existing.requested_university_name) {
+          await taxonomyService.universities
+            .remove(existing.university_id, ctx)
+            .catch((err) => logger.warn({ err, requestId: id }, "Could not delete rejected university"));
+        }
+      }
 
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
@@ -926,8 +1146,8 @@ export const taxonomyService = {
           row.requested_faculty_name && `faculty "${row.requested_faculty_name}"`,
           row.requested_programme_name &&
             `programme "${row.requested_programme_name}"`,
-          row.requested_subject_code &&
-            `subject "${row.requested_subject_code} - ${row.requested_subject_name}"`,
+          row.requested_subject_name &&
+            `subject "${row.requested_subject_code ? `${row.requested_subject_code} - ` : ""}${row.requested_subject_name}"`,
         ]
           .filter(Boolean)
           .join(", ");

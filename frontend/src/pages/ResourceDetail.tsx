@@ -78,8 +78,8 @@ function ResourceSubjectBadge({
   if (!subject) return null;
 
   return (
-    <span className="mt-2 inline-block rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700">
-      {subject.code} · {subject.name}
+    <span className="mt-grid-2 inline-block rounded-full bg-[#F1F0FA] px-2.5 py-1 text-caption font-heading text-primary-700">
+      {subject.code ? `${subject.code} · ${subject.name}` : subject.name}
     </span>
   );
 }
@@ -166,11 +166,11 @@ export default function ResourceDetail() {
   const { data: previewUrl } = useFilePreviewUrl(
     isImage || isPdf ? readyFile?.id : undefined,
   );
-  const showSkeleton = useMinimumLoading(isLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading, 600);
 
   if (showSkeleton)
     return (
-      <div className="mx-auto max-w-3xl animate-pulse px-[18px] py-[22px]" aria-label="Loading academic resource">
+      <div className="page-container page-container-reading animate-pulse" aria-label="Loading academic resource">
         <div className="h-4 w-24 rounded bg-violet-100" />
         <div className="mt-5 overflow-hidden rounded-[22px] border border-[#ECEBF7] bg-white shadow-sm">
           <div className="h-48 bg-slate-100" />
@@ -181,14 +181,14 @@ export default function ResourceDetail() {
 
   if (isLoading)
     return (
-      <p className="mx-auto max-w-3xl px-[18px] py-[22px] text-sm text-slate-500">
+      <p className="page-container page-container-reading text-body-sm text-content-muted">
         Loading…
       </p>
     );
 
   if (isError || !data)
     return (
-      <div className="mx-auto max-w-3xl px-[18px] py-[22px]">
+      <div className="page-container page-container-reading">
         <p className="text-sm text-red-600">
           This resource does not exist, or you don't have access to it.
         </p>
@@ -264,7 +264,7 @@ export default function ResourceDetail() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-[18px] py-[22px]">
+    <div className="page-container page-container-reading">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -403,7 +403,7 @@ export default function ResourceDetail() {
                       id="edit-subjectId"
                       options={(editSubjects ?? [])
                         .filter((s) => s.isActive)
-                        .map((s) => ({ value: s.id, label: `${s.code} · ${s.name}` }))}
+                        .map((s) => ({ value: s.id, label: s.code ? `${s.code} · ${s.name}` : s.name }))}
                       value={field.value ?? ""}
                       onChange={field.onChange}
                       disabled={!editProgrammeId}
@@ -440,7 +440,7 @@ export default function ResourceDetail() {
         ) : (
           <>
             <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">
                 {resource.title}
               </h1>
               <span

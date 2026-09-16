@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="border-t border-[#E7E6F3] bg-white py-4 text-center text-sm text-slate-500 transition-colors motion-safe:duration-200 dark:border-[#2E2A54] dark:bg-[#1B1836] dark:text-slate-400">
+    <footer className="border-t border-border bg-surface-card px-gutter-mobile py-grid-4 text-center text-body-sm text-content-muted transition-colors motion-safe:duration-standard sm:px-gutter-tablet lg:px-gutter-desktop">
       <p>&copy; {new Date().getFullYear()} JomDekan. Built for Malaysian university students.</p>
     </footer>
   );

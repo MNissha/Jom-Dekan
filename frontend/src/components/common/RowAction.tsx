@@ -23,7 +23,7 @@ export function RowAction({
       aria-label={title}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-lg border p-2 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`rounded-control border p-2 transition duration-fast hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       {children}
     </button>

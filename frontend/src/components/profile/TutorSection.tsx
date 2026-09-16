@@ -1,16 +1,18 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   CalendarCheck,
   CalendarPlus,
   Check,
   Clock,
+  Download,
+  FileText,
   GraduationCap,
   Unlink,
   Users,
   X,
 } from "lucide-react";
-import { useSubjects } from "../../hooks/useTaxonomy";
 import { RescheduleBookingButton } from "../common/RescheduleBookingButton";
+import { SubjectMultiSelect } from "../common/SubjectMultiSelect";
 import {
   useApplyAsTutor,
   useDecideBooking,
@@ -19,48 +21,116 @@ import {
   useMyBookingsAsTutor,
   useMyStudents,
   useMyTutorStatus,
+  useProfileResumeUrl,
+  useResumeUploadIntent,
   useUpdateTutorProfile,
 } from "../../hooks/useTutor";
+import { useMyProfile, useUpdateProfile } from "../../hooks/useProfile";
+import { tutorService } from "../../service/tutorService";
 import type { TutorProfile } from "../../types/tutor";
+import type { Subject } from "../../types/taxonomy";
+import { buttonClassName, controlClassName } from "../common/controlStyles";
+
+const RESUME_ALLOWED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const RESUME_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
 const CARD_CLASS = "mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm sm:p-6";
-const INPUT_CLASS =
-  "h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500";
-const TEXTAREA_CLASS =
-  "rounded-xl border border-[#E4E3F2] px-3 py-3 text-sm font-medium text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500";
-const PRIMARY_BUTTON =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 text-sm font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60";
-const SECONDARY_BUTTON =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E4E3F2] bg-white px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60";
+const INPUT_CLASS = controlClassName(false);
+const TEXTAREA_CLASS = controlClassName(false, "min-h-24 resize-y");
+const PRIMARY_BUTTON = buttonClassName();
+const SECONDARY_BUTTON = buttonClassName({ variant: "secondary" });
 
 function ApplyForm({ isReapply }: { isReapply?: boolean }) {
-  const { data: subjects } = useSubjects();
   const applyAsTutor = useApplyAsTutor();
+  const resumeUploadIntent = useResumeUploadIntent();
+  const { data: profile } = useMyProfile();
+  const updateProfile = useUpdateProfile();
+
   const [bio, setBio] = useState("");
   const [experience, setExperience] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
+  const [openToOtherUniversities, setOpenToOtherUniversities] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeUploadProgress, setResumeUploadProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  function toggleSubject(id: string) {
-    setSelectedSubjects((current) =>
-      current.includes(id) ? current.filter((s) => s !== id) : [...current, id],
-    );
+  // Phone comes from the account's own profile — pre-filled once it
+  // loads, editable here, and saved back to the profile on submit so
+  // it stays the single source of truth rather than a second copy.
+  useEffect(() => {
+    if (profile?.phone) setPhone((current) => current || profile.phone!);
+  }, [profile?.phone]);
+
+  function handleResumeChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setFormError(null);
+    if (file && !RESUME_ALLOWED_TYPES.includes(file.type)) {
+      setFormError("Resume must be a PDF or Word (.docx) document.");
+      event.target.value = "";
+      return;
+    }
+    if (file && file.size > RESUME_MAX_SIZE_BYTES) {
+      setFormError("Resume is too large. Maximum size is 10MB.");
+      event.target.value = "";
+      return;
+    }
+    setResumeFile(file);
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setFormError(null);
     if (selectedSubjects.length === 0) {
       setFormError("Select at least one subject you can tutor.");
       return;
     }
-    applyAsTutor.mutate({
-      bio,
-      experience,
-      subjects: selectedSubjects,
-      hourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
-    });
+    if (!resumeFile) {
+      setFormError("Attach your resume/CV (PDF or Word).");
+      return;
+    }
+    if (!phone.trim()) {
+      setFormError("A contact phone number is required.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (phone.trim() !== (profile?.phone ?? "")) {
+        await updateProfile.mutateAsync({ phone: phone.trim() });
+      }
+
+      setResumeUploadProgress(0);
+      const intent = await resumeUploadIntent.mutateAsync({
+        fileName: resumeFile.name,
+        contentType: resumeFile.type,
+        sizeBytes: resumeFile.size,
+      });
+      await tutorService.uploadResumeFile(intent.uploadUrl, resumeFile, setResumeUploadProgress);
+
+      await applyAsTutor.mutateAsync({
+        bio,
+        experience,
+        subjects: selectedSubjects.map((s) => s.id),
+        hourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
+        openToOtherUniversities,
+        resumeStorageKey: intent.key,
+        resumeOriginalFilename: resumeFile.name,
+        resumeMimeType: resumeFile.type,
+        resumeSizeBytes: resumeFile.size,
+        portfolioUrl: portfolioUrl.trim() || undefined,
+      });
+    } catch {
+      setFormError("Something went wrong submitting your application. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -87,19 +157,7 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
 
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Subjects you can tutor</span>
-          <div className="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto rounded-xl border border-[#E4E3F2] p-3 sm:grid-cols-2">
-            {(subjects ?? []).map((subject) => (
-              <label key={subject.id} className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={selectedSubjects.includes(subject.id)}
-                  onChange={() => toggleSubject(subject.id)}
-                  className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                />
-                {subject.name}
-              </label>
-            ))}
-          </div>
+          <SubjectMultiSelect selected={selectedSubjects} onChange={setSelectedSubjects} />
         </div>
 
         <label className="flex flex-col gap-1.5">
@@ -116,6 +174,51 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
           />
         </label>
 
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Resume / CV</span>
+          <input
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={handleResumeChange}
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-primary-700 hover:file:bg-primary-100"
+          />
+          <span className="text-xs text-slate-500">
+            {resumeFile ? `Selected: ${resumeFile.name}` : "PDF or Word (.docx), up to 10MB."}
+            {isSubmitting && resumeUploadProgress > 0 && resumeUploadProgress < 100 && ` · Uploading ${resumeUploadProgress}%`}
+          </span>
+        </label>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Contact email</span>
+            <input type="email" readOnly disabled value={profile?.email ?? ""} className={INPUT_CLASS} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Contact phone</span>
+            <input
+              type="tel"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. +60 12-345 6789"
+              className={INPUT_CLASS}
+            />
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            Portfolio website <span className="normal-case text-slate-400">(optional)</span>
+          </span>
+          <input
+            type="text"
+            value={portfolioUrl}
+            onChange={(e) => setPortfolioUrl(e.target.value)}
+            placeholder="e.g. https://yourportfolio.com"
+            className={INPUT_CLASS}
+          />
+        </label>
+
         <label className="flex max-w-xs flex-col gap-1.5">
           <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Hourly rate (RM, optional)</span>
           <input
@@ -128,15 +231,26 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
           />
         </label>
 
-        {(formError || applyAsTutor.isError) && (
-          <p className="text-sm font-medium text-red-600">
-            {formError ?? "Something went wrong submitting your application. Please try again."}
-          </p>
-        )}
+        <label className="flex items-start gap-2.5 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={openToOtherUniversities}
+            onChange={(e) => setOpenToOtherUniversities(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span>
+            <span className="font-medium">Open to students from other universities or programmes</span>
+            <span className="block text-xs text-slate-500">
+              For the subjects above, let students outside your own university/programme book you too.
+            </span>
+          </span>
+        </label>
+
+        {formError && <p className="text-sm font-medium text-red-600">{formError}</p>}
 
         <div>
-          <button type="submit" disabled={applyAsTutor.isPending} className={PRIMARY_BUTTON}>
-            {applyAsTutor.isPending ? "Submitting…" : "Submit application"}
+          <button type="submit" disabled={isSubmitting} className={PRIMARY_BUTTON}>
+            {isSubmitting ? "Submitting…" : "Submit application"}
           </button>
         </div>
       </div>
@@ -304,15 +418,68 @@ function StudentsCard() {
   );
 }
 
+function ResumeCard({ profile }: { profile: TutorProfile | null }) {
+  const getResumeUrl = useProfileResumeUrl();
+
+  function handleDownload() {
+    if (!profile) return;
+    getResumeUrl.mutate(profile.userId, {
+      onSuccess: ({ url }) => window.open(url, "_blank", "noopener,noreferrer"),
+    });
+  }
+
+  if (!profile?.resumeFilename && !profile?.portfolioUrl) return null;
+
+  return (
+    <div className={CARD_CLASS}>
+      <h3 className="flex items-center gap-2 font-semibold text-slate-800">
+        <FileText className="h-5 w-5 text-primary-600" aria-hidden="true" />
+        Resume &amp; portfolio
+      </h3>
+      <div className="mt-3 flex flex-col gap-2 text-sm">
+        {profile.resumeFilename && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={getResumeUrl.isPending}
+            className="inline-flex w-fit items-center gap-2 rounded-lg border border-[#E4E3F2] px-3 py-2 font-semibold text-primary-700 hover:bg-[#FAF9FF] disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {getResumeUrl.isPending ? "Preparing download…" : profile.resumeFilename}
+          </button>
+        )}
+        {profile.portfolioUrl && (
+          <a
+            href={profile.portfolioUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-fit text-primary-700 hover:underline"
+          >
+            {profile.portfolioUrl}
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TutorDashboard({ profile }: { profile: TutorProfile | null }) {
   const updateProfile = useUpdateTutorProfile();
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [hourlyRate, setHourlyRate] = useState(profile?.hourlyRate?.toString() ?? "");
   const [isActive, setIsActive] = useState(profile?.isActive ?? true);
+  const [openToOtherUniversities, setOpenToOtherUniversities] = useState(
+    profile?.openToOtherUniversities ?? false,
+  );
 
   function handleSave(event: FormEvent) {
     event.preventDefault();
-    updateProfile.mutate({ bio, hourlyRate: hourlyRate ? Number(hourlyRate) : null, isActive });
+    updateProfile.mutate({
+      bio,
+      hourlyRate: hourlyRate ? Number(hourlyRate) : null,
+      isActive,
+      openToOtherUniversities,
+    });
   }
 
   return (
@@ -347,6 +514,20 @@ function TutorDashboard({ profile }: { profile: TutorProfile | null }) {
             />
             Accepting new booking requests
           </label>
+          <label className="flex items-start gap-2.5 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={openToOtherUniversities}
+              onChange={(e) => setOpenToOtherUniversities(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span>
+              <span className="font-medium">Open to students from other universities or programmes</span>
+              <span className="block text-xs text-slate-500">
+                For your listed subjects, let students outside your own university/programme book you too.
+              </span>
+            </span>
+          </label>
           <div>
             <button type="submit" disabled={updateProfile.isPending} className={PRIMARY_BUTTON}>
               {updateProfile.isPending ? "Saving…" : "Save changes"}
@@ -355,6 +536,7 @@ function TutorDashboard({ profile }: { profile: TutorProfile | null }) {
         </form>
       </div>
 
+      <ResumeCard profile={profile} />
       <GoogleCalendarCard connected={profile?.googleCalendarConnected ?? false} email={profile?.googleCalendarEmail ?? null} />
       <BookingsCard />
       <StudentsCard />

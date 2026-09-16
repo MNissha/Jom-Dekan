@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Upload, HelpCircle, Users, Briefcase } from "lucide-react";
+import { cardClassName, SkeletonBlock } from "../common/cards";
 
 const actions = [
   {
@@ -37,11 +38,11 @@ const actions = [
 
 function QuickActionSkeleton() {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-[#ECEBF7] p-4 motion-safe:animate-pulse" aria-hidden="true">
-      <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-100" />
+    <div className={cardClassName("static", "flex h-full flex-col gap-3")} aria-hidden="true">
+      <SkeletonBlock className="h-10 w-10 shrink-0 rounded-xl" />
       <div className="space-y-2">
-        <div className="h-3.5 w-3/4 rounded bg-slate-200" />
-        <div className="h-3 w-full rounded bg-slate-100" />
+        <SkeletonBlock className="h-3.5 w-3/4" />
+        <SkeletonBlock className="h-3 w-full" />
       </div>
     </div>
   );
@@ -49,7 +50,7 @@ function QuickActionSkeleton() {
 
 export function QuickActions({ forceLoading = false }: { forceLoading?: boolean }) {
   return (
-    <div className="rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm" aria-busy={forceLoading}>
+    <div className={cardClassName("static")} aria-busy={forceLoading}>
       <h2 className="font-semibold text-slate-800">Quick actions</h2>
       <p className="mt-0.5 text-sm text-slate-500">Contribute, ask, or earn — in one tap</p>
 
@@ -61,7 +62,7 @@ export function QuickActions({ forceLoading = false }: { forceLoading?: boolean 
                 key={to}
                 to={to}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className="flex h-full flex-col gap-3 rounded-2xl border border-[#ECEBF7] p-4 transition motion-safe:duration-200 motion-safe:animate-[fadeIn_350ms_ease-out_both] hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:translate-y-0 active:shadow-sm"
+                className={cardClassName("interactive", "flex h-full flex-col gap-3 motion-safe:animate-[fadeIn_350ms_ease-out_both]")}
               >
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
                   <Icon className="h-5 w-5" aria-hidden="true" />

@@ -219,7 +219,7 @@ export default function AdminProgrammes({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Programmes</h1>
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Programmes</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Pick a university, then a faculty, to manage its programmes.
       </p>
@@ -344,7 +344,7 @@ export default function AdminProgrammes({
             </button>
           </form>
 
-          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="card-base admin-table-container mt-6 overflow-x-auto">
             {isLoading ? (
               <p className="p-4 text-sm text-slate-500">Loading…</p>
             ) : isError ? (
@@ -553,7 +553,7 @@ export default function AdminProgrammes({
                       )
                       .map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.code} · {s.name}
+                          {s.code ? `${s.code} · ${s.name}` : s.name}
                         </option>
                       ))}
                   </select>
@@ -599,9 +599,13 @@ export default function AdminProgrammes({
                       className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     >
                       <span>
-                        <span className="font-medium text-slate-800">
-                          {s.code}
-                        </span>{" "}
+                        {s.code && (
+                          <>
+                            <span className="font-medium text-slate-800">
+                              {s.code}
+                            </span>{" "}
+                          </>
+                        )}
                         <span className="text-slate-600">{s.name}</span>
                       </span>
                       <button

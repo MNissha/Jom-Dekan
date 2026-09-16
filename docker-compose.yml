@@ -57,8 +57,17 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-docker-dev-access-secret-change-before-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-docker-dev-refresh-secret-change-before-production}
       COOKIE_SECRET: ${COOKIE_SECRET:-docker-dev-cookie-secret}
-      STORAGE_PROVIDER: local-fs
+      # Same pattern as DB_* above: uses real Supabase Storage credentials
+      # from the private root .env when present, otherwise falls back to
+      # the self-contained local-fs adapter (files on the backend volume,
+      # no cloud account needed).
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local-fs}
       STORAGE_LOCAL_ROOT: /app/backend/storage/resources
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-jomdekan-resources}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-}
+      STORAGE_REGION: ${STORAGE_REGION:-auto}
       STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET:-docker-dev-storage-signing-secret-change-before-production}
       EMAIL_PROVIDER: console
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

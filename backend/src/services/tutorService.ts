@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
   tutorModel,
   type TutorApplicationRow,
@@ -16,6 +17,18 @@ import { encryptSecret, decryptSecret } from "../utils/crypto";
 import { logger } from "../utils/logger";
 import { env } from "../config/config/env";
 import { AppError } from "../types/errors";
+import { getStorageAdapter, signUploadToken } from "../config/config/storage";
+import { detectFileType } from "../utils/fileSniffer";
+
+// Resumes are a document, not one of resources' image/office types —
+// scoped to just PDF/DOCX regardless of what resources otherwise allow.
+const ALLOWED_RESUME_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+] as const;
+const MAX_RESUME_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const RESUME_UPLOAD_TOKEN_TTL_SECONDS = 300;
+const RESUME_DOWNLOAD_TOKEN_TTL_SECONDS = 300;
 
 function profileUrl(): string {
   return `${env.corsOrigins[0]}/profile?section=tutor`;
@@ -34,6 +47,9 @@ function toApiApplication(row: TutorApplicationRow | TutorApplicationWithApplica
     subjects: row.subjects,
     experience: row.experience,
     hourlyRate: row.hourly_rate ? Number(row.hourly_rate) : null,
+    openToOtherUniversities: row.open_to_other_universities,
+    resumeFilename: row.resume_original_filename,
+    portfolioUrl: row.portfolio_url,
     status: row.status,
     rejectionReason: row.rejection_reason,
     createdAt: row.created_at,
@@ -55,6 +71,9 @@ function toApiProfile(row: TutorProfileRow) {
     subjects: row.subjects,
     hourlyRate: row.hourly_rate ? Number(row.hourly_rate) : null,
     experience: row.experience,
+    openToOtherUniversities: row.open_to_other_universities,
+    resumeFilename: row.resume_original_filename,
+    portfolioUrl: row.portfolio_url,
     isActive: row.is_active,
     verifiedAt: row.verified_at,
     googleCalendarConnected: row.google_calendar_connected,
@@ -78,18 +97,105 @@ function toApiBooking(row: TutorBookingWithContext) {
     durationMinutes: row.duration_minutes,
     message: row.message,
     status: row.status,
+    rescheduleProposedBy: row.reschedule_proposed_by,
     googleCalendarEventId: row.google_calendar_event_id,
     createdAt: row.created_at,
   };
 }
 
 export const tutorService = {
+  /**
+   * Signs an upload token for a tutor's resume, same mechanism as
+   * resources' own uploads (a short-lived JWT carrying just the storage
+   * key), but pointed at this service's own upload route instead —
+   * unlike resources, a resume has no resource_files row to claim, so
+   * it can't go through resourceService's own upload-intent/receive
+   * pair as-is.
+   */
+  async getResumeUploadIntent(input: {
+    fileName: string;
+    contentType: string;
+    sizeBytes: number;
+  }) {
+    if (!(ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(input.contentType)) {
+      throw AppError.badRequest("Resume must be a PDF or Word document.");
+    }
+    if (input.sizeBytes > MAX_RESUME_SIZE_BYTES) {
+      throw AppError.badRequest(
+        `Resume is too large. Maximum size is ${Math.floor(MAX_RESUME_SIZE_BYTES / (1024 * 1024))}MB.`,
+      );
+    }
+    const safeName = input.fileName.replace(/[^\w.\-]+/g, "_").slice(-100);
+    const key = `tutor-resumes/${randomUUID()}-${safeName}`;
+    const token = signUploadToken(key, RESUME_UPLOAD_TOKEN_TTL_SECONDS);
+    return { uploadUrl: `/api/v1/tutors/resume-upload?token=${token}`, key };
+  },
+
+  /** Receives the resume's bytes for a pending upload token. */
+  async receiveResumeUpload(storageKey: string, buffer: Buffer) {
+    const detected = detectFileType(buffer);
+    if (!detected || !(ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(detected)) {
+      throw AppError.badRequest("The uploaded file must be a real PDF or Word document.");
+    }
+    await getStorageAdapter().putObject(storageKey, buffer, detected);
+    return { key: storageKey, mimeType: detected };
+  },
+
+  async getApplicationResumeUrl(applicationId: string, ctx: { actorUserId: string; actorRole: "USER" | "ADMIN" }) {
+    const application = await tutorModel.applications.findById(applicationId);
+    if (!application) throw AppError.notFound("Application not found.");
+    if (application.user_id !== ctx.actorUserId && ctx.actorRole !== "ADMIN") {
+      throw AppError.forbidden();
+    }
+    if (!application.resume_storage_key) throw AppError.notFound("No resume on file for this application.");
+    const url = await getStorageAdapter().createSignedDownloadUrl(
+      application.resume_storage_key,
+      RESUME_DOWNLOAD_TOKEN_TTL_SECONDS,
+    );
+    return { url, filename: application.resume_original_filename };
+  },
+
+  async getProfileResumeUrl(userId: string, ctx: { actorUserId: string; actorRole: "USER" | "ADMIN" }) {
+    const profile = await tutorModel.profiles.findByUserId(userId);
+    if (!profile) throw AppError.notFound("This user is not a verified tutor.");
+    if (userId !== ctx.actorUserId && ctx.actorRole !== "ADMIN") {
+      throw AppError.forbidden();
+    }
+    if (!profile.resume_storage_key) throw AppError.notFound("No resume on file for this tutor.");
+    const url = await getStorageAdapter().createSignedDownloadUrl(
+      profile.resume_storage_key,
+      RESUME_DOWNLOAD_TOKEN_TTL_SECONDS,
+    );
+    return { url, filename: profile.resume_original_filename };
+  },
+
   // ---- Applications ----------------------------------------------------
   async applyAsTutor(
     userId: string,
-    data: { bio: string; subjects: string[]; experience: string; hourlyRate?: number },
+    data: {
+      bio: string;
+      subjects: string[];
+      experience: string;
+      hourlyRate?: number;
+      openToOtherUniversities?: boolean;
+      resumeStorageKey: string;
+      resumeOriginalFilename: string;
+      resumeMimeType: string;
+      resumeSizeBytes: number;
+      portfolioUrl?: string;
+    },
   ) {
-    return toApiApplication(await tutorModel.applications.create(userId, data));
+    const application = await tutorModel.applications.create(userId, data);
+
+    const applicant = await userModel.findById(userId);
+    await notificationModel.notifyAdmins("TUTOR_APPLICATION_SUBMITTED", {
+      title: "New tutor application",
+      message: `${applicant?.email ?? "A user"} applied to become a verified tutor.`,
+      applicationId: application.id,
+      userId,
+    });
+
+    return toApiApplication(application);
   },
 
   async getMyApplicationStatus(userId: string) {
@@ -116,7 +222,18 @@ export const tutorService = {
 
   async updateTutorProfile(
     userId: string,
-    data: { bio?: string; subjects?: string[]; hourlyRate?: number | null; isActive?: boolean },
+    data: {
+      bio?: string;
+      subjects?: string[];
+      hourlyRate?: number | null;
+      isActive?: boolean;
+      openToOtherUniversities?: boolean;
+      resumeStorageKey?: string;
+      resumeOriginalFilename?: string;
+      resumeMimeType?: string;
+      resumeSizeBytes?: number;
+      portfolioUrl?: string | null;
+    },
   ) {
     const profile = await tutorModel.profiles.findByUserId(userId);
     if (!profile) throw AppError.forbidden("You are not a verified tutor.");
@@ -203,6 +320,12 @@ export const tutorService = {
         subjects: application.subjects,
         experience: application.experience,
         hourlyRate: application.hourly_rate ? Number(application.hourly_rate) : null,
+        openToOtherUniversities: application.open_to_other_universities,
+        resumeStorageKey: application.resume_storage_key,
+        resumeOriginalFilename: application.resume_original_filename,
+        resumeMimeType: application.resume_mime_type,
+        resumeSizeBytes: application.resume_size_bytes,
+        portfolioUrl: application.portfolio_url,
         sourceApplicationId: application.id,
       });
     }
@@ -264,7 +387,18 @@ export const tutorService = {
   async adminGrantTutorTag(
     adminId: string,
     userId: string,
-    data: { bio: string; subjects: string[]; experience: string; hourlyRate?: number },
+    data: {
+      bio: string;
+      subjects: string[];
+      experience: string;
+      hourlyRate?: number;
+      openToOtherUniversities?: boolean;
+      resumeStorageKey?: string;
+      resumeOriginalFilename?: string;
+      resumeMimeType?: string;
+      resumeSizeBytes?: number;
+      portfolioUrl?: string;
+    },
   ) {
     const user = await userModel.findById(userId);
     if (!user) throw AppError.notFound("User not found.");
@@ -307,7 +441,18 @@ export const tutorService = {
   async adminUpdateTutorTag(
     adminId: string,
     userId: string,
-    data: { bio?: string; subjects?: string[]; hourlyRate?: number | null; isActive?: boolean },
+    data: {
+      bio?: string;
+      subjects?: string[];
+      hourlyRate?: number | null;
+      isActive?: boolean;
+      openToOtherUniversities?: boolean;
+      resumeStorageKey?: string;
+      resumeOriginalFilename?: string;
+      resumeMimeType?: string;
+      resumeSizeBytes?: number;
+      portfolioUrl?: string;
+    },
   ) {
     const profile = await tutorModel.profiles.findByUserId(userId);
     if (!profile) throw AppError.notFound("This user is not a verified tutor.");
@@ -461,23 +606,48 @@ export const tutorService = {
     }));
   },
 
-  async decideBooking(tutorId: string, bookingId: string, status: TutorBookingStatus) {
+  async decideBooking(userId: string, bookingId: string, status: TutorBookingStatus) {
     if (status !== "accepted" && status !== "declined") {
       throw AppError.badRequest("Status must be 'accepted' or 'declined'.");
     }
     const booking = await tutorModel.bookings.findById(bookingId);
     if (!booking) throw AppError.notFound("Booking not found.");
-    if (booking.tutor_id !== tutorId) throw AppError.forbidden();
+    const isParty = booking.tutor_id === userId || booking.student_id === userId;
+    if (!isParty) throw AppError.forbidden();
+    const expectedDecisionMaker = booking.reschedule_proposed_by
+      ? (booking.reschedule_proposed_by === booking.tutor_id ? booking.student_id : booking.tutor_id)
+      : booking.tutor_id;
+    if (userId !== expectedDecisionMaker) {
+      throw AppError.forbidden(
+        booking.reschedule_proposed_by
+          ? "Only the other party can confirm this reschedule."
+          : "Only the tutor can decide an original booking request.",
+      );
+    }
     if (booking.status !== "pending") throw AppError.badRequest("This booking has already been decided.");
 
+    const isRescheduleDecision = Boolean(booking.reschedule_proposed_by);
+    const decisionMakerName = userId === booking.tutor_id
+      ? booking.tutor_name ?? "The tutor"
+      : booking.student_name ?? "The student";
+    const recipientEmail = booking.reschedule_proposed_by === booking.tutor_id
+      ? booking.tutor_email
+      : booking.student_email;
+    const decisionVerb = status === "accepted" ? "confirmed" : "declined";
+    const decisionMessage = isRescheduleDecision
+      ? `${decisionMakerName} ${decisionVerb} the proposed new time for ${new Date(booking.requested_start_at).toLocaleString()}.`
+      : `${decisionMakerName} ${status} your session request for ${new Date(booking.requested_start_at).toLocaleString()}.`;
     const updated = await tutorModel.bookings.updateStatus(bookingId, status);
 
+    const recipientId = booking.reschedule_proposed_by ?? booking.student_id;
     await notificationModel.notifyUser(
-      booking.student_id,
+      recipientId,
       status === "accepted" ? "TUTOR_BOOKING_ACCEPTED" : "TUTOR_BOOKING_DECLINED",
       {
-        title: status === "accepted" ? "Your booking was accepted" : "Your booking was declined",
-        message: `${booking.tutor_name ?? "The tutor"} ${status} your session request for ${new Date(booking.requested_start_at).toLocaleString()}.`,
+        title: isRescheduleDecision
+          ? `Your proposed new time was ${decisionVerb}`
+          : status === "accepted" ? "Your booking was accepted" : "Your booking was declined",
+        message: decisionMessage,
         bookingId,
       },
     );
@@ -487,10 +657,12 @@ export const tutorService = {
     // decision immediately, and the email is genuinely best-effort.
     emailService
       .sendEmail({
-        to: booking.student_email,
-        subject: `Your tutoring session request was ${status}`,
+        to: recipientEmail,
+        subject: isRescheduleDecision
+          ? `Your proposed tutoring time was ${decisionVerb}`
+          : `Your tutoring session request was ${status}`,
         text: [
-          `${booking.tutor_name ?? "The tutor"} ${status} your session request for ${new Date(booking.requested_start_at).toLocaleString()}.`,
+          decisionMessage,
           `View your bookings: ${bookingsUrl()}`,
         ].join("\n"),
       })
@@ -549,14 +721,12 @@ export const tutorService = {
     const updated = await tutorModel.bookings.reschedule(bookingId, {
       requestedStartAt: data.requestedStartAt,
       durationMinutes: data.durationMinutes ?? booking.duration_minutes,
-      resetToPending: wasAccepted,
+      proposedBy: userId,
     });
 
     await notificationModel.notifyUser(otherPartyId, "TUTOR_BOOKING_RESCHEDULED", {
       title: "A session was rescheduled",
-      message: `${proposer} proposed a new time: ${data.requestedStartAt.toLocaleString()}.${
-        wasAccepted ? " Please reconfirm." : ""
-      }`,
+      message: `${proposer} proposed a new time: ${data.requestedStartAt.toLocaleString()}. Please confirm or decline it.`,
       bookingId,
     });
 
@@ -569,9 +739,21 @@ export const tutorService = {
       await messageModel.messages.create(
         conversation.id,
         userId,
-        `${proposer} proposed rescheduling to ${data.requestedStartAt.toLocaleString()}.${
-          wasAccepted ? " Please reconfirm this booking." : ""
-        }`,
+        `${proposer} proposed rescheduling to ${data.requestedStartAt.toLocaleString()}.`,
+        {
+          messageType: "booking_request",
+          metadata: {
+            bookingId,
+            subjectName: booking.subject_name,
+            requestedStartAt: data.requestedStartAt.toISOString(),
+            durationMinutes: data.durationMinutes ?? booking.duration_minutes,
+            note: "Please confirm or decline the proposed new time.",
+            studentName: booking.student_name,
+            studentEmail: booking.student_email,
+            studentPhone: booking.student_phone,
+            isReschedule: true,
+          },
+        },
       );
     } catch (err) {
       logger.error({ err, bookingId }, "Failed to send reschedule message");
@@ -583,7 +765,7 @@ export const tutorService = {
         subject: "Your tutoring session was rescheduled",
         text: [
           `${proposer} proposed a new time for your tutoring session: ${data.requestedStartAt.toLocaleString()}.`,
-          ...(wasAccepted ? ["Please reconfirm this booking."] : []),
+          "Please confirm or decline the proposed new time.",
           `View your bookings: ${bookingsUrl()}`,
         ].join("\n"),
       })

@@ -38,6 +38,18 @@ export function useBookingById(bookingId: string | undefined) {
   });
 }
 
+export function useResumeUploadIntent() {
+  return useMutation({ mutationFn: tutorService.getResumeUploadIntent });
+}
+
+export function useApplicationResumeUrl() {
+  return useMutation({ mutationFn: tutorService.getApplicationResumeUrl });
+}
+
+export function useProfileResumeUrl() {
+  return useMutation({ mutationFn: tutorService.getProfileResumeUrl });
+}
+
 export function useApplyAsTutor() {
   const queryClient = useQueryClient();
   return useMutation({

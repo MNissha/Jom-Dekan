@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { Button } from "./ui";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -23,21 +24,27 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    cancelRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
   }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="overlay-root">
       <div
-        className="absolute inset-0 bg-slate-900/60"
+        className="overlay-backdrop"
         onClick={onCancel}
         aria-hidden="true"
       />
@@ -45,35 +52,33 @@ export function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+        className="dialog-surface max-w-sm p-grid-6"
       >
         <h2
           id="confirm-dialog-title"
-          className="text-lg font-semibold text-slate-900"
+          className="text-lg font-semibold text-content-primary"
         >
           {title}
         </h2>
-        <p className="mt-2 text-sm text-slate-600">{message}</p>
+        <p className="mt-2 text-sm text-content-secondary">{message}</p>
         <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
+          <Button
+            ref={cancelRef}
             onClick={onCancel}
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            variant="secondary"
+            className="rounded-full"
           >
             {cancelLabel}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={onConfirm}
-            disabled={isConfirming}
-            className={`rounded-full px-4 py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 disabled:opacity-60 ${
-              destructive
-                ? "bg-red-600 hover:bg-red-700 focus-visible:ring-red-500"
-                : "bg-primary-600 hover:bg-primary-700 focus-visible:ring-primary-500"
-            }`}
+            loading={isConfirming}
+            loadingLabel={confirmLabel}
+            variant={destructive ? "danger" : "primary"}
+            className="rounded-full"
           >
-            {isConfirming ? "Working…" : confirmLabel}
-          </button>
+            {confirmLabel}
+          </Button>
         </div>
       </div>
     </div>

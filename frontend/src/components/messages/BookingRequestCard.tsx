@@ -3,6 +3,7 @@ import { useCurrentUser } from "../../hooks/useAuth";
 import { useBookingById, useDecideBooking } from "../../hooks/useTutor";
 import { RescheduleBookingButton } from "../common/RescheduleBookingButton";
 import type { Message, BookingRequestMetadata } from "../../types/message";
+import { cardClassName, StatusIndicator, type StatusTone } from "../common/cards";
 
 function readMetadata(message: Message): BookingRequestMetadata {
   const m = message.metadata as Partial<BookingRequestMetadata>;
@@ -15,13 +16,14 @@ function readMetadata(message: Message): BookingRequestMetadata {
     studentName: m.studentName ?? null,
     studentEmail: m.studentEmail ?? null,
     studentPhone: m.studentPhone ?? null,
+    isReschedule: m.isReschedule ?? false,
   };
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700",
-  accepted: "bg-emerald-50 text-emerald-700",
-  declined: "bg-red-50 text-red-700",
+const STATUS_TONE: Record<string, StatusTone> = {
+  pending: "warning",
+  accepted: "success",
+  declined: "danger",
 };
 
 export function BookingRequestCard({ message }: { message: Message }) {
@@ -40,15 +42,24 @@ export function BookingRequestCard({ message }: { message: Message }) {
   // snapshot, so falling back to metadata avoids showing a stale time.
   const requestedStartAt = booking?.requestedStartAt ?? metadata.requestedStartAt;
   const durationMinutes = booking?.durationMinutes ?? metadata.durationMinutes;
+  const isReschedule = Boolean(metadata.isReschedule);
+  const canDecide = Boolean(
+    booking &&
+    currentUser &&
+    status === "pending" &&
+    (booking.rescheduleProposedBy
+      ? isReschedule && currentUser.id !== booking.rescheduleProposedBy && isParty
+      : isTutor),
+  );
 
   return (
-    <div className="max-w-[92%] rounded-2xl border border-[#E4E3F2] bg-white p-4 text-sm shadow-sm dark:border-[#332C63] dark:bg-[#231E4A] sm:max-w-[85%]">
+    <div className={cardClassName("booking", "max-w-[92%] text-body-sm sm:max-w-[85%]")}>
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-primary-700 dark:text-primary-300">
           <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-          Booking request
+          {isReschedule ? "Reschedule proposal" : "Booking request"}
         </span>
-        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${STATUS_STYLE[status]}`}>{status}</span>
+        <StatusIndicator tone={STATUS_TONE[status] ?? "neutral"}>{status}</StatusIndicator>
       </div>
 
       <dl className="mt-3 space-y-1.5 text-slate-700 dark:text-slate-200">
@@ -80,7 +91,7 @@ export function BookingRequestCard({ message }: { message: Message }) {
         )}
       </div>
 
-      {isTutor && status === "pending" && (
+      {canDecide && (
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -89,7 +100,7 @@ export function BookingRequestCard({ message }: { message: Message }) {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
-            Accept
+            {isReschedule ? "Confirm new time" : "Accept"}
           </button>
           <button
             type="button"
@@ -98,9 +109,9 @@ export function BookingRequestCard({ message }: { message: Message }) {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E4E3F2] px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-[#332C63] dark:text-slate-200"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
-            Decline
+            {isReschedule ? "Decline new time" : "Decline"}
           </button>
-          <RescheduleBookingButton bookingId={metadata.bookingId} />
+          {!isReschedule && <RescheduleBookingButton bookingId={metadata.bookingId} />}
         </div>
       )}
 

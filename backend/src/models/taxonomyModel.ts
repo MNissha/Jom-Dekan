@@ -30,7 +30,12 @@ export interface ProgrammeRow {
 }
 export interface SubjectRow {
   id: string;
-  code: string;
+  // NULL means "legacy / catalogue-wide" — created before subjects were
+  // scoped per university, or an admin-created subject not tied to one.
+  // Never treated as equal to another NULL for uniqueness purposes (see
+  // migration 041's partial unique indexes).
+  university_id: string | null;
+  code: string | null;
   name: string;
   is_active: boolean;
   source: "ADMIN" | "COMMUNITY";
@@ -269,16 +274,56 @@ export const taxonomyModel = {
     },
     // `code` is stored already normalized (see normalizeSubjectCode), so
     // this is a plain equality lookup, not a case-insensitive search.
-    async findByCode(code: string): Promise<SubjectRow | null> {
+    // Scoped to a university (or explicitly NULL/"legacy") to match the
+    // per-university uniqueness in migration 041 — a NULL universityId
+    // here intentionally only matches other NULL-university rows, never
+    // "any university", so it can't accidentally merge two different
+    // universities' CSC577 into one.
+    async findByCode(
+      code: string,
+      universityId: string | null,
+    ): Promise<SubjectRow | null> {
       const result = await pool.query<SubjectRow>(
-        `SELECT * FROM subjects WHERE code = $1`,
-        [code],
+        universityId
+          ? `SELECT * FROM subjects WHERE code = $1 AND university_id = $2`
+          : `SELECT * FROM subjects WHERE code = $1 AND university_id IS NULL`,
+        universityId ? [code, universityId] : [code],
       );
       return result.rows[0] ?? null;
     },
-    async list(): Promise<SubjectRow[]> {
+    // Fallback lookup for the optional-code case: same university, same
+    // normalized (trimmed, case-insensitive) name.
+    async findByNormalizedName(
+      name: string,
+      universityId: string,
+    ): Promise<SubjectRow | null> {
       const result = await pool.query<SubjectRow>(
-        `SELECT * FROM subjects ORDER BY is_active DESC, name ASC`,
+        `SELECT * FROM subjects
+         WHERE code IS NULL AND university_id = $1 AND lower(btrim(name)) = lower(btrim($2))`,
+        [universityId, name],
+      );
+      return result.rows[0] ?? null;
+    },
+    async list(filters?: {
+      universityId?: string;
+      search?: string;
+    }): Promise<SubjectRow[]> {
+      const conditions: string[] = [];
+      const values: unknown[] = [];
+      if (filters?.universityId) {
+        values.push(filters.universityId);
+        conditions.push(`university_id = $${values.length}`);
+      }
+      if (filters?.search) {
+        values.push(`%${filters.search.replace(/[\\%_]/g, "\\$&")}%`);
+        conditions.push(
+          `(code ILIKE $${values.length} ESCAPE '\\' OR name ILIKE $${values.length} ESCAPE '\\')`,
+        );
+      }
+      const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      const result = await pool.query<SubjectRow>(
+        `SELECT * FROM subjects ${whereClause} ORDER BY is_active DESC, name ASC`,
+        values,
       );
       return result.rows;
     },
@@ -293,18 +338,20 @@ export const taxonomyModel = {
       return result.rows;
     },
     async create(params: {
-      code: string;
+      code?: string | null;
       name: string;
+      universityId?: string | null;
       source?: "ADMIN" | "COMMUNITY";
       verificationStatus?: "COMMUNITY_SUBMITTED" | "ADMIN_VERIFIED";
       createdBy?: string | null;
     }): Promise<SubjectRow> {
       const result = await pool.query<SubjectRow>(
-        `INSERT INTO subjects (code, name, source, verification_status, created_by)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        `INSERT INTO subjects (code, name, university_id, source, verification_status, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
         [
-          params.code,
+          params.code ?? null,
           params.name,
+          params.universityId ?? null,
           params.source ?? "ADMIN",
           params.verificationStatus ?? "ADMIN_VERIFIED",
           params.createdBy ?? null,
@@ -420,6 +467,7 @@ export function toApiProgramme(row: ProgrammeRow) {
 export function toApiSubject(row: SubjectRow) {
   return {
     id: row.id,
+    universityId: row.university_id,
     code: row.code,
     name: row.name,
     isActive: row.is_active,

@@ -152,7 +152,7 @@ export default function AdminUniversities({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Universities</h1>
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Universities</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Only admins can create, edit, or archive universities here. "Archive"
         hides a university from new picks without deleting it, so existing
@@ -220,7 +220,7 @@ export default function AdminUniversities({
         </button>
       </form>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="card-base admin-table-container mt-6 overflow-x-auto">
         {isLoading ? (
           <p className="p-4 text-sm text-slate-500">Loading…</p>
         ) : isError ? (

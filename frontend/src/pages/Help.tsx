@@ -33,8 +33,8 @@ export default function Help() {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px] px-[18px] py-[22px]">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Help &amp; Support</h1>
+    <div className="page-container page-container-reading">
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Help &amp; Support</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Learn about JomDekan, get help from our team, or tell us how to make it better.
       </p>

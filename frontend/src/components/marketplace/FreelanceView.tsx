@@ -11,6 +11,7 @@ import { ReportButton } from "../common/ReportButton";
 import { MarketplaceCardSkeleton } from "./MarketplaceCardSkeleton";
 import type { Opportunity, OpportunityApplication, OpportunityApplicationStatus, OpportunityMode } from "../../types/opportunity";
 import { useMinimumLoading } from "../../hooks/useMinimumLoading";
+import { cardClassName } from "../common/cards";
 
 const MODE_LABEL: Record<OpportunityMode, string> = {
   ONLINE: "Remote",
@@ -191,7 +192,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
   const toast = useToast();
   const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
   const { myOpportunities, isLoading: isLoadingMine } = useMyOpportunities();
-  const showSkeleton = useMinimumLoading(isLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading, 600);
 
   const [view, setView] = useState<"browse" | "mine">("browse");
 
@@ -469,7 +470,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                     setDetailOppId(opp.id);
                   }
                 }}
-                className="flex cursor-pointer flex-wrap items-center gap-4 rounded-[20px] border border-[#ECEBF7] bg-white p-[18px] text-left transition motion-safe:duration-150 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                className={cardClassName("opportunity", "flex cursor-pointer flex-wrap items-center gap-4 text-left")}
               >
                 <div className="min-w-0 flex-1">
                   <h3 className="text-[16px] font-bold text-slate-900">{opp.title}</h3>

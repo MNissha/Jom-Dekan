@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { clearBrowserSession, markBrowserSessionActive } from '../utils/browserSession';
 
 interface AuthUser {
   id: string;
@@ -27,7 +28,7 @@ interface AuthState {
 
 /**
  * Client-only session state. The access token deliberately lives here
- * (in-memory, never persisted to localStorage/sessionStorage) rather
+ * (in-memory, never persisted as readable token data) rather
  * than as TanStack Query data — it is not server data to cache, it is
  * ephemeral UI/session state, and Zustand is reserved for exactly this
  * per the architecture guide.
@@ -40,8 +41,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isInitialized: false,
   sessionCheckFailed: false,
-  setSession: (accessToken, user) => set({ accessToken, user, sessionCheckFailed: false }),
-  clearSession: () => set({ accessToken: null, user: null }),
+  setSession: (accessToken, user) => {
+    markBrowserSessionActive();
+    set({ accessToken, user, sessionCheckFailed: false });
+  },
+  clearSession: () => {
+    clearBrowserSession();
+    set({ accessToken: null, user: null });
+  },
   setInitialized: () => set({ isInitialized: true }),
   setSessionCheckFailed: (failed) => set({ sessionCheckFailed: failed }),
   // Re-arms the bootstrap effect (useSessionBootstrap only runs while

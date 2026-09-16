@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
@@ -8,6 +8,7 @@ import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { StatusBanner } from "../../components/common/StatusBanner";
 import { RowAction } from "../../components/common/RowAction";
+import { SearchableSelect } from "../../components/common/SearchableSelect";
 import {
   subjectFormSchema,
   type SubjectFormValues,
@@ -18,6 +19,7 @@ import {
   useUpdateSubject,
   useSetSubjectStatus,
   useDeleteSubject,
+  useUniversities,
 } from "../../hooks/useTaxonomy";
 import type { Subject } from "../../types/taxonomy";
 
@@ -41,6 +43,7 @@ export default function AdminSubjects({
   embedded?: boolean;
 }) {
   const { data: subjects, isLoading, isError } = useSubjects();
+  const { data: universities } = useUniversities();
   const createSubject = useCreateSubject();
   const updateSubject = useUpdateSubject();
   const setStatus = useSetSubjectStatus();
@@ -60,16 +63,20 @@ export default function AdminSubjects({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SubjectFormValues>({ resolver: zodResolver(subjectFormSchema) });
 
   const onSubmit = (values: SubjectFormValues) =>
-    createSubject.mutate(values, {
-      onSuccess: () => {
-        reset();
-        setBanner({ type: "success", message: "Subject added." });
+    createSubject.mutate(
+      { ...values, universityId: values.universityId || undefined },
+      {
+        onSuccess: () => {
+          reset();
+          setBanner({ type: "success", message: "Subject added." });
+        },
       },
-    });
+    );
 
   const serverError = createSubject.isError
     ? extractErrorMessage(createSubject.error)
@@ -155,7 +162,7 @@ export default function AdminSubjects({
 
   return (
     <AdminPageShell embedded={embedded}>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Subjects</h1>
+      <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Subjects</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Subjects are standalone (e.g. CSC510) and get linked to programmes
         separately.
@@ -217,6 +224,29 @@ export default function AdminSubjects({
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
+        <div>
+          <label
+            htmlFor="universityId"
+            className="block text-sm font-medium text-slate-700"
+          >
+            University (optional)
+          </label>
+          <div className="mt-1 w-64">
+            <Controller
+              control={control}
+              name="universityId"
+              render={({ field }) => (
+                <SearchableSelect
+                  id="universityId"
+                  options={(universities ?? []).map((u) => ({ value: u.id, label: u.name }))}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="Catalogue-wide (no university)"
+                />
+              )}
+            />
+          </div>
+        </div>
         <button
           type="submit"
           disabled={isSubmitting || createSubject.isPending}
@@ -226,7 +256,7 @@ export default function AdminSubjects({
         </button>
       </form>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="card-base admin-table-container mt-6 overflow-x-auto">
         {isLoading ? (
           <p className="p-4 text-sm text-slate-500">Loading…</p>
         ) : isError ? (
@@ -237,6 +267,7 @@ export default function AdminSubjects({
               <tr>
                 <th className="px-4 py-2">Code</th>
                 <th className="px-4 py-2">Name</th>
+                <th className="px-4 py-2">University</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2 text-right">Action</th>
               </tr>
@@ -247,7 +278,7 @@ export default function AdminSubjects({
                 return (
                   <tr key={s.id} className="border-t border-slate-100">
                     <td className="px-4 py-2 font-medium text-slate-800">
-                      {s.code}
+                      {s.code ?? "—"}
                     </td>
                     {isEditing ? (
                       <>
@@ -263,6 +294,9 @@ export default function AdminSubjects({
                               {editError}
                             </p>
                           )}
+                        </td>
+                        <td className="px-4 py-2 text-slate-500">
+                          {universities?.find((u) => u.id === s.universityId)?.name ?? "—"}
                         </td>
                         <td className="px-4 py-2">
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
@@ -292,6 +326,9 @@ export default function AdminSubjects({
                     ) : (
                       <>
                         <td className="px-4 py-2 text-slate-600">{s.name}</td>
+                        <td className="px-4 py-2 text-slate-500">
+                          {universities?.find((u) => u.id === s.universityId)?.name ?? "—"}
+                        </td>
                         <td className="px-4 py-2">
                           <span
                             className={`rounded-full px-2 py-0.5 text-xs font-medium ${

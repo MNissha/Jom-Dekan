@@ -221,12 +221,29 @@ export const resourceModel = {
     if (filters.category) addCondition("r.category = ?", filters.category);
 
     let searchParamIndex: number | null = null;
+    let partialSearchParamIndex: number | null = null;
     if (filters.q) {
-      addCondition(
-        "r.search_vector @@ websearch_to_tsquery('english', ?)",
-        filters.q,
-      );
+      values.push(filters.q);
       searchParamIndex = values.length;
+
+      // Full-text search handles natural-language terms and relevance, while
+      // this escaped ILIKE pattern also finds course codes and word fragments
+      // (for example, "scs" inside a title or description).
+      const escapedPartialQuery = filters.q.replace(/[\\%_]/g, "\\$&");
+      values.push(`%${escapedPartialQuery}%`);
+      partialSearchParamIndex = values.length;
+      conditions.push(
+        `(r.search_vector @@ websearch_to_tsquery('english', $${searchParamIndex})
+          OR r.title ILIKE $${partialSearchParamIndex} ESCAPE '\\'
+          OR COALESCE(r.description, '') ILIKE $${partialSearchParamIndex} ESCAPE '\\'
+          OR EXISTS (
+            SELECT 1
+            FROM subjects search_subject
+            WHERE search_subject.id = r.subject_id
+              AND (search_subject.code ILIKE $${partialSearchParamIndex} ESCAPE '\\'
+                OR search_subject.name ILIKE $${partialSearchParamIndex} ESCAPE '\\')
+          ))`,
+      );
     }
 
     const whereClause =
@@ -236,8 +253,9 @@ export const resourceModel = {
     // governs the rest of the order — a title search still resolves rank
     // ties alphabetically, not by recency.
     const orderParts: string[] = [];
-    if (searchParamIndex !== null) {
+    if (searchParamIndex !== null && partialSearchParamIndex !== null) {
       orderParts.push(
+        `CASE WHEN r.title ILIKE $${partialSearchParamIndex} ESCAPE '\\' THEN 1 ELSE 0 END DESC`,
         `ts_rank(r.search_vector, websearch_to_tsquery('english', $${searchParamIndex})) DESC`,
       );
     }

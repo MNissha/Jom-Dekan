@@ -147,7 +147,7 @@ function LogTable({ tab, page, setPage, search }: { tab: LogTab; page: number; s
 
   return (
     <>
-      <div className="mt-4 overflow-x-auto rounded-[22px] border border-[#E8E5F7] bg-white shadow-sm">
+      <div className="card-base admin-table-container mt-4 overflow-x-auto">
         {query.isLoading ? (
           <div className="space-y-3 p-5" role="status" aria-label="Loading logs">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -238,12 +238,12 @@ export function AdminLogs({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <AdminPageShell embedded={embedded}>
-      <div className="mx-auto max-w-6xl px-4 py-8 motion-safe:animate-[fadeIn_220ms_ease-out]">
+      <div className="page-container page-container-standard py-grid-8 motion-safe:animate-panel-enter">
         <header className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-[#332475] via-[#4338CA] to-[#6558DD] p-6 text-white shadow-lg">
           <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-amber-300/20 blur-2xl" />
           <div className="relative">
             <p className="text-xs font-bold uppercase tracking-[.2em] text-[#DDD8FF]">Admin portal</p>
-            <h1 className="mt-1 text-3xl font-bold">Activity logs</h1>
+            <h1 className="mt-grid-1 break-words text-2xl font-heading leading-tight sm:text-page-title">Activity logs</h1>
             <p className="mt-1 text-sm text-[#D5D0F7]">
               A permanent, read-only record of what happened on JomDekan — entries can never be edited, deleted or
               archived.

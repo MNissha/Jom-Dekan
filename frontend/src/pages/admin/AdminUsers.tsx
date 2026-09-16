@@ -110,12 +110,12 @@ function AccountActionModal({
       role="dialog"
       aria-modal="true"
       aria-label={isDisable ? "Disable account" : "Delete account"}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]"
+      className="overlay-root"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="w-full max-w-[480px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
+      <div className="dialog-surface max-w-[480px]">
         <div
-          className="flex items-start justify-between gap-4 p-[22px] text-white"
+          className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
           style={{
             background: isDisable
               ? "radial-gradient(120% 160% at 88% 8%, #D97706 0%, #78350F 55%, #451A03 100%)"
@@ -139,7 +139,7 @@ function AccountActionModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-[22px]">
+        <form onSubmit={handleSubmit} className="dialog-body flex flex-col gap-4 p-[22px]">
           {serverError && (
             <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
               {serverError}
@@ -280,23 +280,23 @@ export function AdminUsers({ embedded = false, onSelectUser }: { embedded?: bool
   }
 
   return <AdminPageShell embedded={embedded}>
-    <div className="mx-auto max-w-6xl px-4 py-8 motion-safe:animate-[fadeIn_220ms_ease-out]">
+    <div className="page-container page-container-standard py-grid-8 motion-safe:animate-panel-enter">
       <header className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-[#332475] via-[#4338CA] to-[#6558DD] p-6 text-white shadow-lg">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-amber-300/20 blur-2xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
-          <div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#DDD8FF]">Admin directory</p><h1 className="mt-1 text-3xl font-bold">User management</h1><p className="mt-1 text-sm text-[#D5D0F7]">Create accounts, update access and manage user status.</p></div>
+          <div className="min-w-0"><p className="text-overline uppercase text-[#DDD8FF]">Admin directory</p><h1 className="mt-grid-1 break-words text-2xl font-heading leading-tight sm:text-page-title">User management</h1><p className="mt-grid-1 max-w-2xl break-words text-body-sm text-[#D5D0F7]">Create accounts, update access and manage user status.</p></div>
           <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-[#F5C21A] px-4 py-2.5 text-sm font-bold text-[#231C57] shadow-md transition hover:-translate-y-0.5 hover:bg-amber-300"><Plus className="h-4 w-4" />Add new user</button>
         </div>
       </header>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {summaries.map(({ label, value, icon: Icon, color }) => <div key={label} className="flex items-center gap-3 rounded-2xl border border-[#E8E5F7] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><span className={`rounded-xl p-2.5 ${color}`}><Icon className="h-5 w-5" /></span><div><p className="text-xs font-semibold text-slate-500">{label}</p><p className="text-2xl font-bold text-slate-900">{value}</p></div></div>)}
+        {summaries.map(({ label, value, icon: Icon, color }) => <div key={label} className="card-base card-static card-admin-summary flex items-center gap-3"><span className={`rounded-xl p-2.5 ${color}`}><Icon className="h-5 w-5" /></span><div><p className="text-caption text-content-muted">{label}</p><p className="text-2xl font-heading text-content-primary">{value}</p></div></div>)}
       </div>
 
       {feedback && <p role="status" className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${feedback.error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>{feedback.text}</p>}
       <div className="relative mt-5 max-w-md"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="search" value={searchInput} onChange={(event) => { setSearchInput(event.target.value); setPage(1); }} placeholder="Search by name or email…" className="w-full rounded-xl border border-[#DDD9F1] bg-white py-2.5 pl-10 pr-3 text-sm shadow-sm outline-none focus:border-[#6558DD] focus:ring-4 focus:ring-indigo-100" /></div>
 
-      <div className="mt-4 overflow-x-auto rounded-[22px] border border-[#E8E5F7] bg-white shadow-sm">
+      <div className="card-base admin-table-container mt-4 overflow-x-auto">
         {query.isLoading || isSearchPending ? <div className="space-y-3 p-5" role="status" aria-label="Searching users">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-14 animate-pulse rounded-xl bg-slate-100" />)}</div>
           : query.isError ? <p className="p-8 text-center text-red-600">Could not load users.</p>
           : !users.length ? <p className="p-8 text-center text-slate-500">No users found.</p>

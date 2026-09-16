@@ -190,6 +190,19 @@ class S3StorageAdapter implements StorageAdapter {
   }
 }
 
+// For an upload that doesn't go through the resource pipeline (e.g. a
+// tutor's resume) — same signed-token shape createUploadIntent uses
+// internally, just not hardcoded to /resources/files/upload as the
+// destination. The caller builds its own upload URL around this token,
+// pointed at its own token-gated PUT route.
+export function signUploadToken(key: string, expiresInSeconds: number): string {
+  return jwt.sign(
+    { key, purpose: "upload" } satisfies StorageTokenPayload,
+    env.storage.signingSecret,
+    { expiresIn: expiresInSeconds, algorithm: "HS256" },
+  );
+}
+
 export function verifyStorageToken(
   token: string,
   expectedPurpose: "upload" | "download",

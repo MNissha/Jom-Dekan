@@ -3,7 +3,7 @@ import { adminTutorTagController } from "../controllers/adminTutorTagController"
 import { authenticate } from "../config/middleware/authMiddleware";
 import { authorize } from "../config/middleware/authorizeMiddleware";
 import { validate } from "../config/middleware/validateMiddleware";
-import { applyTutorSchema, updateTutorProfileSchema, tutorUserIdParamSchema } from "../validators/tutorValidators";
+import { adminGrantTutorTagSchema, updateTutorProfileSchema, tutorUserIdParamSchema } from "../validators/tutorValidators";
 
 const router = Router();
 
@@ -23,7 +23,7 @@ router.post(
   "/:userId",
   authenticate,
   authorize("ADMIN"),
-  validate({ params: tutorUserIdParamSchema, body: applyTutorSchema }),
+  validate({ params: tutorUserIdParamSchema, body: adminGrantTutorTagSchema }),
   adminTutorTagController.grant,
 );
 

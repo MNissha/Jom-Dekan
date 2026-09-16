@@ -17,7 +17,7 @@ import { AdminAnalyticsPanel } from "./admin/AdminAnalytics";
 export default function Dashboard() {
   const user = useCurrentUser();
   const { data: profile } = useMyProfile();
-  // Simulated ~2s reveal for this frontend demo, kept separate from the
+  // Brief simulated reveal for this frontend demo, kept separate from the
   // real react-query isLoading flags below (OR'd in, never replacing them).
   const isDemoLoading = useDemoLoading();
 
@@ -39,14 +39,14 @@ export default function Dashboard() {
 
   if (user?.role === "ADMIN") {
     return (
-      <div className="mx-auto max-w-[1440px] px-[18px] pt-[22px] pb-[28px]">
+      <div className="page-container page-container-dashboard pb-grid-8">
         <AdminAnalyticsPanel />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] px-[18px] pt-[22px] pb-[28px]">
+    <div className="page-container page-container-dashboard pb-grid-8">
       {/* Hero/greeting card — reference token: radial gradient, 26px
           radius, 30px padding, white text. No fabricated "semester/week"
           badge here — the backend has no academic-term data, so unlike

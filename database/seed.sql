@@ -43,12 +43,22 @@ SELECT f.id, 'Bachelor of Laws (Hons)', 'law-llb', 'DEGREE' FROM faculties f
 WHERE f.slug = 'law'
 ON CONFLICT (faculty_id, slug) DO NOTHING;
 
-INSERT INTO subjects (code, name) VALUES
+-- Seeded catalogue-wide (no university_id) same as before migration 041
+-- introduced per-university scoping — these predate that and there's no
+-- reliable single university to assign them to. Can't use
+-- `ON CONFLICT (code)` any more (that constraint is gone; uniqueness is
+-- now per-university, and these rows are intentionally university_id
+-- NULL), so idempotency is a plain existence check instead.
+INSERT INTO subjects (code, name)
+SELECT v.code, v.name FROM (VALUES
     ('CSC510', 'Software Engineering'),
     ('CSC548', 'Database Systems'),
     ('CSC577', 'Artificial Intelligence'),
     ('LAW404', 'Law of Contract II')
-ON CONFLICT (code) DO NOTHING;
+) AS v(code, name)
+WHERE NOT EXISTS (
+    SELECT 1 FROM subjects s WHERE s.code = v.code AND s.university_id IS NULL
+);
 
 INSERT INTO programme_subjects (programme_id, subject_id, recommended_year, recommended_semester, curriculum_year)
 SELECT p.id, s.id, 3, 1, 2024

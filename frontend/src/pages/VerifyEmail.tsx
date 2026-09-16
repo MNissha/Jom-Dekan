@@ -25,30 +25,30 @@ export default function VerifyEmail() {
         : null;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12 text-center">
+    <div className="page-container flex min-h-[70vh] max-w-md flex-col justify-center py-grid-12 text-center">
       {!token && (
         <>
-          <h1 className="text-2xl font-bold text-slate-900">Invalid verification link</h1>
+          <h1 className="text-2xl font-heading leading-tight text-content-primary sm:text-page-title">Invalid verification link</h1>
           <p className="mt-2 text-sm text-slate-500">This link is missing its token.</p>
         </>
       )}
 
       {token && verifyEmail.isPending && (
         <>
-          <h1 className="text-2xl font-bold text-slate-900">Verifying your email…</h1>
+          <h1 className="text-2xl font-heading leading-tight text-content-primary sm:text-page-title">Verifying your email…</h1>
         </>
       )}
 
       {token && verifyEmail.isSuccess && (
         <>
-          <h1 className="text-2xl font-bold text-slate-900">Email verified</h1>
+          <h1 className="text-2xl font-heading leading-tight text-content-primary sm:text-page-title">Email verified</h1>
           <p className="mt-2 text-sm text-slate-500">Your email address has been confirmed. You're all set.</p>
         </>
       )}
 
       {token && verifyEmail.isError && (
         <>
-          <h1 className="text-2xl font-bold text-slate-900">Verification failed</h1>
+          <h1 className="text-2xl font-heading leading-tight text-content-primary sm:text-page-title">Verification failed</h1>
           <p className="mt-2 text-sm text-red-600">{serverError}</p>
         </>
       )}

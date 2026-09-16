@@ -34,8 +34,8 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
-        <h1 className="text-2xl font-bold text-slate-900">Invalid reset link</h1>
+      <div className="page-container flex min-h-[70vh] max-w-md flex-col justify-center py-grid-12">
+        <h1 className="text-2xl font-heading leading-tight text-content-primary sm:text-page-title">Invalid reset link</h1>
         <p className="mt-2 text-sm text-slate-500">
           This password reset link is missing its token. Request a new one below.
         </p>
@@ -50,8 +50,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
-      <h1 className="text-2xl font-bold text-slate-900">Choose a new password</h1>
+    <div className="page-container flex min-h-[70vh] max-w-md flex-col justify-center py-grid-12">
+      <h1 className="text-2xl font-heading leading-tight text-content-primary sm:text-page-title">Choose a new password</h1>
       <p className="mt-1 text-sm text-slate-500">This link can only be used once and expires after 1 hour.</p>
 
       <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>

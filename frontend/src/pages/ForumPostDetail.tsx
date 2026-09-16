@@ -18,7 +18,7 @@ import { ArrowLeft } from "lucide-react";
 
 function DiscussionDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl animate-pulse px-[18px] py-[22px]" aria-label="Loading discussion">
+    <div className="page-container page-container-reading animate-pulse" aria-label="Loading discussion">
       <div className="h-4 w-36 rounded bg-violet-100" />
       <div className="mt-5 rounded-[24px] border border-violet-100 bg-white p-6 shadow-sm">
         <div className="h-7 w-3/4 rounded bg-violet-100" />
@@ -51,19 +51,19 @@ export default function ForumPostDetail() {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState("");
   const [commentVisibility, setCommentVisibility] = useState<Record<string, boolean>>({});
-  const showSkeleton = useMinimumLoading(isLoading || commentsLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading || commentsLoading, 600);
 
   if (showSkeleton) return <DiscussionDetailSkeleton />;
 
   if (isLoading)
     return (
-      <p className="mx-auto max-w-3xl px-[18px] py-[22px] text-sm text-slate-500">
+      <p className="page-container page-container-reading text-body-sm text-content-muted">
         Loading…
       </p>
     );
   if (isError || !post)
     return (
-      <div className="mx-auto max-w-3xl px-[18px] py-[22px]">
+      <div className="page-container page-container-reading">
         <p className="text-sm text-red-600">
           This post does not exist, or it has been deleted.
         </p>
@@ -139,8 +139,7 @@ export default function ForumPostDetail() {
   };
 
   return (
-    <div className="relative mx-auto max-w-3xl px-[18px] py-[22px] motion-safe:animate-[fadeIn_300ms_ease-out]">
-      <div className="pointer-events-none absolute -right-10 top-16 -z-10 h-44 w-44 rounded-full bg-violet-200/30 blur-3xl" aria-hidden="true" />
+    <div className="page-container page-container-reading motion-safe:animate-content-enter">
 
       <Link to="/forum" className="group mt-2 mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 transition motion-safe:duration-150 hover:text-primary-700">
         <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 transition-transform motion-safe:duration-150 group-hover:-translate-x-1 group-hover:border-primary-300 group-hover:bg-primary-50">
@@ -149,8 +148,7 @@ export default function ForumPostDetail() {
         Back
       </Link>
 
-      <div className="group mt-4 overflow-hidden rounded-[24px] border border-[#E4E0FA] bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-xl">
-        <div className="-mx-6 -mt-6 mb-5 h-1.5 bg-gradient-to-r from-[#4338CA] via-violet-500 to-[#F5C21A]" aria-hidden="true" />
+      <article className="card-base card-static mt-4 p-grid-5 sm:p-grid-6">
         {isEditing ? (
           <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
             <div>
@@ -209,7 +207,7 @@ export default function ForumPostDetail() {
                 myVote={post.myVote}
               />
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-slate-900">
+                <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">
                   {post.title}
                 </h1>
                 <p className="mt-1 text-xs font-semibold text-slate-400">
@@ -244,30 +242,31 @@ export default function ForumPostDetail() {
             )}
           </>
         )}
-      </div>
+      </article>
 
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold text-slate-800">Comments</h2>
+      <section className="mt-grid-6" aria-labelledby="comments-heading">
+        <h2 id="comments-heading" className="text-section-title text-content-primary">Discussion</h2>
+        <p className="mt-1 text-sm text-content-secondary">{(comments ?? []).length} {(comments ?? []).length === 1 ? "comment" : "comments"}</p>
 
-        <form onSubmit={handleAddComment} className="mt-3 flex flex-col gap-2">
+        <form onSubmit={handleAddComment} className="mt-grid-3 rounded-card border border-border bg-surface-card p-grid-3 shadow-sm">
           <textarea
             value={commentBody}
             onChange={(e) => setCommentBody(e.target.value)}
             placeholder="Add a comment…"
             required
-            rows={3}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            rows={2}
+            className="min-h-20 w-full resize-y rounded-control border border-border bg-surface-page px-grid-3 py-grid-2 text-body-sm text-content-primary placeholder:text-content-muted focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           <button
             type="submit"
             disabled={createComment.isPending}
-            className="self-start rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+            className="mt-grid-2 inline-flex min-h-control-sm items-center self-end rounded-full bg-primary-600 px-grid-4 text-label text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {createComment.isPending ? "Posting…" : "Comment"}
           </button>
         </form>
 
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-grid-4 flex flex-col gap-grid-2">
           {(comments ?? []).map((comment, index) => {
             const commentCanManage =
               user?.id === comment.authorId || user?.role === "ADMIN";
@@ -276,9 +275,8 @@ export default function ForumPostDetail() {
               <div
                 key={comment.id}
                 style={{ animationDelay: `${index * 70}ms` }}
-                className="group/comment relative flex gap-3 overflow-hidden rounded-2xl border border-[#ECEBF7] bg-white p-4 shadow-sm transition duration-200 motion-safe:animate-[notificationRise_320ms_ease-out_both] hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md"
+                className="card-base card-static card-comment flex gap-grid-3 px-grid-4 py-grid-3 motion-safe:animate-content-enter"
               >
-                <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#6D5CE7] to-[#4338CA] opacity-0 transition group-hover/comment:opacity-100" aria-hidden="true" />
                 <VoteButtons
                   targetType="forum_comment"
                   targetId={comment.id}
@@ -367,7 +365,7 @@ export default function ForumPostDetail() {
             </p>
           )}
         </div>
-      </div>
+      </section>
 
     </div>
   );

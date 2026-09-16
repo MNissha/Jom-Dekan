@@ -14,6 +14,7 @@ import { RESOURCE_CATEGORIES, RESOURCE_CATEGORY_LABELS, type ResourceCategory, t
 import type { University } from "../types/taxonomy";
 import { fileTypeBadge } from "../utils/fileTypeBadge";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
+import { cardClassName } from "../components/common/cards";
 
 const PAGE_SIZE = 12;
 type SortBy = "newest" | "oldest" | "title";
@@ -172,7 +173,7 @@ export default function Resources() {
     page,
     pageSize: PAGE_SIZE,
   });
-  const showSkeleton = useMinimumLoading(isLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading, 600);
   const resources = data?.data ?? [];
   const total = data?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -209,7 +210,7 @@ export default function Resources() {
   }
 
   const hasActiveFilters = Boolean(
-    searchInput || universityId || facultyId || programmeId || subjectId,
+    searchInput || universityId || facultyId || programmeId || subjectId || category,
   );
 
   function handleResetFilters() {
@@ -219,14 +220,15 @@ export default function Resources() {
     setFacultyId(undefined);
     setProgrammeId(undefined);
     setSubjectId(undefined);
+    setCategory(undefined);
     setPage(1);
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-[18px] py-[22px]">
+    <div className="page-container page-container-standard">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Academic Resources</h1>
+          <h1 className="break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Academic Resources</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {total > 0 ? `${total} resources` : "Browse resources"} — filter by university, programme, subject or
             category.
@@ -304,7 +306,7 @@ export default function Resources() {
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">University</label>
+            <label className="text-overline uppercase text-content-muted">University</label>
             <div className="mt-1.5">
               <SearchableSelect
                 options={[
@@ -318,7 +320,7 @@ export default function Resources() {
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Faculty</label>
+            <label className="text-overline uppercase text-content-muted">Faculty</label>
             <div className="mt-1.5">
               <SearchableSelect
                 options={[
@@ -333,7 +335,7 @@ export default function Resources() {
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Programme</label>
+            <label className="text-overline uppercase text-content-muted">Programme</label>
             <div className="mt-1.5">
               <SearchableSelect
                 options={[
@@ -348,12 +350,12 @@ export default function Resources() {
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Subject</label>
+            <label className="text-overline uppercase text-content-muted">Subject</label>
             <div className="mt-1.5">
               <SearchableSelect
                 options={[
                   { value: "", label: "All subjects" },
-                  ...(subjects ?? []).map((s) => ({ value: s.id, label: `${s.code} · ${s.name}` })),
+                  ...(subjects ?? []).map((s) => ({ value: s.id, label: s.code ? `${s.code} · ${s.name}` : s.name })),
                 ]}
                 value={subjectId ?? ""}
                 onChange={handleSubjectChange}
@@ -422,20 +424,20 @@ export default function Resources() {
                   key={r.id}
                   to={`/resources/${r.id}`}
                   style={{ animationDelay: `${i * 40}ms` }}
-                  className="flex flex-col overflow-hidden rounded-2xl border border-[#ECEBF7] bg-white shadow-sm transition motion-safe:duration-150 motion-safe:animate-[fadeIn_300ms_ease-out_both] hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
+                  className={cardClassName("resource", "flex flex-col overflow-hidden p-0 motion-safe:animate-[fadeIn_300ms_ease-out_both]")}
                 >
                   <ResourceThumbnail resource={r} />
                   <div className="flex flex-1 flex-col p-5">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <span
-                        className={`max-w-full break-words rounded-full px-2.5 py-1 text-[11px] font-bold ${badge.className}`}
+                        className={`max-w-full break-words rounded-full px-2.5 py-1 text-caption font-heading ${badge.className}`}
                         aria-label={`File type: ${badge.label}`}
                       >
                         {badge.label}
                       </span>
                       <div className="flex shrink-0 items-center gap-2">
                         {r.status !== "READY" && (
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadgeClass(r.status)}`}>
+                          <span className={`rounded-full px-2 py-0.5 text-caption ${statusBadgeClass(r.status)}`}>
                             {r.status}
                           </span>
                         )}
@@ -444,16 +446,16 @@ export default function Resources() {
                       </div>
                     </div>
 
-                    <h2 className="mt-3 line-clamp-2 text-[15.5px] font-bold text-slate-900">{r.title}</h2>
+                    <h2 className="mt-grid-3 line-clamp-2 text-subsection-title text-content-primary">{r.title}</h2>
                     <ResourceTaxonomyLine resource={r} universities={universities} />
 
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {subject && (
-                        <span className="rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700">
+                      {subject?.code && (
+                        <span className="rounded-full bg-[#F1F0FA] px-2.5 py-1 text-caption font-heading text-primary-700">
                           {subject.code}
                         </span>
                       )}
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-caption font-heading text-slate-600">
                         {RESOURCE_CATEGORY_LABELS[r.category]}
                       </span>
                     </div>
@@ -465,7 +467,7 @@ export default function Resources() {
                         ) : (
                           "A JomDekan student"
                         )}
-                        <span className="block text-[11px] font-medium text-slate-400">
+                        <span className="block text-caption text-content-muted">
                           Uploaded {new Date(r.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                         </span>
                       </span>

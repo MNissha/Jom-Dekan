@@ -2,7 +2,46 @@ import axiosInstance from "../api/axiosInstance";
 import type { MyTutorStatus, TutorApplication, TutorBooking, TutorProfile, TutorStudent } from "../types/tutor";
 
 export const tutorService = {
-  async apply(data: { bio: string; subjects: string[]; experience: string; hourlyRate?: number }) {
+  async getResumeUploadIntent(data: { fileName: string; contentType: string; sizeBytes: number }) {
+    const { data: res } = await axiosInstance.post("/tutors/resume-upload-intent", data);
+    return res.data as { uploadUrl: string; key: string };
+  },
+  // Same PUT-the-raw-file-to-a-signed-URL mechanics as resourceService's
+  // own uploadFile — kept as its own small copy here rather than
+  // imported, since that one's typed to return a resource file, not a
+  // resume upload's plain ack.
+  async uploadResumeFile(uploadUrl: string, file: File, onProgress?: (percent: number) => void) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const base = axiosInstance.defaults.baseURL ?? "";
+    const origin = new URL(base, window.location.origin).origin;
+    await axiosInstance.put(new URL(uploadUrl, origin).toString(), formData, {
+      headers: { "Content-Type": undefined },
+      onUploadProgress: (event) => {
+        if (onProgress && event.total) onProgress(Math.round((event.loaded / event.total) * 100));
+      },
+    });
+  },
+  async getApplicationResumeUrl(applicationId: string) {
+    const { data } = await axiosInstance.get(`/tutors/applications/${applicationId}/resume`);
+    return data.data as { url: string; filename: string | null };
+  },
+  async getProfileResumeUrl(userId: string) {
+    const { data } = await axiosInstance.get(`/tutors/${userId}/resume`);
+    return data.data as { url: string; filename: string | null };
+  },
+  async apply(data: {
+    bio: string;
+    subjects: string[];
+    experience: string;
+    hourlyRate?: number;
+    openToOtherUniversities?: boolean;
+    resumeStorageKey: string;
+    resumeOriginalFilename: string;
+    resumeMimeType: string;
+    resumeSizeBytes: number;
+    portfolioUrl?: string;
+  }) {
     const { data: res } = await axiosInstance.post("/tutors/apply", data);
     return res.data as TutorApplication;
   },
@@ -14,7 +53,18 @@ export const tutorService = {
     const { data } = await axiosInstance.get(`/tutors/${userId}`);
     return data.data as TutorProfile;
   },
-  async updateMyProfile(data: { bio?: string; subjects?: string[]; hourlyRate?: number | null; isActive?: boolean }) {
+  async updateMyProfile(data: {
+    bio?: string;
+    subjects?: string[];
+    hourlyRate?: number | null;
+    isActive?: boolean;
+    openToOtherUniversities?: boolean;
+    resumeStorageKey?: string;
+    resumeOriginalFilename?: string;
+    resumeMimeType?: string;
+    resumeSizeBytes?: number;
+    portfolioUrl?: string;
+  }) {
     const { data: res } = await axiosInstance.patch("/tutors/me", data);
     return res.data as TutorProfile;
   },
@@ -75,14 +125,26 @@ export const tutorService = {
   },
   async adminGrantTutorTag(
     userId: string,
-    data: { bio: string; subjects: string[]; experience: string; hourlyRate?: number },
+    data: {
+      bio: string;
+      subjects: string[];
+      experience: string;
+      hourlyRate?: number;
+      openToOtherUniversities?: boolean;
+    },
   ) {
     const { data: res } = await axiosInstance.post(`/admin/tutors/${userId}`, data);
     return res.data as TutorProfile;
   },
   async adminUpdateTutorTag(
     userId: string,
-    data: { bio?: string; subjects?: string[]; hourlyRate?: number | null; isActive?: boolean },
+    data: {
+      bio?: string;
+      subjects?: string[];
+      hourlyRate?: number | null;
+      isActive?: boolean;
+      openToOtherUniversities?: boolean;
+    },
   ) {
     const { data: res } = await axiosInstance.patch(`/admin/tutors/${userId}`, data);
     return res.data as TutorProfile;

@@ -29,6 +29,7 @@ export interface BookingRequestMetadata {
   studentName: string | null;
   studentEmail: string | null;
   studentPhone: string | null;
+  isReschedule?: boolean;
 }
 
 export interface Message {

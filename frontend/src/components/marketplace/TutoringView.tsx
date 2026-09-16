@@ -1,19 +1,23 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, X, Check, Wifi, MapPin, Shuffle, CalendarClock, Phone, Mail, Link as LinkIcon, GraduationCap, ClipboardPen, ShieldCheck, Rocket, MessagesSquare, Info } from "lucide-react";
 import { useOpportunities } from "../../hooks/useOpportunities";
 import { useToast } from "../../context/ToastContext";
 import { useCurrentUser } from "../../hooks/useAuth";
-import { useMyBookingsAsStudent, useMyTutorStatus, useTutorProfile } from "../../hooks/useTutor";
+import { useMyBookingsAsStudent, useMyTutorStatus, useTutorProfile, useUpdateTutorProfile } from "../../hooks/useTutor";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
 import { UserLink } from "../common/UserLink";
 import { BookSessionButton } from "../common/BookSessionButton";
+import { SubjectMultiSelect } from "../common/SubjectMultiSelect";
 import { MarketplaceCardSkeleton } from "./MarketplaceCardSkeleton";
 import type { Opportunity, OpportunityMode } from "../../types/opportunity";
+import type { Subject } from "../../types/taxonomy";
 import { useMinimumLoading } from "../../hooks/useMinimumLoading";
+import { cardClassName } from "../common/cards";
 
 // A TUTORING opportunity's owner is, by construction, a verified tutor
 // once tutor verification landed (creating one now requires it) — but
@@ -34,12 +38,22 @@ function TutorCardAction({
   if (currentUserId && opportunity.owner_id === currentUserId) return null;
   if (tutorProfile && tutorProfile.isActive) {
     return (
-      <BookSessionButton
-        tutorUserId={opportunity.owner_id}
-        specialtySubjectIds={tutorProfile.subjects}
-        label="Book a session"
-        triggerClassName="flex h-9 items-center gap-2 rounded-full bg-primary-600 px-4 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
-      />
+      <div className="flex items-center gap-2">
+        {tutorProfile.openToOtherUniversities && (
+          <span
+            title="Open to students from other universities/programmes"
+            className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700"
+          >
+            Cross-uni OK
+          </span>
+        )}
+        <BookSessionButton
+          tutorUserId={opportunity.owner_id}
+          specialtySubjectIds={tutorProfile.subjects}
+          label="Book a session"
+          triggerClassName="flex h-9 items-center gap-2 rounded-full bg-primary-600 px-4 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
+        />
+      </div>
     );
   }
   return (
@@ -190,7 +204,6 @@ const TERMS = [
 type TermKey = (typeof TERMS)[number]["key"];
 
 interface ApplyForm {
-  subjects: string;
   rate: string;
   level: string;
   mode: OpportunityMode;
@@ -203,7 +216,6 @@ interface ApplyForm {
 }
 
 const EMPTY_FORM: ApplyForm = {
-  subjects: "",
   rate: "",
   level: "",
   mode: "ONLINE",
@@ -221,10 +233,11 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   const currentUser = useCurrentUser();
   const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
   const { data: tutorStatus } = useMyTutorStatus();
+  const updateTutorProfile = useUpdateTutorProfile();
   const { data: myBookings } = useMyBookingsAsStudent();
   // Declined requests aren't a "booked session" — don't clutter this panel with them.
   const upcomingBookings = useMemo(() => (myBookings ?? []).filter((b) => b.status !== "declined"), [myBookings]);
-  const showSkeleton = useMinimumLoading(isLoading, 2000);
+  const showSkeleton = useMinimumLoading(isLoading, 600);
 
   const tutors = useMemo(
     () => (opportunities as Opportunity[]).filter((o) => o.listing_type === "TUTORING" && o.status === "active"),
@@ -237,6 +250,8 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   const [applyStep, setApplyStep] = useState<1 | 2>(1);
   const [applyDone, setApplyDone] = useState(false);
   const [form, setForm] = useState<ApplyForm>(EMPTY_FORM);
+  const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
+  const [openToOtherUniversities, setOpenToOtherUniversities] = useState(false);
   const [availability, setAvailability] = useState<Record<string, boolean>>({ "Weekday evenings": true });
   const [terms, setTerms] = useState<Record<TermKey, boolean>>({
     guidance: false,
@@ -260,6 +275,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
     setApplyOpen(true);
     setApplyDone(false);
     setApplyStep(1);
+    setOpenToOtherUniversities(tutorStatus?.profile?.openToOtherUniversities ?? false);
   }
   function closeApply() {
     setApplyOpen(false);
@@ -292,7 +308,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   const levelOk = /^\d+$/.test(form.level) && Number(form.level) > 0;
   const phoneOk = /^\d+$/.test(form.phone);
   const step1Ready =
-    form.subjects.trim() &&
+    selectedSubjects.length > 0 &&
     rateOk &&
     levelOk &&
     phoneOk &&
@@ -303,14 +319,15 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   const termsReady = Object.values(terms).every(Boolean);
 
   async function handleSubmit() {
-    if (!termsReady) return;
+    if (!termsReady || selectedSubjects.length === 0) return;
     setSubmitting(true);
     const availabilityList = Object.entries(availability)
       .filter(([, on]) => on)
       .map(([label]) => label);
+    const subjectsText = selectedSubjects.map((s) => (s.code ? `${s.code} — ${s.name}` : s.name)).join(", ");
 
     const description = [
-      `Subjects: ${form.subjects}`,
+      `Subjects: ${subjectsText}`,
       `Rate: RM ${form.rate}/hr`,
       `Year/Level: ${form.level}`,
       `Qualification: ${form.qualification} (${form.grade})`,
@@ -323,14 +340,19 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
       .join("\n");
 
     try {
+      if (openToOtherUniversities !== (tutorStatus?.profile?.openToOtherUniversities ?? false)) {
+        await updateTutorProfile.mutateAsync({ openToOtherUniversities });
+      }
       await createOpportunity({
-        title: `Tutoring — ${form.subjects}`.slice(0, 120),
+        title: `Tutoring — ${subjectsText}`.slice(0, 120),
         description,
+        subjectId: selectedSubjects[0]?.id,
         listingType: "TUTORING",
         mode: form.mode,
       });
       setApplyDone(true);
       setForm(EMPTY_FORM);
+      setSelectedSubjects([]);
       setAvailability({ "Weekday evenings": true });
       setTerms({ guidance: false, accuracy: false, conduct: false, independent: false, liability: false });
     } catch (err) {
@@ -476,7 +498,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                         setDetailOppId(opp.id);
                       }
                     }}
-                    className="flex cursor-pointer flex-col gap-3 rounded-[20px] border border-[#ECEBF7] bg-white p-[18px] text-left transition motion-safe:duration-150 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    className={cardClassName("tutor", "flex cursor-pointer flex-col gap-3 text-left")}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -531,7 +553,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
           )}
         </div>
 
-        <div className="min-w-0 flex-1 basis-[300px] rounded-[22px] border border-[#ECEBF7] bg-white p-5">
+        <div className="min-w-0 flex-1 basis-[300px] self-start rounded-[22px] border border-[#ECEBF7] bg-white p-5">
           <h2 className="text-[16.5px] font-bold text-slate-900">Your booked sessions</h2>
           {upcomingBookings.length === 0 ? (
             <div className="mt-4 flex flex-col items-start gap-2">
@@ -569,12 +591,20 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
         </div>
       </div>
 
-      {/* Apply-to-tutor listing modal */}
-      {applyOpen && (
-        <div role="dialog" aria-modal="true" aria-label="Tutor application" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
-          <div className="w-full max-w-[640px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
+      {/* Apply-to-tutor listing modal — portaled to <body> so it escapes
+          .page-stage (DashboardLayout's route-transition wrapper). That
+          wrapper's `content-enter` animation ends on `transform:
+          translateY(0)`, and a non-"none" transform on an ancestor
+          establishes the containing block for `position: fixed`
+          descendants — without the portal this modal would size/center
+          itself against the whole (taller-than-viewport) page instead of
+          the viewport, and scroll along with the page underneath it. */}
+      {applyOpen && createPortal(
+        <div className="overlay-root">
+          <div className="overlay-backdrop" aria-hidden="true" />
+          <div role="dialog" aria-modal="true" aria-label="Tutor application" className="dialog-surface max-w-[640px]">
             <div
-              className="flex items-start justify-between gap-4 p-[22px] text-white"
+              className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
               style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
             >
               <div className="min-w-0">
@@ -603,7 +633,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
             </div>
 
             {applyDone ? (
-              <div className="flex flex-col items-center gap-3 p-10 text-center">
+              <div className="dialog-body flex flex-col items-center gap-3 p-10 text-center">
                 <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E4F5EC] text-[#1B7A55]">
                   <Check className="h-7 w-7" aria-hidden="true" />
                 </span>
@@ -616,11 +646,30 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 </button>
               </div>
             ) : applyStep === 1 ? (
-              <div className="flex max-h-[65vh] flex-col gap-5 overflow-y-auto p-[22px]">
+              <div className="dialog-body flex flex-col gap-5 p-[22px]">
                 <section className="flex flex-col gap-3">
                   <h3 className="text-xs font-bold tracking-wide text-primary-700">TEACHING DETAILS</h3>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-bold text-slate-500">
+                      Subjects you can teach<span className="text-red-500"> *</span>
+                    </span>
+                    <SubjectMultiSelect selected={selectedSubjects} onChange={setSelectedSubjects} />
+                  </div>
+                  <label className="flex items-start gap-2.5 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={openToOtherUniversities}
+                      onChange={(e) => setOpenToOtherUniversities(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span>
+                      <span className="font-medium">Open to students from other universities or programmes</span>
+                      <span className="block text-xs text-slate-500">
+                        For the subjects above, let students outside your own university/programme book you too.
+                      </span>
+                    </span>
+                  </label>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Subjects you can teach" required hint="e.g. CSC510, CS241" value={form.subjects} onChange={(v) => updateForm("subjects", v)} />
                     <Field label="Hourly rate (RM)" required hint="e.g. 25" type="number" inputMode="decimal" min="0.01" step="0.01" invalid={!!form.rate && !rateOk} value={form.rate} onChange={(v) => /^\d*(\.\d{0,2})?$/.test(v) && updateForm("rate", v)} />
                     <Field label="Year / level" required hint="e.g. 3" type="number" inputMode="numeric" min="1" step="1" invalid={!!form.level && !levelOk} value={form.level} onChange={(v) => /^\d*$/.test(v) && updateForm("level", v)} />
                     <label className="flex flex-col gap-1.5">
@@ -720,26 +769,9 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                     className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </label>
-
-                <div className="flex flex-wrap justify-end gap-3 border-t border-[#F1F0FA] pt-4">
-                  <button type="button" onClick={closeApply} className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700">
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => step1Ready && setApplyStep(2)}
-                    disabled={!step1Ready}
-                    title={step1Ready ? undefined : "Fill in every required field, including a valid email"}
-                    className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
-                      step1Ready ? "cursor-pointer bg-primary-600 text-white hover:bg-primary-700" : "cursor-not-allowed bg-slate-200 text-slate-400"
-                    }`}
-                  >
-                    Continue to terms
-                  </button>
-                </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 p-[22px]">
+              <div className="dialog-body flex flex-col gap-4 p-[22px]">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Tutor terms &amp; conditions</h3>
                   <p className="mt-1 text-sm text-slate-500">Tick each item to publish your listing.</p>
@@ -775,57 +807,86 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 <p className="text-xs font-semibold text-slate-400">
                   By registering you confirm your details are accurate and consent to JomDekan reviewing your listing.
                 </p>
-                <div className="flex flex-wrap justify-between gap-3 border-t border-[#F1F0FA] pt-4">
-                  <button type="button" onClick={() => setApplyStep(1)} className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700">
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={!termsReady || submitting}
-                    title={termsReady ? undefined : "Accept all five terms to register"}
-                    className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
-                      termsReady && !submitting ? "cursor-pointer bg-[#F5C21A] text-[#231C57] hover:bg-[#FFD24D]" : "cursor-not-allowed bg-slate-200 text-slate-400"
-                    }`}
-                  >
-                    {submitting ? "Submitting…" : "Register as tutor"}
-                  </button>
-                </div>
+              </div>
+            )}
+
+            {!applyDone && (
+              <div className="dialog-footer flex flex-wrap justify-between gap-3 p-[22px]">
+                {applyStep === 1 ? (
+                  <>
+                    <button type="button" onClick={closeApply} className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700">
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => step1Ready && setApplyStep(2)}
+                      disabled={!step1Ready}
+                      title={step1Ready ? undefined : "Fill in every required field, including a valid email"}
+                      className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
+                        step1Ready ? "cursor-pointer bg-primary-600 text-white hover:bg-primary-700" : "cursor-not-allowed bg-slate-200 text-slate-400"
+                      }`}
+                    >
+                      Continue to terms
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => setApplyStep(1)} className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700">
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!termsReady || submitting}
+                      title={termsReady ? undefined : "Accept all five terms to register"}
+                      className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
+                        termsReady && !submitting ? "cursor-pointer bg-[#F5C21A] text-[#231C57] hover:bg-[#FFD24D]" : "cursor-not-allowed bg-slate-200 text-slate-400"
+                      }`}
+                    >
+                      {submitting ? "Submitting…" : "Register as tutor"}
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Apply / inquire to an existing tutor listing — reuses the same
           real applyToOpportunity mutation the generic marketplace uses. */}
-      {selectedOpp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-lg font-bold text-slate-900">Submit application</h3>
-            <form onSubmit={handleApplyToTutor} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Cover message / approach</label>
-                <textarea
-                  rows={4}
-                  value={coverMessage}
-                  onChange={(e) => setCoverMessage(e.target.value)}
-                  placeholder="Explain what you need help with…"
-                  className="w-full rounded-xl border border-slate-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setSelectedOpp(null)} className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
-                  Cancel
-                </button>
-                <button type="submit" className="rounded-full bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700">
-                  Send application
-                </button>
-              </div>
-            </form>
+      {selectedOpp && createPortal(
+        <div role="dialog" aria-modal="true" aria-label="Submit application" className="overlay-root">
+          <div className="overlay-backdrop" aria-hidden="true" />
+          <div className="dialog-surface max-w-md">
+            <div className="dialog-body flex flex-col gap-4 p-6">
+              <h3 className="text-lg font-bold text-slate-900">Submit application</h3>
+              <form id="apply-to-listing-form" onSubmit={handleApplyToTutor} className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Cover message / approach</label>
+                  <textarea
+                    rows={4}
+                    value={coverMessage}
+                    onChange={(e) => setCoverMessage(e.target.value)}
+                    placeholder="Explain what you need help with…"
+                    className="w-full rounded-xl border border-slate-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+              </form>
+            </div>
+            <div className="dialog-footer flex justify-end gap-2 p-6">
+              <button type="button" onClick={() => setSelectedOpp(null)} className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
+                Cancel
+              </button>
+              <button type="submit" form="apply-to-listing-form" className="rounded-full bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700">
+                Send application
+              </button>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Tutor detail view — opened by clicking a card. Shows the real
@@ -846,11 +907,12 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
           .slice(0, 2)
           .toUpperCase();
 
-        return (
-          <div role="dialog" aria-modal="true" aria-label="Tutor details" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
-            <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
+        return createPortal(
+          <div className="overlay-root">
+            <div className="overlay-backdrop" aria-hidden="true" />
+            <div role="dialog" aria-modal="true" aria-label="Tutor details" className="dialog-surface max-w-[560px]">
               <div
-                className="flex items-start justify-between gap-4 p-[22px] text-white"
+                className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
                 style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
               >
                 <div className="flex min-w-0 items-center gap-3">
@@ -878,7 +940,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 </button>
               </div>
 
-              <div className="flex max-h-[65vh] flex-col gap-5 overflow-y-auto p-[22px]">
+              <div className="dialog-body flex flex-col gap-5 p-[22px]">
                 <div className="flex flex-wrap gap-4">
                   {parsed.rate && (
                     <div>
@@ -974,7 +1036,7 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-[#F1F0FA] p-[22px]">
+              <div className="dialog-footer flex justify-end gap-3 p-[22px]">
                 <button
                   type="button"
                   onClick={() => setDetailOppId(null)}
@@ -992,7 +1054,8 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 />
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         );
       })()}
     </div>

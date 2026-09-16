@@ -9,8 +9,8 @@ const links = [
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-6xl gap-8 px-4 py-8">
-      <aside className="w-48 shrink-0">
+    <div className="page-container page-container-wide flex flex-col gap-grid-6 lg:flex-row">
+      <aside className="shrink-0 lg:w-48">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
           Taxonomy admin
         </h2>
@@ -22,8 +22,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               className={({ isActive }) =>
                 `rounded-lg px-3 py-2 ${
                   isActive
-                    ? "bg-primary-50 font-medium text-primary-700"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-brand-primary-soft font-medium text-brand-primary"
+                    : "text-content-secondary hover:bg-surface-muted hover:text-content-primary"
                 }`
               }
             >

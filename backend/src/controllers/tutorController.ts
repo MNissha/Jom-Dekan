@@ -7,6 +7,56 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 export const tutorController = {
+  async getResumeUploadIntent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await tutorService.getResumeUploadIntent(req.body);
+      res.status(201).json({ data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async receiveResumeUpload(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.storageToken) {
+        return next(new Error("Missing storage token.")); // unreachable — verifyStorageTokenMiddleware runs first
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "No file was uploaded." } });
+      }
+      const data = await tutorService.receiveResumeUpload(req.storageToken.key, req.file.buffer);
+      res.status(200).json({ data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getApplicationResumeUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params as { id: string };
+      const data = await tutorService.getApplicationResumeUrl(id, {
+        actorUserId: req.user!.id,
+        actorRole: req.user!.role,
+      });
+      res.status(200).json({ data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getProfileResumeUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.params as { userId: string };
+      const data = await tutorService.getProfileResumeUrl(userId, {
+        actorUserId: req.user!.id,
+        actorRole: req.user!.role,
+      });
+      res.status(200).json({ data });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async apply(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await tutorService.applyAsTutor(req.user!.id, req.body);

@@ -276,9 +276,9 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
 
   return (
     <AdminPageShell embedded={embedded}>
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="page-container page-container-standard py-grid-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">Admin safety</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Moderation queue</h1>
+        <h1 className="mt-grid-1 break-words text-2xl font-heading leading-tight tracking-tight text-content-primary sm:text-page-title">Moderation queue</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Review reports and respond directly to reporters.</p>
 
         <nav className="mt-5 flex w-fit flex-wrap gap-1 rounded-xl border border-[#ECEBF7] bg-white p-1 shadow-sm" aria-label="Report types">
@@ -306,7 +306,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
           </nav>
         )}
 
-        <div key={section} className="mt-4 overflow-hidden rounded-[22px] border border-[#ECEBF7] bg-white shadow-sm motion-safe:animate-[fadeIn_200ms_ease-out]">
+        <div key={section} className="card-base admin-table-container mt-4 overflow-hidden motion-safe:animate-panel-enter">
           {isLoadingQueue ? (
             <p className="p-8 text-center text-stone-500">Loading moderation queue...</p>
           ) : visibleReports.length === 0 ? (
@@ -343,9 +343,9 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px] motion-safe:animate-[fadeIn_150ms_ease-out]" role="dialog" aria-modal="true" aria-labelledby="review-title">
-          <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl motion-safe:animate-[modalRise_220ms_ease-out]">
-            <header className="flex shrink-0 items-start justify-between bg-gradient-to-br from-[#332475] to-[#4B3FD3] px-6 py-5 text-white">
+        <div className="overlay-root" role="dialog" aria-modal="true" aria-labelledby="review-title">
+          <div className="dialog-surface max-w-2xl">
+            <header className="dialog-header flex items-start justify-between bg-gradient-to-br from-[#332475] to-[#4B3FD3] px-6 py-5 text-white">
               <div>
                 <span className="inline-flex rounded-full bg-amber-400/25 px-3 py-1 text-[11px] font-bold tracking-wide text-amber-200">REVIEW REPORT</span>
                 <h2 id="review-title" className="mt-3 text-2xl font-extrabold">Moderation decision</h2>
@@ -354,7 +354,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               <button type="button" onClick={() => { setSelected(null); setSearchParams({ section }); }} disabled={submitting} aria-label="Close review" className="rounded-xl border border-white/25 p-2 text-white transition hover:rotate-90 hover:bg-white/10 disabled:opacity-50"><X className="h-5 w-5" /></button>
             </header>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+            <div className="dialog-body flex-1 space-y-5 p-6">
               <div className="rounded-2xl border border-[#ECEBF7] bg-[#F8F8FD] p-4">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-[#4338CA]" />
@@ -465,7 +465,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               </section>
             </div>
 
-            <footer className="flex shrink-0 justify-end gap-3 border-t border-[#ECEBF7] bg-white px-6 py-4">
+            <footer className="dialog-footer flex justify-end gap-3 px-6 py-4">
               <button type="button" onClick={() => { setSelected(null); setSearchParams({ section }); }} disabled={submitting} className="rounded-xl border border-[#DDDCEC] px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Cancel</button>
               <button type="button" onClick={() => void submit()} disabled={submitting || response.trim().length < 5} className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:translate-y-0 disabled:opacity-50 ${decision === "approve" ? "bg-[#4338CA] hover:bg-[#3730A3]" : "bg-red-600 hover:bg-red-700"}`}>
                 {submitting ? "Sending..." : decision === "approve" ? "Resolve & send" : "Reject & send"}
