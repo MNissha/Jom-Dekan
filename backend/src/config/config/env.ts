@@ -87,6 +87,14 @@ const envSchema = z.object({
 
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
+  // Backend callback URL for the tutor "Connect Google Calendar" OAuth
+  // flow (distinct from login OAuth — needs its own redirect URI
+  // registered on the OAuth client in Google Cloud Console, with the
+  // Calendar API enabled for the project). Left empty in environments
+  // that haven't set up Calendar integration yet — googleCalendarService
+  // only errors when the connect flow is actually invoked, the same
+  // "optional until used" pattern as OPENAI_API_KEY above.
+  GOOGLE_CALENDAR_REDIRECT_URI: z.string().optional().default(""),
 
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   RATE_LIMIT_MAX_AUTH: z.coerce.number().int().positive().default(20),
@@ -244,6 +252,7 @@ export const env = {
   google: {
     clientId: raw.GOOGLE_CLIENT_ID,
     clientSecret: raw.GOOGLE_CLIENT_SECRET,
+    calendarRedirectUri: raw.GOOGLE_CALENDAR_REDIRECT_URI,
   },
 
   rateLimit: {

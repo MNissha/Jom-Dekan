@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { OpportunityModel, type OpportunityApplicationFile } from "../models/opportunityModel";
 import { auditLogModel } from "../models/auditLogModel";
 import { emailService } from "../services/emailService";
+import { tutorService } from "../services/tutorService";
 import { logger } from "../utils/logger";
 import { env } from "../config/config/env";
 import { AppError } from "../types/errors";
@@ -30,6 +31,11 @@ export class OpportunityService {
       applicationDeadline?: string;
     },
   ) {
+    if (data.listingType === "TUTORING" && !(await tutorService.isVerifiedTutor(ownerId))) {
+      throw AppError.badRequest(
+        "Apply to become a verified tutor before posting a tutoring listing.",
+      );
+    }
     return await OpportunityModel.create(ownerId, data);
   }
 

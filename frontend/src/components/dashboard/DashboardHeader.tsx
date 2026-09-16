@@ -5,6 +5,7 @@ import { useCurrentUser, useLogout } from "../../hooks/useAuth";
 import { useMyProfile } from "../../hooks/useProfile";
 import { useDemoLoading } from "../../hooks/useDemoLoading";
 import { NotificationsPopover } from "../common/NotificationsPopover";
+import { MessagesHeaderLink } from "../common/MessagesHeaderLink";
 import { HeaderClock } from "../common/HeaderClock";
 import { ThemeToggle } from "../common/ThemeToggle";
 
@@ -82,6 +83,10 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <HeaderClock />
+
+      <div className="hidden sm:block">
+        <MessagesHeaderLink />
+      </div>
 
       <div className="hidden sm:block">
         <NotificationsPopover />

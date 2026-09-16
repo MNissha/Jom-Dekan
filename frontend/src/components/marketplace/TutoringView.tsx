@@ -1,15 +1,60 @@
 import { useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { UserPlus, X, Check, Wifi, MapPin, Shuffle, CalendarClock, Phone, Mail, Link as LinkIcon, GraduationCap, ClipboardPen, ShieldCheck, Rocket, MessagesSquare, Info } from "lucide-react";
 import { useOpportunities } from "../../hooks/useOpportunities";
 import { useToast } from "../../context/ToastContext";
+import { useCurrentUser } from "../../hooks/useAuth";
+import { useMyBookingsAsStudent, useMyTutorStatus, useTutorProfile } from "../../hooks/useTutor";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
 import { UserLink } from "../common/UserLink";
+import { BookSessionButton } from "../common/BookSessionButton";
 import { MarketplaceCardSkeleton } from "./MarketplaceCardSkeleton";
 import type { Opportunity, OpportunityMode } from "../../types/opportunity";
 import { useMinimumLoading } from "../../hooks/useMinimumLoading";
+
+// A TUTORING opportunity's owner is, by construction, a verified tutor
+// once tutor verification landed (creating one now requires it) — but
+// older listings from before that gate may not be. Show the real
+// structured booking flow only when the owner still has a live verified
+// profile; fall back to the legacy free-text "Apply / Inquire" pitch
+// otherwise, and hide both entirely for the viewer's own listing.
+function TutorCardAction({
+  opportunity,
+  currentUserId,
+  onLegacyApply,
+}: {
+  opportunity: Opportunity;
+  currentUserId: string | undefined;
+  onLegacyApply: () => void;
+}) {
+  const { data: tutorProfile } = useTutorProfile(opportunity.owner_id);
+  if (currentUserId && opportunity.owner_id === currentUserId) return null;
+  if (tutorProfile && tutorProfile.isActive) {
+    return (
+      <BookSessionButton
+        tutorUserId={opportunity.owner_id}
+        specialtySubjectIds={tutorProfile.subjects}
+        label="Book a session"
+        triggerClassName="flex h-9 items-center gap-2 rounded-full bg-primary-600 px-4 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onLegacyApply();
+      }}
+      className="rounded-full bg-primary-600 px-4 py-2 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
+    >
+      Apply / Inquire
+    </button>
+  );
+}
 
 // The tutor application form (below) writes subjects, rate, contact info
 // etc. into one free-text `description` in a fixed layout — there's no
@@ -172,7 +217,13 @@ const EMPTY_FORM: ApplyForm = {
 
 export function TutoringView({ initialDetailId = null }: { initialDetailId?: string | null }) {
   const toast = useToast();
+  const navigate = useNavigate();
+  const currentUser = useCurrentUser();
   const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
+  const { data: tutorStatus } = useMyTutorStatus();
+  const { data: myBookings } = useMyBookingsAsStudent();
+  // Declined requests aren't a "booked session" — don't clutter this panel with them.
+  const upcomingBookings = useMemo(() => (myBookings ?? []).filter((b) => b.status !== "declined"), [myBookings]);
   const showSkeleton = useMinimumLoading(isLoading, 2000);
 
   const tutors = useMemo(
@@ -213,6 +264,28 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   function closeApply() {
     setApplyOpen(false);
   }
+
+  // "Apply to tutor" now means two different things depending on where
+  // the viewer stands: someone who isn't yet a verified tutor is sent to
+  // the real verification form (Profile > Tutoring) — posting a listing
+  // is gated on that (see OpportunityService.createOpportunity) — while
+  // an already-verified tutor goes straight to the existing "post a
+  // listing" modal below, since they're legitimately allowed to post.
+  function handleApplyToTutorClick() {
+    if (tutorStatus?.isVerifiedTutor) {
+      openApply();
+    } else {
+      navigate("/profile?section=tutor");
+    }
+  }
+
+  const tutorCtaLabel = tutorStatus?.isVerifiedTutor
+    ? "Post a tutoring listing"
+    : tutorStatus?.application?.status === "pending"
+      ? "Application pending"
+      : tutorStatus?.application?.status === "rejected"
+        ? "Re-apply to tutor"
+        : "Apply to tutor";
 
   const emailOk = /.+@.+\..+/.test(form.email);
   const rateOk = /^\d+(\.\d{1,2})?$/.test(form.rate) && Number(form.rate) > 0;
@@ -302,11 +375,12 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
         <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
-            onClick={openApply}
-            className="flex items-center gap-2 rounded-xl bg-[#F5C21A] px-4 py-2.5 text-sm font-bold text-[#231C57] transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-[#FFD24D] active:translate-y-0"
+            onClick={handleApplyToTutorClick}
+            disabled={tutorStatus?.application?.status === "pending"}
+            className="flex items-center gap-2 rounded-xl bg-[#F5C21A] px-4 py-2.5 text-sm font-bold text-[#231C57] transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-[#FFD24D] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <UserPlus className="h-4 w-4" aria-hidden="true" />
-            Apply to tutor
+            {tutorCtaLabel}
           </button>
           <button
             type="button"
@@ -369,10 +443,11 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
             <EmptyState icon={UserPlus} title="No tutors listed yet" description="Be the first to apply — your listing will show up here for other students to find.">
               <button
                 type="button"
-                onClick={openApply}
-                className="mt-6 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                onClick={handleApplyToTutorClick}
+                disabled={tutorStatus?.application?.status === "pending"}
+                className="mt-6 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Apply to tutor
+                {tutorCtaLabel}
               </button>
             </EmptyState>
           ) : (
@@ -443,16 +518,11 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                           {MODE_LABEL[opp.mode]}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedOpp(opp.id);
-                        }}
-                        className="rounded-full bg-primary-600 px-4 py-2 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
-                      >
-                        Apply / Inquire
-                      </button>
+                      <TutorCardAction
+                        opportunity={opp}
+                        currentUserId={currentUser?.id}
+                        onLegacyApply={() => setSelectedOpp(opp.id)}
+                      />
                     </div>
                   </article>
                 );
@@ -463,15 +533,39 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
 
         <div className="min-w-0 flex-1 basis-[300px] rounded-[22px] border border-[#ECEBF7] bg-white p-5">
           <h2 className="text-[16.5px] font-bold text-slate-900">Your booked sessions</h2>
-          {/* Honest empty state — there's no scheduling/booking system yet
-              (same reasoning as the dashboard's Upcoming Sessions), so
-              nothing real to list here rather than fabricated bookings. */}
-          <div className="mt-4 flex flex-col items-start gap-2">
-            <CalendarClock className="h-6 w-6 text-slate-300" aria-hidden="true" />
-            <p className="text-sm text-slate-500">
-              No sessions booked yet. Message a tutor above, or apply to tutor yourself.
-            </p>
-          </div>
+          {upcomingBookings.length === 0 ? (
+            <div className="mt-4 flex flex-col items-start gap-2">
+              <CalendarClock className="h-6 w-6 text-slate-300" aria-hidden="true" />
+              <p className="text-sm text-slate-500">
+                No sessions booked yet. Book a tutor above, or apply to tutor yourself.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {upcomingBookings.slice(0, 5).map((booking) => (
+                <li key={booking.id} className="rounded-xl border border-[#ECEBF7] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-slate-800">{booking.tutorName ?? "A tutor"}</p>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        booking.status === "accepted"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : booking.status === "declined"
+                            ? "bg-red-50 text-red-700"
+                            : "bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      {booking.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {booking.subjectName ?? "Session"} ·{" "}
+                    {new Date(booking.requestedStartAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
@@ -888,16 +982,14 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 >
                   Close
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
+                <TutorCardAction
+                  opportunity={detailOpp}
+                  currentUserId={currentUser?.id}
+                  onLegacyApply={() => {
                     setSelectedOpp(detailOpp.id);
                     setDetailOppId(null);
                   }}
-                  className="rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white hover:bg-primary-700"
-                >
-                  Apply / Inquire
-                </button>
+                />
               </div>
             </div>
           </div>

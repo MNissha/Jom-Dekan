@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   BookOpen,
   MessageSquare,
+  MessageCircle,
   Users,
   Briefcase,
   Heart,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { useCurrentUser, useLogout } from "../../hooks/useAuth";
 import { useModeration } from "../../hooks/useModeration";
+import { useUnreadMessageCount } from "../../hooks/useMessages";
 import type { Notification } from "../../types/moderation";
 
 const links = [
@@ -28,12 +30,18 @@ const links = [
   { to: "/favorites", label: "Favourites", icon: Heart },
 ];
 
+// Split around the "Messages" row, which needs an unread badge (so it
+// can't just be a plain entry in `links`/`NavRows`) but must render
+// directly below "Academic Resources".
+const linksBeforeMessages = links.slice(0, 2);
+const linksAfterMessages = links.slice(2);
+
 const adminToolLinks = [
   { to: "/admin/users", label: "Users", icon: Users },
   {
-    to: "/admin/tutoring",
+    to: "/admin/tutor-applications",
     label: "Tutoring",
-    icon: Users,
+    icon: GraduationCap,
   },
   {
     to: "/admin/opportunities",
@@ -206,6 +214,43 @@ function NotificationsNavLink({
   );
 }
 
+// Same real-nav-destination pattern as NotificationsNavLink, backed by
+// useUnreadMessageCount() (the messaging feature's own badge source —
+// deliberately not useModeration(), which is the separate notifications
+// feature).
+function MessagesNavLink({
+  collapsed,
+  onClose,
+}: {
+  collapsed: boolean;
+  onClose: () => void;
+}) {
+  const unreadCount = useUnreadMessageCount();
+
+  return (
+    <NavLink
+      to="/messages"
+      onClick={onClose}
+      title={collapsed ? "Messages" : undefined}
+      className={({ isActive }) => `relative ${rowClass(isActive, collapsed)}`}
+    >
+      <MessageCircle className="h-[19px] w-[19px] shrink-0" aria-hidden="true" />
+      {!collapsed && <span className="flex-1 text-left">Messages</span>}
+      {unreadCount > 0 &&
+        (collapsed ? (
+          <span
+            className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-400"
+            aria-hidden="true"
+          />
+        ) : (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1 text-[11px] font-bold text-[#231C57]">
+            {unreadCount}
+          </span>
+        ))}
+    </NavLink>
+  );
+}
+
 export function DashboardSidebar({
   isOpen,
   onClose,
@@ -264,13 +309,19 @@ export function DashboardSidebar({
           <nav
             className={`flex flex-col gap-1 py-3 text-sm ${collapsed ? "px-2" : "px-3"}`}
           >
-            <NavRows
-              onClose={onClose}
-              collapsed={collapsed}
-              items={
-                isAdmin ? links.filter((l) => l.to === "/dashboard") : links
-              }
-            />
+            {isAdmin ? (
+              <NavRows
+                onClose={onClose}
+                collapsed={collapsed}
+                items={links.filter((l) => l.to === "/dashboard")}
+              />
+            ) : (
+              <>
+                <NavRows onClose={onClose} collapsed={collapsed} items={linksBeforeMessages} />
+                <MessagesNavLink collapsed={collapsed} onClose={onClose} />
+                <NavRows onClose={onClose} collapsed={collapsed} items={linksAfterMessages} />
+              </>
+            )}
             {isAdmin && (
               <AdminToolNavRows collapsed={collapsed} onClose={onClose} />
             )}
@@ -365,13 +416,19 @@ export function DashboardSidebar({
             </div>
             <div className="flex-1 overflow-y-auto">
               <nav className="flex flex-col gap-1 p-3 text-sm">
-                <NavRows
-                  onClose={onClose}
-                  collapsed={false}
-                  items={
-                    isAdmin ? links.filter((l) => l.to === "/dashboard") : links
-                  }
-                />
+                {isAdmin ? (
+                  <NavRows
+                    onClose={onClose}
+                    collapsed={false}
+                    items={links.filter((l) => l.to === "/dashboard")}
+                  />
+                ) : (
+                  <>
+                    <NavRows onClose={onClose} collapsed={false} items={linksBeforeMessages} />
+                    <MessagesNavLink collapsed={false} onClose={onClose} />
+                    <NavRows onClose={onClose} collapsed={false} items={linksAfterMessages} />
+                  </>
+                )}
                 {isAdmin && (
                   <AdminToolNavRows collapsed={false} onClose={onClose} />
                 )}

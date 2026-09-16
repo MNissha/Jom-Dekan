@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import {
   ArrowLeft,
+  CalendarClock,
   ChevronRight,
   FileText,
   GraduationCap,
@@ -20,9 +21,12 @@ import { useMyProfile, useMyStats, useUpdateProfile } from "../hooks/useProfile"
 import { useForgotPassword } from "../hooks/useAuth";
 import { useUniversities } from "../hooks/useTaxonomy";
 import { useSubmitSupportRequest } from "../hooks/useSupportRequests";
+import { useMyBookingsAsStudent } from "../hooks/useTutor";
 import { FIELDS_OF_STUDY } from "../constants/fieldsOfStudy";
 import { SearchableSelect } from "../components/common/SearchableSelect";
 import { TermsModal } from "../components/common/TermsModal";
+import { RescheduleBookingButton } from "../components/common/RescheduleBookingButton";
+import { TutorSection } from "../components/profile/TutorSection";
 import { useMinimumLoading } from "../hooks/useMinimumLoading";
 
 const CURRENT_SEMESTER_OPTIONS = Array.from({ length: 10 }, (_, index) => index + 1);
@@ -33,7 +37,9 @@ type SettingsSection =
   | "about"
   | "contact"
   | "suggestions"
-  | "terms";
+  | "terms"
+  | "tutor"
+  | "bookings";
 
 const SECTION_TITLES: Record<SettingsSection, string> = {
   personal: "Personal information",
@@ -42,6 +48,8 @@ const SECTION_TITLES: Record<SettingsSection, string> = {
   contact: "Contact support",
   suggestions: "Share a suggestion",
   terms: "Terms of service",
+  tutor: "Tutoring",
+  bookings: "My bookings",
 };
 
 const CARD_CLASS = "mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm sm:p-6";
@@ -130,6 +138,55 @@ function DetailHeader({ title, onBack }: { title: string; onBack: () => void }) 
       </button>
       <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h1>
     </div>
+  );
+}
+
+function MyBookingsSection() {
+  const { data: bookings, isLoading } = useMyBookingsAsStudent();
+
+  return (
+    <section className={CARD_CLASS}>
+      <h2 className="font-bold text-slate-800">Your tutoring bookings</h2>
+      <p className="mt-1 text-sm leading-6 text-slate-500">Session requests you&apos;ve sent to tutors, and their status.</p>
+      {isLoading ? (
+        <p className="mt-4 text-sm text-slate-500">Loading…</p>
+      ) : (bookings ?? []).length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">You haven&apos;t requested any tutoring sessions yet.</p>
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {(bookings ?? []).map((booking) => (
+            <li key={booking.id} className="rounded-xl border border-[#ECEBF7] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-800">
+                  {booking.tutorName ?? "A tutor"}
+                  {booking.subjectName ? ` · ${booking.subjectName}` : ""}
+                </p>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
+                    booking.status === "accepted"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : booking.status === "declined"
+                        ? "bg-red-50 text-red-700"
+                        : "bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {booking.status}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                {new Date(booking.requestedStartAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} ·{" "}
+                {booking.durationMinutes} min
+              </p>
+              {booking.status !== "declined" && (
+                <div className="mt-2">
+                  <RescheduleBookingButton bookingId={booking.id} />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -517,6 +574,10 @@ export default function Profile() {
       );
     }
 
+    if (activeSection === "tutor") return <TutorSection />;
+
+    if (activeSection === "bookings") return <MyBookingsSection />;
+
     if (activeSection === "suggestions") {
       return (
         <section className={CARD_CLASS}>
@@ -607,6 +668,10 @@ export default function Profile() {
             </SettingsGroup>
             <SettingsGroup title="Security">
               <SettingsRow icon={LockKeyhole} title="Password & security" description="Request a secure password-reset link" onClick={() => openSection("security")} />
+            </SettingsGroup>
+            <SettingsGroup title="Tutoring">
+              <SettingsRow icon={GraduationCap} title="Tutoring" description="Apply to become a verified tutor, or manage your tutor profile and bookings" onClick={() => openSection("tutor")} />
+              <SettingsRow icon={CalendarClock} title="My bookings" description="Track the tutoring sessions you've requested" onClick={() => openSection("bookings")} />
             </SettingsGroup>
             <SettingsGroup title="Support">
               <SettingsRow icon={Info} title="About JomDekan" description="Learn more about the JomDekan student community" onClick={() => openSection("about")} />

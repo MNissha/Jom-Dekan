@@ -8,6 +8,8 @@ import resourceSummaryRoutes from "./resourceSummaryRoutes";
 import resourceAgentRoutes from "./resourceAgentRoutes";
 import favoriteRoutes from "./favoriteRoutes";
 import forumRoutes from "./forumRoutes";
+import messageRoutes from "./messageRoutes";
+import tutorRoutes from "./tutorRoutes";
 
 /**
  * All product routes are mounted under /api/v1. System routes
@@ -25,5 +27,7 @@ router.use("/resources", resourceSummaryRoutes);
 router.use("/resources", resourceAgentRoutes);
 router.use("/favorites", favoriteRoutes);
 router.use("/forum", forumRoutes);
+router.use("/messages", messageRoutes);
+router.use("/tutors", tutorRoutes);
 
 export default router;

@@ -19,6 +19,7 @@ import ResourceDetail from "./pages/ResourceDetail";
 import Favorites from "./pages/Favorites";
 import Forum from "./pages/Forum";
 import ForumPostDetail from "./pages/ForumPostDetail";
+import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 
 import { ErrorBoundary } from "./errors/ErrorBoundary";
@@ -30,6 +31,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminModerationQueue from "./pages/admin/AdminModerationQueue";
 import AdminOpportunities from "./pages/admin/AdminOpportunities";
+import AdminTutorApplications from "./pages/admin/AdminTutorApplications";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminLogs from "./pages/admin/AdminLogs";
 
@@ -173,6 +175,27 @@ function App() {
         />
 
         <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Messages />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages/:conversationId"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Messages />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/admin"
           element={
             <ProtectedRoute requireAdmin>
@@ -295,9 +318,7 @@ function App() {
           path="/admin/tutoring"
           element={
             <ProtectedRoute requireAdmin>
-              <DashboardLayout>
-                <AdminOpportunities embedded category="tutoring" />
-              </DashboardLayout>
+              <Navigate to="/admin/tutor-applications?section=listings" replace />
             </ProtectedRoute>
           }
         />
@@ -307,6 +328,16 @@ function App() {
             <ProtectedRoute requireAdmin>
               <DashboardLayout>
                 <AdminOpportunities embedded category="freelance" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/tutor-applications"
+          element={
+            <ProtectedRoute requireAdmin>
+              <DashboardLayout>
+                <AdminTutorApplications embedded />
               </DashboardLayout>
             </ProtectedRoute>
           }
