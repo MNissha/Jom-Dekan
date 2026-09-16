@@ -1,7 +1,11 @@
 import { useNavigate, useParams, Navigate } from "react-router-dom";
+import { GraduationCap } from "lucide-react";
 import { useUserProfile } from "../hooks/useProfile";
 import { useCurrentUser } from "../hooks/useAuth";
+import { useTutorProfile } from "../hooks/useTutor";
 import { ReportButton } from "../components/common/ReportButton";
+import { MessageButton } from "../components/common/MessageButton";
+import { BookSessionButton } from "../components/common/BookSessionButton";
 
 const STUDY_LEVEL_LABELS: Record<string, string> = {
   DIPLOMA: "Diploma",
@@ -15,6 +19,7 @@ export default function UserProfile() {
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
   const { data: profile, isLoading, isError } = useUserProfile(id);
+  const { data: tutorProfile } = useTutorProfile(id);
 
   // Your own username links here too — send you to the editable version
   // of the same information instead of a read-only duplicate.
@@ -65,18 +70,40 @@ export default function UserProfile() {
           </div>
           <div className="min-w-0">
             <p className="truncate text-xl font-extrabold tracking-tight">{profile.displayName}</p>
-            <p className="truncate text-sm font-medium text-[#C6C2EC]">
-              {profile.academicRole === "TUTOR" ? "Tutor" : "Student"}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-medium text-[#C6C2EC]">
+                {profile.academicRole === "TUTOR" ? "Tutor" : "Student"}
+              </p>
+              {tutorProfile && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#F5C21A] px-2.5 py-1 text-xs font-bold text-[#231C57]">
+                  <GraduationCap className="h-3.5 w-3.5" aria-hidden="true" />
+                  Verified Tutor
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         {currentUser && (
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
+            {tutorProfile && tutorProfile.isActive && (
+              <BookSessionButton tutorUserId={profile.id} specialtySubjectIds={tutorProfile.subjects} />
+            )}
+            <MessageButton targetUserId={profile.id} />
             <ReportButton targetType="user" targetId={profile.id} />
           </div>
         )}
       </div>
+
+      {tutorProfile && (
+        <div className="mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-6 shadow-sm">
+          <h2 className="font-semibold text-slate-800">Tutoring</h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{tutorProfile.bio}</p>
+          {tutorProfile.hourlyRate !== null && (
+            <p className="mt-3 text-sm font-semibold text-slate-700">RM {tutorProfile.hourlyRate.toFixed(2)} / hour</p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-6 shadow-sm">
         <h2 className="font-semibold text-slate-800">About</h2>

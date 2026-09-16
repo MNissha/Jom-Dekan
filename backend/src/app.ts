@@ -21,6 +21,8 @@ import opportunityRoutes from "./routes/opportunityRoutes";
 import moderationRoutes from "./routes/moderationRoutes";
 import adminUserRoutes from "./routes/adminUserRoutes";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes";
+import adminTutorRoutes from "./routes/adminTutorRoutes";
+import adminTutorTagRoutes from "./routes/adminTutorTagRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import auditLogRoutes from "./routes/auditLogRoutes";
 import supportRequestRoutes from "./routes/supportRequestRoutes";
@@ -115,6 +117,8 @@ export function createApp(): Express {
   app.use("/api/v1", moderationRoutes);
   app.use("/api/v1/admin/users", adminUserRoutes);
   app.use("/api/v1/admin", adminAnalyticsRoutes);
+  app.use("/api/v1/admin/tutor-applications", adminTutorRoutes);
+  app.use("/api/v1/admin/tutors", adminTutorTagRoutes);
   app.use("/api/v1/reports", reportRoutes);
   app.use("/api/v1", auditLogRoutes);
   app.use("/api/v1/support-requests", supportRequestRoutes);

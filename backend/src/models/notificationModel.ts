@@ -38,15 +38,4 @@ export const notificationModel = {
       [adminIds, type, JSON.stringify(payload)],
     );
   },
-
-  async notifyUser(
-    userId: string,
-    type: string,
-    payload: Record<string, unknown>,
-  ): Promise<void> {
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, payload) VALUES ($1, $2, $3::jsonb)`,
-      [userId, type, JSON.stringify(payload)],
-    );
-  },
 };
