@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "./ui";
 
 interface ConfirmDialogProps {
@@ -41,7 +42,7 @@ export function ConfirmDialog({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="overlay-root">
       <div
         className="overlay-backdrop"
@@ -81,6 +82,7 @@ export function ConfirmDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

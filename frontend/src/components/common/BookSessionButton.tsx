@@ -86,6 +86,7 @@ export function BookSessionButton({
             aria-label="Book a tutoring session"
             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="w-full max-w-[520px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
               <div

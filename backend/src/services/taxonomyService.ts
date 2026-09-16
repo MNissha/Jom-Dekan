@@ -55,6 +55,7 @@ export async function createOrReuseUniversity(
       action: "TAXONOMY_UNIVERSITY_CREATED",
       targetType: "university",
       targetId: row.id,
+      reason: `Created "${row.name}".`,
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });
@@ -105,6 +106,7 @@ export async function createOrReuseFaculty(
       action: "TAXONOMY_FACULTY_CREATED",
       targetType: "faculty",
       targetId: row.id,
+      reason: `Created "${row.name}".`,
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });
@@ -152,6 +154,7 @@ export async function createOrReuseProgramme(
       action: "TAXONOMY_PROGRAMME_CREATED",
       targetType: "programme",
       targetId: row.id,
+      reason: `Created "${row.name}".`,
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });
@@ -212,6 +215,7 @@ async function createOrReuseSubject(
         action: "TAXONOMY_SUBJECT_CREATED",
         targetType: "subject",
         targetId: subject.id,
+        reason: `Created "${normalized} - ${name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -272,6 +276,7 @@ export const taxonomyService = {
         action: "TAXONOMY_UNIVERSITY_CREATED",
         targetType: "university",
         targetId: row.id,
+        reason: `Created "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -305,6 +310,7 @@ export const taxonomyService = {
         action: "TAXONOMY_UNIVERSITY_UPDATED",
         targetType: "university",
         targetId: row.id,
+        reason: `Updated "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -322,6 +328,7 @@ export const taxonomyService = {
           : "TAXONOMY_UNIVERSITY_ARCHIVED",
         targetType: "university",
         targetId: row.id,
+        reason: `${isActive ? "Restored" : "Archived"} "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -344,6 +351,7 @@ export const taxonomyService = {
         action: "TAXONOMY_UNIVERSITY_DELETED",
         targetType: "university",
         targetId: id,
+        reason: `Deleted "${university.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -390,6 +398,7 @@ export const taxonomyService = {
         action: "TAXONOMY_FACULTY_CREATED",
         targetType: "faculty",
         targetId: row.id,
+        reason: `Created "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -418,6 +427,7 @@ export const taxonomyService = {
         action: "TAXONOMY_FACULTY_UPDATED",
         targetType: "faculty",
         targetId: row.id,
+        reason: `Updated "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -435,6 +445,7 @@ export const taxonomyService = {
           : "TAXONOMY_FACULTY_ARCHIVED",
         targetType: "faculty",
         targetId: row.id,
+        reason: `${isActive ? "Restored" : "Archived"} "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -457,6 +468,7 @@ export const taxonomyService = {
         action: "TAXONOMY_FACULTY_DELETED",
         targetType: "faculty",
         targetId: id,
+        reason: `Deleted "${faculty.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -503,6 +515,7 @@ export const taxonomyService = {
         action: "TAXONOMY_PROGRAMME_CREATED",
         targetType: "programme",
         targetId: row.id,
+        reason: `Created "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -536,6 +549,7 @@ export const taxonomyService = {
         action: "TAXONOMY_PROGRAMME_UPDATED",
         targetType: "programme",
         targetId: row.id,
+        reason: `Updated "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -553,6 +567,7 @@ export const taxonomyService = {
           : "TAXONOMY_PROGRAMME_ARCHIVED",
         targetType: "programme",
         targetId: row.id,
+        reason: `${isActive ? "Restored" : "Archived"} "${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -575,6 +590,7 @@ export const taxonomyService = {
         action: "TAXONOMY_PROGRAMME_DELETED",
         targetType: "programme",
         targetId: id,
+        reason: `Deleted "${programme.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -623,6 +639,7 @@ export const taxonomyService = {
         action: "TAXONOMY_SUBJECT_CREATED",
         targetType: "subject",
         targetId: row.id,
+        reason: `Created "${code} - ${input.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -700,6 +717,7 @@ export const taxonomyService = {
           : "TAXONOMY_SUBJECT_REUSED_FOR_PROGRAMME",
         targetType: "subject",
         targetId: subject.id,
+        reason: `${created ? "Created" : "Linked existing"} "${code} - ${subject.name}" for programme "${programme.name}".`,
         metadata: {
           programmeId: input.programmeId,
           curriculumYear: input.curriculumYear,
@@ -790,6 +808,7 @@ export const taxonomyService = {
           action: "TAXONOMY_SUBJECT_COMMUNITY_SUBMITTED",
           targetType: "subject",
           targetId: subject.id,
+          reason: `Created "${subject.code ? `${subject.code} - ` : ""}${subject.name}" for ${university.name}.`,
           metadata: { universityId: input.universityId },
           requestId: ctx.requestId,
           ipAddress: ctx.ipAddress,
@@ -822,6 +841,7 @@ export const taxonomyService = {
         action: "TAXONOMY_SUBJECT_UPDATED",
         targetType: "subject",
         targetId: row.id,
+        reason: `Updated "${row.code ? `${row.code} - ` : ""}${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -839,6 +859,7 @@ export const taxonomyService = {
           : "TAXONOMY_SUBJECT_ARCHIVED",
         targetType: "subject",
         targetId: row.id,
+        reason: `${isActive ? "Restored" : "Archived"} "${row.code ? `${row.code} - ` : ""}${row.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -861,6 +882,7 @@ export const taxonomyService = {
         action: "TAXONOMY_SUBJECT_DELETED",
         targetType: "subject",
         targetId: id,
+        reason: `Deleted "${subject.code ? `${subject.code} - ` : ""}${subject.name}".`,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
@@ -892,6 +914,7 @@ export const taxonomyService = {
         action: "TAXONOMY_PROGRAMME_SUBJECT_LINKED",
         targetType: "programme",
         targetId: input.programmeId,
+        reason: `Linked subject "${subject.code ? `${subject.code} - ` : ""}${subject.name}" to programme "${programme.name}".`,
         metadata: { subjectId: input.subjectId },
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
@@ -907,6 +930,7 @@ export const taxonomyService = {
       subjectId: string,
       ctx: ActorContext,
     ) {
+      const subject = await taxonomyModel.subjects.findById(subjectId);
       const removed = await taxonomyModel.programmeSubjects.unlink(
         programmeId,
         subjectId,
@@ -918,6 +942,7 @@ export const taxonomyService = {
         action: "TAXONOMY_PROGRAMME_SUBJECT_UNLINKED",
         targetType: "programme",
         targetId: programmeId,
+        reason: subject ? `Unlinked subject "${subject.code ? `${subject.code} - ` : ""}${subject.name}".` : undefined,
         metadata: { subjectId },
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
@@ -983,16 +1008,6 @@ export const taxonomyService = {
         note: input.note,
       });
 
-      await auditLogModel.record({
-        actorUserId: ctx.actorUserId,
-        actorRole: ctx.actorRole,
-        action: "TAXONOMY_REQUEST_SUBMITTED",
-        targetType: "taxonomy_request",
-        targetId: row.id,
-        requestId: ctx.requestId,
-        ipAddress: ctx.ipAddress,
-      });
-
       const missing = [
         input.requestedUniversityName && `university "${input.requestedUniversityName}"`,
         input.requestedFacultyName && `faculty "${input.requestedFacultyName}"`,
@@ -1002,6 +1017,18 @@ export const taxonomyService = {
       ]
         .filter(Boolean)
         .join(", ");
+
+      await auditLogModel.record({
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        action: "TAXONOMY_REQUEST_SUBMITTED",
+        targetType: "taxonomy_request",
+        targetId: row.id,
+        reason: `Requested ${missing}.${input.note ? ` Note: ${input.note}` : ""}`,
+        requestId: ctx.requestId,
+        ipAddress: ctx.ipAddress,
+      });
+
       await notificationModel.notifyAdmins("TAXONOMY_REQUEST_SUBMITTED", {
         message: `New taxonomy request: ${missing}.${input.note ? ` Note: ${input.note}` : ""}`,
         taxonomyRequestId: row.id,
@@ -1126,6 +1153,22 @@ export const taxonomyService = {
         }
       }
 
+      // Same summary used for the audit log's "what was this about" and
+      // the requester's own notification — one source of truth so an
+      // admin reading the log doesn't just see "Taxonomy Request
+      // Rejected" with no idea what was actually requested/refused.
+      const missing = [
+        row.requested_university_name &&
+          `university "${row.requested_university_name}"`,
+        row.requested_faculty_name && `faculty "${row.requested_faculty_name}"`,
+        row.requested_programme_name &&
+          `programme "${row.requested_programme_name}"`,
+        row.requested_subject_name &&
+          `subject "${row.requested_subject_code ? `${row.requested_subject_code} - ` : ""}${row.requested_subject_name}"`,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
       await auditLogModel.record({
         actorUserId: ctx.actorUserId,
         actorRole: ctx.actorRole,
@@ -1135,22 +1178,12 @@ export const taxonomyService = {
             : "TAXONOMY_REQUEST_REJECTED",
         targetType: "taxonomy_request",
         targetId: row.id,
+        reason: missing ? `Requested ${missing}.` : undefined,
         requestId: ctx.requestId,
         ipAddress: ctx.ipAddress,
       });
 
       if (row.requested_by) {
-        const missing = [
-          row.requested_university_name &&
-            `university "${row.requested_university_name}"`,
-          row.requested_faculty_name && `faculty "${row.requested_faculty_name}"`,
-          row.requested_programme_name &&
-            `programme "${row.requested_programme_name}"`,
-          row.requested_subject_name &&
-            `subject "${row.requested_subject_code ? `${row.requested_subject_code} - ` : ""}${row.requested_subject_name}"`,
-        ]
-          .filter(Boolean)
-          .join(", ");
         await notificationModel.notifyUser(
           row.requested_by,
           decision === "APPROVED"

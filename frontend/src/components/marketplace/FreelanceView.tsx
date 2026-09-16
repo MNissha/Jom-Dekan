@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import { Briefcase, Plus, X, Check, Phone, Mail, Link as LinkIcon, PenLine, ShieldCheck, Rocket, Handshake, Info, ChevronDown, Download, UserRound, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useOpportunities, useMyOpportunities, useOpportunityApplications, useDecideApplication } from "../../hooks/useOpportunities";
@@ -520,7 +521,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
       )}
 
       {/* Post-a-listing modal */}
-      {postOpen && (
+      {postOpen && createPortal(
         <div role="dialog" aria-modal="true" aria-label="Post a freelance opportunity" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
           <div className="w-full max-w-[640px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
             <div
@@ -759,13 +760,14 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Apply to an existing listing — reuses the same real
           applyToOpportunity mutation the tutoring/generic marketplace
           views use. */}
-      {selectedOpp && (
+      {selectedOpp && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 py-8">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="mb-4 text-lg font-bold text-slate-900">Submit application</h3>
@@ -831,7 +833,8 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Listing detail view — opened by clicking a card. Shows the real
@@ -841,7 +844,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
           apply flow. */}
       {detailOpp && (() => {
         const parsed = parseListing(detailOpp.description);
-        return (
+        return createPortal(
           <div role="dialog" aria-modal="true" aria-label="Listing details" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
             <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
               <div
@@ -971,7 +974,8 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                 })()}
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         );
       })()}
     </div>

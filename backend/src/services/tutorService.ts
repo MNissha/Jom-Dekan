@@ -271,6 +271,7 @@ export const tutorService = {
       action: "TUTOR_APPLICATION_DELETED",
       targetType: "tutor_application",
       targetId: id,
+      reason: `Deleted a ${application.status} application.${linkedProfile ? " This revoked the applicant's verified tutor tag." : ""}`,
       metadata: { userId: application.user_id, status: application.status, revokedTag: Boolean(linkedProfile) },
     });
 
@@ -330,13 +331,15 @@ export const tutorService = {
       });
     }
 
+    const applicant = await userModel.findById(application.user_id);
+
     await auditLogModel.record({
       actorUserId: adminId,
       actorRole: "ADMIN",
       action: decision === "approved" ? "TUTOR_APPLICATION_APPROVED" : "TUTOR_APPLICATION_REJECTED",
       targetType: "tutor_application",
       targetId: applicationId,
-      reason,
+      reason: reason ?? (applicant ? `Approved ${applicant.email}'s tutor application.` : undefined),
       metadata: { userId: application.user_id },
     });
 
@@ -353,7 +356,6 @@ export const tutorService = {
       },
     );
 
-    const applicant = await userModel.findById(application.user_id);
     if (applicant) {
       // Not awaited — a real provider's API round-trip (seconds, not
       // milliseconds) must never hold up the HTTP response for an
@@ -417,6 +419,7 @@ export const tutorService = {
       action: "TUTOR_TAG_GRANTED",
       targetType: "tutor_profile",
       targetId: userId,
+      reason: `Granted a tutor tag directly to ${user.email}, with no application on file.`,
     });
 
     await notificationModel.notifyUser(userId, "TUTOR_APPLICATION_APPROVED", {
@@ -463,6 +466,7 @@ export const tutorService = {
       action: "TUTOR_TAG_UPDATED",
       targetType: "tutor_profile",
       targetId: userId,
+      reason: `Updated fields: ${Object.keys(data).join(", ")}.`,
     });
     return updated ? toApiProfile(updated) : null;
   },
@@ -470,6 +474,7 @@ export const tutorService = {
   async adminRevokeTutorTag(adminId: string, userId: string) {
     const profile = await tutorModel.profiles.findByUserId(userId);
     if (!profile) throw AppError.notFound("This user is not a verified tutor.");
+    const user = await userModel.findById(userId);
     await tutorModel.profiles.remove(userId);
 
     await auditLogModel.record({
@@ -478,6 +483,7 @@ export const tutorService = {
       action: "TUTOR_TAG_REVOKED",
       targetType: "tutor_profile",
       targetId: userId,
+      reason: user ? `Revoked ${user.email}'s verified tutor tag.` : undefined,
     });
 
     await notificationModel.notifyUser(userId, "TUTOR_TAG_REVOKED", {
@@ -485,7 +491,6 @@ export const tutorService = {
       message: "An admin has revoked your verified tutor tag.",
     });
 
-    const user = await userModel.findById(userId);
     if (user) {
       emailService
         .sendEmail({

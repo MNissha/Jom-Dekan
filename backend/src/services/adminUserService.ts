@@ -38,7 +38,7 @@ export const adminUserService = {
       displayName: input.displayName,
       role: input.role,
     });
-    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_USER_CREATED", targetType: "user", targetId: row.id, metadata: { role: input.role } });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_USER_CREATED", targetType: "user", targetId: row.id, reason: `Created ${input.email} as ${input.role}.`, metadata: { role: input.role } });
     return toApiAdminUserProfile(row);
   },
 
@@ -51,7 +51,7 @@ export const adminUserService = {
     const row = await adminUserModel.update(userId, input);
     if (!row) throw AppError.notFound("User not found.");
     if (userId !== adminId) await sessionModel.revokeAllForUser(userId);
-    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_USER_UPDATED", targetType: "user", targetId: userId, metadata: { role: input.role } });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: "ADMIN_USER_UPDATED", targetType: "user", targetId: userId, reason: `Updated ${input.email} (${input.displayName}, ${input.role}).`, metadata: { role: input.role } });
     return toApiAdminUserProfile(row);
   },
 
@@ -60,7 +60,7 @@ export const adminUserService = {
     const row = await adminUserModel.updateStatus(userId, status);
     if (!row) throw AppError.notFound("User not found.");
     if (status === "SUSPENDED") await sessionModel.revokeAllForUser(userId);
-    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: status === "SUSPENDED" ? "USER_SUSPENDED" : "USER_REACTIVATED", targetType: "user", targetId: userId });
+    await auditLogModel.record({ actorUserId: adminId, actorRole: "ADMIN", action: status === "SUSPENDED" ? "USER_SUSPENDED" : "USER_REACTIVATED", targetType: "user", targetId: userId, reason: `${status === "SUSPENDED" ? "Suspended" : "Reactivated"} ${row.email}.` });
     return toApiAdminUserProfile(row);
   },
 
@@ -151,6 +151,7 @@ export const adminUserService = {
       action: "ACCOUNT_ENABLED",
       targetType: "user",
       targetId: userId,
+      reason: `Re-enabled ${existing.email}.`,
       requestId: ctx.requestId,
       ipAddress: ctx.ipAddress,
     });

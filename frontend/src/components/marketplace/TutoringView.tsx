@@ -723,18 +723,6 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                     <Field label="Highest qualification" required hint="e.g. Diploma in Computer Science" value={form.qualification} onChange={(v) => updateForm("qualification", v)} />
                     <Field label="CGPA / subject grade" required hint="e.g. 3.72 or A for CSC510" value={form.grade} onChange={(v) => updateForm("grade", v)} />
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-[#D9D7EE] p-3.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F0FA] text-primary-700">
-                      <UserPlus className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-800">Transcript or result slip</p>
-                      <p className="text-xs text-slate-500">Document verification isn&apos;t available yet</p>
-                    </div>
-                    <button type="button" disabled title="Coming soon" className="cursor-not-allowed rounded-lg border border-[#E4E3F2] px-3 py-2 text-xs font-bold text-slate-400">
-                      Choose file
-                    </button>
-                  </div>
                 </section>
 
                 <section className="flex flex-col gap-2">

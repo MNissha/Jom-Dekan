@@ -12,10 +12,9 @@ import {
   Lightbulb,
   LockKeyhole,
   Mail,
-  UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { updateProfileFormSchema, type UpdateProfileFormValues } from "../schemas/profileSchemas";
 import { useMyProfile, useMyStats, useUpdateProfile } from "../hooks/useProfile";
 import { useForgotPassword } from "../hooks/useAuth";
@@ -126,32 +125,10 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
   );
 }
 
-function DetailHeader({
-  title,
-  onBack,
-  onPageBack,
-}: {
-  title: string;
-  onBack: () => void;
-  // Some sections (e.g. Tutoring) can be reached from outside Profile &
-  // Settings entirely (Marketplace's "Apply to tutor" button) — for those,
-  // also offer a plain "Back" that returns to wherever the user came from,
-  // instead of only the "Profile & Settings" link back to the section list.
-  onPageBack?: () => void;
-}) {
+function DetailHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        {onPageBack && (
-          <button
-            type="button"
-            onClick={onPageBack}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl pr-3 text-sm font-bold text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back
-          </button>
-        )}
         <button
           type="button"
           onClick={onBack}
@@ -216,7 +193,6 @@ function MyBookingsSection() {
 }
 
 export default function Profile() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedSection = searchParams.get("section");
   const activeSection = isSettingsSection(requestedSection) ? requestedSection : null;
@@ -641,11 +617,7 @@ export default function Profile() {
     <div className="page-container page-container-standard">
       {activeSection ? (
         <>
-          <DetailHeader
-            title={SECTION_TITLES[activeSection]}
-            onBack={() => setSearchParams({})}
-            onPageBack={activeSection === "tutor" ? () => navigate(-1) : undefined}
-          />
+          <DetailHeader title={SECTION_TITLES[activeSection]} onBack={() => setSearchParams({})} />
           {renderDetail()}
         </>
       ) : (
@@ -693,9 +665,6 @@ export default function Profile() {
           </section>
 
           <div className="w-full">
-            <SettingsGroup title="Account">
-              <SettingsRow icon={UserRound} title="Personal information" description="Name, contact details and academic information" onClick={() => openSection("personal")} />
-            </SettingsGroup>
             <SettingsGroup title="Security">
               <SettingsRow icon={LockKeyhole} title="Password & security" description="Request a secure password-reset link" onClick={() => openSection("security")} />
             </SettingsGroup>

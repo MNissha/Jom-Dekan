@@ -70,6 +70,13 @@ services:
       STORAGE_REGION: ${STORAGE_REGION:-auto}
       STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET:-docker-dev-storage-signing-secret-change-before-production}
       EMAIL_PROVIDER: console
+      # Same pattern as DB_*/STORAGE_* above: reads real Google OAuth
+      # client credentials from the private root .env when present, so
+      # tutors can connect Google Calendar; the feature stays disabled
+      # (a clear "not configured" error) with no crash when left blank.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALENDAR_REDIRECT_URI: ${GOOGLE_CALENDAR_REDIRECT_URI:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_SUMMARY_ENABLED: ${AI_SUMMARY_ENABLED:-true}
       AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-true}

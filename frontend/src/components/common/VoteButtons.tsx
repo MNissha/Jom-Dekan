@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, ThumbsDown } from "lucide-react";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useCastVote, useRemoveVote } from "../../hooks/useForum";
 import type { VoteTargetType } from "../../types/forum";
 
@@ -76,10 +76,10 @@ export function VoteButtons({
         aria-label={displayMyVote === 1 ? "Remove like" : "Like"}
         aria-pressed={displayMyVote === 1}
         className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 ${
-          displayMyVote === 1 ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300" : "text-content-muted hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
+          displayMyVote === 1 ? "bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-300" : "text-content-muted hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30 dark:hover:text-primary-300"
         }`}
       >
-        <Heart className={`h-4 w-4 ${displayMyVote === 1 ? "fill-current" : ""}`} aria-hidden="true" />
+        <ThumbsUp className={`h-4 w-4 ${displayMyVote === 1 ? "fill-current" : ""}`} aria-hidden="true" />
       </button>
       <span className="min-w-5 text-center text-sm font-semibold text-content-secondary">
         {displayScore}

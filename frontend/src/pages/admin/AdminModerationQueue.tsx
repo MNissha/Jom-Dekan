@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import { ShieldCheck, X } from "lucide-react";
 import { useModeration } from "../../hooks/useModeration";
@@ -333,7 +334,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                     {section === "discussions" && <td className="p-4"><span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase text-violet-700">{item.target_type === "forum_comment" ? "Comment" : "Thread"}</span></td>}
                     <td className="p-4 capitalize text-stone-600">{readable(item.category)}</td>
                     <td className="max-w-md p-4 text-stone-600"><p className="line-clamp-2">{item.details}</p></td>
-                    <td className="p-4"><button type="button" onClick={() => openReview(item)} className="rounded-full bg-[#4338CA] px-4 py-2 text-xs font-semibold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-[#3730A3] hover:shadow-md active:translate-y-0">Review</button></td>
+                    <td className="whitespace-nowrap p-4"><button type="button" onClick={() => openReview(item)} className="whitespace-nowrap rounded-full bg-[#4338CA] px-4 py-2 text-xs font-semibold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-[#3730A3] hover:shadow-md active:translate-y-0">Review</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -342,7 +343,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
         </div>
       </div>
 
-      {selected && (
+      {selected && createPortal(
         <div className="overlay-root" role="dialog" aria-modal="true" aria-labelledby="review-title">
           <div className="dialog-surface max-w-2xl">
             <header className="dialog-header flex items-start justify-between bg-gradient-to-br from-[#332475] to-[#4B3FD3] px-6 py-5 text-white">
@@ -472,7 +473,8 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               </button>
             </footer>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </AdminPageShell>
   );

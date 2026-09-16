@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { MessageSquare, Search, Plus, Heart, X, CheckCircle2, Circle } from "lucide-react";
+import { MessageSquare, Search, Plus, ThumbsUp, X, CheckCircle2, Circle } from "lucide-react";
 import { usePosts, useCreatePost, useCastVote, useRemoveVote, useSetPostSolved } from "../hooks/useForum";
 import { useCurrentUser } from "../hooks/useAuth";
 import { EmptyState } from "../components/common/EmptyState";
@@ -91,11 +92,11 @@ function ForumVoteBox({
       aria-pressed={displayMyVote === 1}
       className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-caption font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 ${
         displayMyVote === 1
-          ? "border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-400/30 dark:bg-rose-950/30 dark:text-rose-300"
-          : "border-border bg-surface-card text-content-muted hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-400/30 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
+          ? "border-primary-200 bg-primary-50 text-primary-600 dark:border-primary-400/30 dark:bg-primary-900/30 dark:text-primary-300"
+          : "border-border bg-surface-card text-content-muted hover:border-primary-200 hover:bg-primary-50 hover:text-primary-600 dark:hover:border-primary-400/30 dark:hover:bg-primary-900/30 dark:hover:text-primary-300"
       }`}
     >
-      <Heart className={`h-4 w-4 ${displayMyVote === 1 ? "fill-current" : ""}`} aria-hidden="true" />
+      <ThumbsUp className={`h-4 w-4 ${displayMyVote === 1 ? "fill-current" : ""}`} aria-hidden="true" />
       <span>{displayScore}</span>
       <span className="sr-only">likes</span>
     </button>
@@ -247,7 +248,7 @@ export default function Forum() {
       {/* New-post modal — same gradient-header treatment as the
           Apply-to-tutor / Post-an-opportunity modals so the marketplace
           and forum feel like one consistent app rather than two styles. */}
-      {isCreating && (
+      {isCreating && createPortal(
         <div role="dialog" aria-modal="true" aria-label="New discussion post" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
           <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
             <div
@@ -319,7 +320,8 @@ export default function Forum() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <div className="mt-6 flex flex-wrap gap-2 border-b border-slate-200 pb-3">

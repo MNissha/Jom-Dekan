@@ -118,6 +118,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
             aria-label="Report content"
             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
           <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
             <div
