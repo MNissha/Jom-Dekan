@@ -6,7 +6,6 @@ import {
   Archive,
   BookOpen,
   Eye,
-  FilePlus2,
   Pencil,
   RotateCcw,
   Search,
@@ -14,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useMinimumLoading } from "../../hooks/useMinimumLoading";
 import {
   useAdminResources,
   useDeleteResource,
@@ -170,10 +170,11 @@ export default function AdminResources() {
   const [status, setStatus] = useState<ResourceStatus | "">("");
   const [category, setCategory] = useState<ResourceCategory | "">("");
   const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<ResourceListItem | "new" | null>(null);
+  const [editing, setEditing] = useState<ResourceListItem | null>(null);
   const [deleting, setDeleting] = useState<ResourceListItem | null>(null);
   const statusMutation = useSetResourceStatus();
   const query = useAdminResources({ q: search || undefined, status: status || undefined, category: category || undefined, page, pageSize: PAGE_SIZE, sortBy: "newest" });
+  const showSkeleton = useMinimumLoading(query.isLoading, 600);
   const resources = query.data?.data ?? [];
   const total = query.data?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -190,9 +191,7 @@ export default function AdminResources() {
 
   return (
     <PageContainer size="dashboard">
-      <PageHeader eyebrow="Content management" title="Resources" description="Create, review, update, archive, restore, and remove academic resources." actions={
-        <Button onClick={() => setEditing("new")}><FilePlus2 className="h-4 w-4" />Create resource</Button>
-      } />
+      <PageHeader eyebrow="Content management" title="Resources" description="Review, update, archive, restore, and remove academic resources." />
 
       <div className="mb-5 grid gap-3 rounded-card border border-border bg-surface-card p-4 shadow-sm md:grid-cols-[1fr_190px_190px]">
         <label className="relative">
@@ -213,7 +212,7 @@ export default function AdminResources() {
         <table className="min-w-[900px] w-full text-left text-sm">
           <thead className="bg-surface-muted text-xs uppercase tracking-wide text-content-muted"><tr><th className="px-5 py-3.5">Resource</th><th className="px-4 py-3.5">Category</th><th className="px-4 py-3.5">Owner</th><th className="px-4 py-3.5">Status</th><th className="px-4 py-3.5">Created</th><th className="px-5 py-3.5 text-right">Actions</th></tr></thead>
           <tbody className="divide-y divide-border-subtle">
-            {query.isLoading ? Array.from({ length: 5 }).map((_, index) => <tr key={index}><td colSpan={6} className="px-5 py-4"><div className="h-8 animate-pulse rounded-lg bg-surface-muted motion-reduce:animate-none" /></td></tr>) : resources.length === 0 ? (
+            {showSkeleton ? Array.from({ length: 5 }).map((_, index) => <tr key={index}><td colSpan={6} className="px-5 py-4"><div className="h-8 animate-pulse rounded-lg bg-surface-muted motion-reduce:animate-none" /></td></tr>) : resources.length === 0 ? (
               <tr><td colSpan={6} className="px-6 py-16 text-center"><BookOpen className="mx-auto h-9 w-9 text-content-muted" /><p className="mt-3 font-semibold text-content-primary">No resources found</p><p className="mt-1 text-content-muted">Try changing the filters or create a new resource.</p></td></tr>
             ) : resources.map((resource) => (
               <tr key={resource.id} className="group transition-colors hover:bg-primary-50/40 dark:hover:bg-primary-950/20">
@@ -236,7 +235,7 @@ export default function AdminResources() {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-content-muted"><span>{total.toLocaleString()} resource{total === 1 ? "" : "s"}</span><div className="flex items-center gap-2"><Button size="small" variant="secondary" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1}>Previous</Button><span className="px-2">Page {page} of {totalPages}</span><Button size="small" variant="secondary" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages}>Next</Button></div></div>
 
-      {editing && <ResourceForm resource={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
+      {editing && <ResourceForm resource={editing} onClose={() => setEditing(null)} />}
       {deleting && <DeleteDialog resource={deleting} onClose={() => setDeleting(null)} />}
     </PageContainer>
   );
