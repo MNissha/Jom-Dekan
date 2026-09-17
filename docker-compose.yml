@@ -76,7 +76,16 @@ services:
       STORAGE_REGION: ${STORAGE_REGION:-auto}
       # Same reasoning as JWT_*/COOKIE_SECRET above — no public fallback.
       STORAGE_SIGNING_SECRET: ${STORAGE_SIGNING_SECRET}
-      EMAIL_PROVIDER: console
+      # Same pattern as STORAGE_*/GOOGLE_* above: reads real SMTP
+      # credentials from the private root .env when present, otherwise
+      # falls back to the self-contained console adapter (logs the email
+      # instead of sending it, no real mailbox needed).
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@jomdekan.app}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       # Same pattern as DB_*/STORAGE_* above: reads real Google OAuth
       # client credentials from the private root .env when present, so
       # tutors can connect Google Calendar; the feature stays disabled
@@ -87,6 +96,11 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_SUMMARY_ENABLED: ${AI_SUMMARY_ENABLED:-true}
       AI_AGENT_ENABLED: ${AI_AGENT_ENABLED:-true}
+      # Wasn't passed through at all before — .env could set this and it
+      # would silently never reach the container, always falling back to
+      # env.ts's own default regardless. See env.ts for why 2000 and not
+      # the old 600 (the schema's own worst case needs closer to 1500).
+      AI_AGENT_MAX_OUTPUT_TOKENS: ${AI_AGENT_MAX_OUTPUT_TOKENS:-2000}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
     volumes:

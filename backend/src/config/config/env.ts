@@ -132,7 +132,16 @@ const envSchema = z.object({
   // ID is never hardcoded in more than this one config module.
   AI_AGENT_ENABLED: booleanString(true),
   OPENAI_AGENT_MODEL: z.string().optional().default(""),
-  AI_AGENT_MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(600),
+  // The structured-output schema alone allows an answer up to ~600
+  // tokens (answerMaxChars in resourceAgent.ts), before citations (up
+  // to 5, each with its own label/title/excerpt text), suggested
+  // questions, and JSON structural overhead are added on top — a
+  // 600-token ceiling leaves no room for any of that and truncates the
+  // response mid-JSON on any non-trivial answer (confirmed live: a
+  // real request came back with status "incomplete", reason
+  // "max_output_tokens", and an unparseable cut-off string). 2000
+  // comfortably covers the schema's real worst case with headroom.
+  AI_AGENT_MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(2000),
   AI_AGENT_MAX_TOOL_CALLS: z.coerce.number().int().positive().max(10).default(2),
   AI_AGENT_MAX_CHUNKS_PER_SEARCH: z.coerce.number().int().positive().max(20).default(5),
   AI_AGENT_MAX_CHUNK_CHARACTERS: z.coerce.number().int().positive().default(1500),
