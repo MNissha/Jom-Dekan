@@ -38,7 +38,9 @@ function bookingsUrl(): string {
   return `${env.corsOrigins[0]}/profile?section=bookings`;
 }
 
-function toApiApplication(row: TutorApplicationRow | TutorApplicationWithApplicant) {
+function toApiApplication(
+  row: TutorApplicationRow | TutorApplicationWithApplicant,
+) {
   const withApplicant = row as TutorApplicationWithApplicant;
   return {
     id: row.id,
@@ -117,7 +119,11 @@ export const tutorService = {
     contentType: string;
     sizeBytes: number;
   }) {
-    if (!(ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(input.contentType)) {
+    if (
+      !(ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(
+        input.contentType,
+      )
+    ) {
       throw AppError.badRequest("Resume must be a PDF or Word document.");
     }
     if (input.sizeBytes > MAX_RESUME_SIZE_BYTES) {
@@ -125,7 +131,7 @@ export const tutorService = {
         `Resume is too large. Maximum size is ${Math.floor(MAX_RESUME_SIZE_BYTES / (1024 * 1024))}MB.`,
       );
     }
-    const safeName = input.fileName.replace(/[^\w.\-]+/g, "_").slice(-100);
+    const safeName = input.fileName.replace(/[^\w.-]+/g, "_").slice(-100);
     const key = `tutor-resumes/${randomUUID()}-${safeName}`;
     const token = signUploadToken(key, RESUME_UPLOAD_TOKEN_TTL_SECONDS);
     return { uploadUrl: `/api/v1/tutors/resume-upload?token=${token}`, key };
@@ -134,20 +140,29 @@ export const tutorService = {
   /** Receives the resume's bytes for a pending upload token. */
   async receiveResumeUpload(storageKey: string, buffer: Buffer) {
     const detected = detectFileType(buffer);
-    if (!detected || !(ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(detected)) {
-      throw AppError.badRequest("The uploaded file must be a real PDF or Word document.");
+    if (
+      !detected ||
+      !(ALLOWED_RESUME_MIME_TYPES as readonly string[]).includes(detected)
+    ) {
+      throw AppError.badRequest(
+        "The uploaded file must be a real PDF or Word document.",
+      );
     }
     await getStorageAdapter().putObject(storageKey, buffer, detected);
     return { key: storageKey, mimeType: detected };
   },
 
-  async getApplicationResumeUrl(applicationId: string, ctx: { actorUserId: string; actorRole: "USER" | "ADMIN" }) {
+  async getApplicationResumeUrl(
+    applicationId: string,
+    ctx: { actorUserId: string; actorRole: "USER" | "ADMIN" },
+  ) {
     const application = await tutorModel.applications.findById(applicationId);
     if (!application) throw AppError.notFound("Application not found.");
     if (application.user_id !== ctx.actorUserId && ctx.actorRole !== "ADMIN") {
       throw AppError.forbidden();
     }
-    if (!application.resume_storage_key) throw AppError.notFound("No resume on file for this application.");
+    if (!application.resume_storage_key)
+      throw AppError.notFound("No resume on file for this application.");
     const url = await getStorageAdapter().createSignedDownloadUrl(
       application.resume_storage_key,
       RESUME_DOWNLOAD_TOKEN_TTL_SECONDS,
@@ -155,13 +170,17 @@ export const tutorService = {
     return { url, filename: application.resume_original_filename };
   },
 
-  async getProfileResumeUrl(userId: string, ctx: { actorUserId: string; actorRole: "USER" | "ADMIN" }) {
+  async getProfileResumeUrl(
+    userId: string,
+    ctx: { actorUserId: string; actorRole: "USER" | "ADMIN" },
+  ) {
     const profile = await tutorModel.profiles.findByUserId(userId);
     if (!profile) throw AppError.notFound("This user is not a verified tutor.");
     if (userId !== ctx.actorUserId && ctx.actorRole !== "ADMIN") {
       throw AppError.forbidden();
     }
-    if (!profile.resume_storage_key) throw AppError.notFound("No resume on file for this tutor.");
+    if (!profile.resume_storage_key)
+      throw AppError.notFound("No resume on file for this tutor.");
     const url = await getStorageAdapter().createSignedDownloadUrl(
       profile.resume_storage_key,
       RESUME_DOWNLOAD_TOKEN_TTL_SECONDS,
@@ -261,7 +280,8 @@ export const tutorService = {
     // tag (tutor_profiles.source_application_id) — the DB cascades that
     // delete automatically (migration 039), but check first so we can
     // tell the user their tag was revoked, not just their old application.
-    const linkedProfile = await tutorModel.profiles.findBySourceApplicationId(id);
+    const linkedProfile =
+      await tutorModel.profiles.findBySourceApplicationId(id);
 
     await tutorModel.applications.remove(id);
 
@@ -272,14 +292,23 @@ export const tutorService = {
       targetType: "tutor_application",
       targetId: id,
       reason: `Deleted a ${application.status} application.${linkedProfile ? " This revoked the applicant's verified tutor tag." : ""}`,
-      metadata: { userId: application.user_id, status: application.status, revokedTag: Boolean(linkedProfile) },
+      metadata: {
+        userId: application.user_id,
+        status: application.status,
+        revokedTag: Boolean(linkedProfile),
+      },
     });
 
     if (linkedProfile) {
-      await notificationModel.notifyUser(application.user_id, "TUTOR_TAG_REVOKED", {
-        title: "Your tutor status was revoked",
-        message: "The application behind your verified tutor tag was removed by an admin, so you're no longer a verified tutor.",
-      });
+      await notificationModel.notifyUser(
+        application.user_id,
+        "TUTOR_TAG_REVOKED",
+        {
+          title: "Your tutor status was revoked",
+          message:
+            "The application behind your verified tutor tag was removed by an admin, so you're no longer a verified tutor.",
+        },
+      );
 
       const user = await userModel.findById(application.user_id);
       if (user) {
@@ -293,7 +322,12 @@ export const tutorService = {
               `Manage your tutor profile: ${profileUrl()}`,
             ].join("\n"),
           })
-          .catch((err) => logger.error({ err, applicationId: id }, "Failed to email user about revoked tutor tag"));
+          .catch((err) =>
+            logger.error(
+              { err, applicationId: id },
+              "Failed to email user about revoked tutor tag",
+            ),
+          );
       }
     }
   },
@@ -310,17 +344,26 @@ export const tutorService = {
       throw AppError.badRequest("This application has already been decided.");
     }
     if (decision === "rejected" && !reason) {
-      throw AppError.badRequest("A reason is required when rejecting an application.");
+      throw AppError.badRequest(
+        "A reason is required when rejecting an application.",
+      );
     }
 
-    const updated = await tutorModel.applications.decide(applicationId, decision, adminId, reason ?? null);
+    const updated = await tutorModel.applications.decide(
+      applicationId,
+      decision,
+      adminId,
+      reason ?? null,
+    );
 
     if (decision === "approved") {
       await tutorModel.profiles.upsertFromApplication(application.user_id, {
         bio: application.bio,
         subjects: application.subjects,
         experience: application.experience,
-        hourlyRate: application.hourly_rate ? Number(application.hourly_rate) : null,
+        hourlyRate: application.hourly_rate
+          ? Number(application.hourly_rate)
+          : null,
         openToOtherUniversities: application.open_to_other_universities,
         resumeStorageKey: application.resume_storage_key,
         resumeOriginalFilename: application.resume_original_filename,
@@ -336,18 +379,30 @@ export const tutorService = {
     await auditLogModel.record({
       actorUserId: adminId,
       actorRole: "ADMIN",
-      action: decision === "approved" ? "TUTOR_APPLICATION_APPROVED" : "TUTOR_APPLICATION_REJECTED",
+      action:
+        decision === "approved"
+          ? "TUTOR_APPLICATION_APPROVED"
+          : "TUTOR_APPLICATION_REJECTED",
       targetType: "tutor_application",
       targetId: applicationId,
-      reason: reason ?? (applicant ? `Approved ${applicant.email}'s tutor application.` : undefined),
+      reason:
+        reason ??
+        (applicant
+          ? `Approved ${applicant.email}'s tutor application.`
+          : undefined),
       metadata: { userId: application.user_id },
     });
 
     await notificationModel.notifyUser(
       application.user_id,
-      decision === "approved" ? "TUTOR_APPLICATION_APPROVED" : "TUTOR_APPLICATION_REJECTED",
+      decision === "approved"
+        ? "TUTOR_APPLICATION_APPROVED"
+        : "TUTOR_APPLICATION_REJECTED",
       {
-        title: decision === "approved" ? "You're a verified tutor!" : "Your tutor application was declined",
+        title:
+          decision === "approved"
+            ? "You're a verified tutor!"
+            : "Your tutor application was declined",
         message:
           decision === "approved"
             ? "Your application to become a JomDekan tutor was approved. You can now post tutoring listings and receive booking requests."
@@ -363,7 +418,10 @@ export const tutorService = {
       emailService
         .sendEmail({
           to: applicant.email,
-          subject: decision === "approved" ? "You're now a verified JomDekan tutor" : "Your tutor application was declined",
+          subject:
+            decision === "approved"
+              ? "You're now a verified JomDekan tutor"
+              : "Your tutor application was declined",
           text: [
             decision === "approved"
               ? "Congratulations — your application to become a JomDekan tutor was approved."
@@ -373,7 +431,12 @@ export const tutorService = {
             `Manage your tutor profile: ${profileUrl()}`,
           ].join("\n"),
         })
-        .catch((err) => logger.error({ err, applicationId }, "Failed to email applicant about tutor application decision"));
+        .catch((err) =>
+          logger.error(
+            { err, applicationId },
+            "Failed to email applicant about tutor application decision",
+          ),
+        );
     }
 
     return updated ? toApiApplication(updated) : null;
@@ -424,7 +487,8 @@ export const tutorService = {
 
     await notificationModel.notifyUser(userId, "TUTOR_APPLICATION_APPROVED", {
       title: "You're a verified tutor!",
-      message: "An admin has granted you a verified tutor tag. You can now post tutoring listings and receive booking requests.",
+      message:
+        "An admin has granted you a verified tutor tag. You can now post tutoring listings and receive booking requests.",
     });
 
     emailService
@@ -436,7 +500,12 @@ export const tutorService = {
           `Manage your tutor profile: ${profileUrl()}`,
         ].join("\n"),
       })
-      .catch((err) => logger.error({ err, userId }, "Failed to email user about granted tutor tag"));
+      .catch((err) =>
+        logger.error(
+          { err, userId },
+          "Failed to email user about granted tutor tag",
+        ),
+      );
 
     return toApiProfile(profile);
   },
@@ -501,7 +570,12 @@ export const tutorService = {
             `Manage your tutor profile: ${profileUrl()}`,
           ].join("\n"),
         })
-        .catch((err) => logger.error({ err, userId }, "Failed to email user about revoked tutor tag"));
+        .catch((err) =>
+          logger.error(
+            { err, userId },
+            "Failed to email user about revoked tutor tag",
+          ),
+        );
     }
   },
 
@@ -509,21 +583,37 @@ export const tutorService = {
   async requestBooking(
     studentId: string,
     tutorUserId: string,
-    data: { subjectId: string; requestedStartAt: Date; durationMinutes: number; message?: string },
+    data: {
+      subjectId: string;
+      requestedStartAt: Date;
+      durationMinutes: number;
+      message?: string;
+    },
   ) {
-    if (studentId === tutorUserId) throw AppError.badRequest("You cannot book a session with yourself.");
+    if (studentId === tutorUserId)
+      throw AppError.badRequest("You cannot book a session with yourself.");
     const profile = await tutorModel.profiles.findByUserId(tutorUserId);
     if (!profile || !profile.is_active) {
-      throw AppError.badRequest("This tutor is not currently accepting bookings.");
+      throw AppError.badRequest(
+        "This tutor is not currently accepting bookings.",
+      );
     }
     if (!profile.subjects.includes(data.subjectId)) {
-      throw AppError.badRequest("This tutor doesn't teach the selected subject.");
+      throw AppError.badRequest(
+        "This tutor doesn't teach the selected subject.",
+      );
     }
     if (data.requestedStartAt.getTime() <= Date.now()) {
-      throw AppError.badRequest("The requested session time must be in the future.");
+      throw AppError.badRequest(
+        "The requested session time must be in the future.",
+      );
     }
 
-    const booking = await tutorModel.bookings.create(studentId, tutorUserId, data);
+    const booking = await tutorModel.bookings.create(
+      studentId,
+      tutorUserId,
+      data,
+    );
     const full = await tutorModel.bookings.findById(booking.id);
 
     await notificationModel.notifyUser(tutorUserId, "TUTOR_BOOKING_REQUESTED", {
@@ -538,7 +628,10 @@ export const tutorService = {
     // below. Sent as the student (the party who actually made the
     // request), since messages.sender_id is never nullable.
     try {
-      const conversation = await messageModel.conversations.findOrCreate(studentId, tutorUserId);
+      const conversation = await messageModel.conversations.findOrCreate(
+        studentId,
+        tutorUserId,
+      );
       await messageModel.messages.create(
         conversation.id,
         studentId,
@@ -560,7 +653,10 @@ export const tutorService = {
     } catch (err) {
       // Best-effort, same reasoning as the notification/email below — the
       // booking itself is already recorded even if this fails.
-      logger.error({ err, bookingId: booking.id }, "Failed to send booking-request message");
+      logger.error(
+        { err, bookingId: booking.id },
+        "Failed to send booking-request message",
+      );
     }
 
     // Not awaited — see the note on the decision email below.
@@ -572,13 +668,20 @@ export const tutorService = {
           `${full?.student_name ?? "A student"} (${full?.student_email ?? "unknown"}) requested a tutoring session.`,
           `Subject: ${full?.subject_name ?? "Not specified"}`,
           `Proposed time: ${data.requestedStartAt.toLocaleString()} (${data.durationMinutes} minutes)`,
-          ...(full?.student_phone ? [`Contact phone: ${full.student_phone}`] : []),
+          ...(full?.student_phone
+            ? [`Contact phone: ${full.student_phone}`]
+            : []),
           ...(data.message ? ["", "Message:", data.message] : []),
           "",
           `Accept or decline this request: ${bookingsUrl()}`,
         ].join("\n"),
       })
-      .catch((err) => logger.error({ err, bookingId: booking.id }, "Failed to email tutor about new booking request"));
+      .catch((err) =>
+        logger.error(
+          { err, bookingId: booking.id },
+          "Failed to email tutor about new booking request",
+        ),
+      );
 
     return full ? toApiBooking(full) : booking;
   },
@@ -586,7 +689,8 @@ export const tutorService = {
   async getBookingById(userId: string, bookingId: string) {
     const booking = await tutorModel.bookings.findById(bookingId);
     if (!booking) throw AppError.notFound("Booking not found.");
-    if (booking.tutor_id !== userId && booking.student_id !== userId) throw AppError.forbidden();
+    if (booking.tutor_id !== userId && booking.student_id !== userId)
+      throw AppError.forbidden();
     return toApiBooking(booking);
   },
 
@@ -611,16 +715,23 @@ export const tutorService = {
     }));
   },
 
-  async decideBooking(userId: string, bookingId: string, status: TutorBookingStatus) {
+  async decideBooking(
+    userId: string,
+    bookingId: string,
+    status: TutorBookingStatus,
+  ) {
     if (status !== "accepted" && status !== "declined") {
       throw AppError.badRequest("Status must be 'accepted' or 'declined'.");
     }
     const booking = await tutorModel.bookings.findById(bookingId);
     if (!booking) throw AppError.notFound("Booking not found.");
-    const isParty = booking.tutor_id === userId || booking.student_id === userId;
+    const isParty =
+      booking.tutor_id === userId || booking.student_id === userId;
     if (!isParty) throw AppError.forbidden();
     const expectedDecisionMaker = booking.reschedule_proposed_by
-      ? (booking.reschedule_proposed_by === booking.tutor_id ? booking.student_id : booking.tutor_id)
+      ? booking.reschedule_proposed_by === booking.tutor_id
+        ? booking.student_id
+        : booking.tutor_id
       : booking.tutor_id;
     if (userId !== expectedDecisionMaker) {
       throw AppError.forbidden(
@@ -629,15 +740,18 @@ export const tutorService = {
           : "Only the tutor can decide an original booking request.",
       );
     }
-    if (booking.status !== "pending") throw AppError.badRequest("This booking has already been decided.");
+    if (booking.status !== "pending")
+      throw AppError.badRequest("This booking has already been decided.");
 
     const isRescheduleDecision = Boolean(booking.reschedule_proposed_by);
-    const decisionMakerName = userId === booking.tutor_id
-      ? booking.tutor_name ?? "The tutor"
-      : booking.student_name ?? "The student";
-    const recipientEmail = booking.reschedule_proposed_by === booking.tutor_id
-      ? booking.tutor_email
-      : booking.student_email;
+    const decisionMakerName =
+      userId === booking.tutor_id
+        ? (booking.tutor_name ?? "The tutor")
+        : (booking.student_name ?? "The student");
+    const recipientEmail =
+      booking.reschedule_proposed_by === booking.tutor_id
+        ? booking.tutor_email
+        : booking.student_email;
     const decisionVerb = status === "accepted" ? "confirmed" : "declined";
     const decisionMessage = isRescheduleDecision
       ? `${decisionMakerName} ${decisionVerb} the proposed new time for ${new Date(booking.requested_start_at).toLocaleString()}.`
@@ -647,11 +761,15 @@ export const tutorService = {
     const recipientId = booking.reschedule_proposed_by ?? booking.student_id;
     await notificationModel.notifyUser(
       recipientId,
-      status === "accepted" ? "TUTOR_BOOKING_ACCEPTED" : "TUTOR_BOOKING_DECLINED",
+      status === "accepted"
+        ? "TUTOR_BOOKING_ACCEPTED"
+        : "TUTOR_BOOKING_DECLINED",
       {
         title: isRescheduleDecision
           ? `Your proposed new time was ${decisionVerb}`
-          : status === "accepted" ? "Your booking was accepted" : "Your booking was declined",
+          : status === "accepted"
+            ? "Your booking was accepted"
+            : "Your booking was declined",
         message: decisionMessage,
         bookingId,
       },
@@ -666,26 +784,34 @@ export const tutorService = {
         subject: isRescheduleDecision
           ? `Your proposed tutoring time was ${decisionVerb}`
           : `Your tutoring session request was ${status}`,
-        text: [
-          decisionMessage,
-          `View your bookings: ${bookingsUrl()}`,
-        ].join("\n"),
+        text: [decisionMessage, `View your bookings: ${bookingsUrl()}`].join(
+          "\n",
+        ),
       })
-      .catch((err) => logger.error({ err, bookingId }, "Failed to email student about booking decision"));
+      .catch((err) =>
+        logger.error(
+          { err, bookingId },
+          "Failed to email student about booking decision",
+        ),
+      );
 
     if (status === "accepted") {
       const profile = await tutorModel.profiles.findByUserId(booking.tutor_id);
       const eventId = await googleCalendarService.createEventIfConnected({
-        refreshTokenEncrypted: profile?.google_calendar_refresh_token_encrypted ?? null,
+        refreshTokenEncrypted:
+          profile?.google_calendar_refresh_token_encrypted ?? null,
         decrypt: decryptSecret,
         tutorEmail: booking.tutor_email,
         studentEmail: booking.student_email,
         summary: `Tutoring session: ${booking.tutor_name ?? "Tutor"} & ${booking.student_name ?? "Student"}`,
-        description: booking.subject_name ? `Subject: ${booking.subject_name}` : "JomDekan tutoring session",
+        description: booking.subject_name
+          ? `Subject: ${booking.subject_name}`
+          : "JomDekan tutoring session",
         startAt: new Date(booking.requested_start_at),
         durationMinutes: booking.duration_minutes,
       });
-      if (eventId) await tutorModel.bookings.setCalendarEventId(bookingId, eventId);
+      if (eventId)
+        await tutorModel.bookings.setCalendarEventId(bookingId, eventId);
     }
 
     const full = await tutorModel.bookings.findById(bookingId);
@@ -699,16 +825,22 @@ export const tutorService = {
   ) {
     const booking = await tutorModel.bookings.findById(bookingId);
     if (!booking) throw AppError.notFound("Booking not found.");
-    if (booking.tutor_id !== userId && booking.student_id !== userId) throw AppError.forbidden();
-    if (booking.status === "declined") throw AppError.badRequest("A declined booking can't be rescheduled.");
+    if (booking.tutor_id !== userId && booking.student_id !== userId)
+      throw AppError.forbidden();
+    if (booking.status === "declined")
+      throw AppError.badRequest("A declined booking can't be rescheduled.");
     if (data.requestedStartAt.getTime() <= Date.now()) {
       throw AppError.badRequest("The new session time must be in the future.");
     }
 
     const isTutor = booking.tutor_id === userId;
-    const proposer = isTutor ? booking.tutor_name ?? "The tutor" : booking.student_name ?? "The student";
+    const proposer = isTutor
+      ? (booking.tutor_name ?? "The tutor")
+      : (booking.student_name ?? "The student");
     const otherPartyId = isTutor ? booking.student_id : booking.tutor_id;
-    const otherPartyEmail = isTutor ? booking.student_email : booking.tutor_email;
+    const otherPartyEmail = isTutor
+      ? booking.student_email
+      : booking.tutor_email;
     const wasAccepted = booking.status === "accepted";
 
     // The old confirmed time is no longer valid — cancel its calendar
@@ -717,7 +849,8 @@ export const tutorService = {
     if (wasAccepted && booking.google_calendar_event_id) {
       const profile = await tutorModel.profiles.findByUserId(booking.tutor_id);
       await googleCalendarService.deleteEventIfConnected({
-        refreshTokenEncrypted: profile?.google_calendar_refresh_token_encrypted ?? null,
+        refreshTokenEncrypted:
+          profile?.google_calendar_refresh_token_encrypted ?? null,
         decrypt: decryptSecret,
         eventId: booking.google_calendar_event_id,
       });
@@ -729,18 +862,25 @@ export const tutorService = {
       proposedBy: userId,
     });
 
-    await notificationModel.notifyUser(otherPartyId, "TUTOR_BOOKING_RESCHEDULED", {
-      title: "A session was rescheduled",
-      message: `${proposer} proposed a new time: ${data.requestedStartAt.toLocaleString()}. Please confirm or decline it.`,
-      bookingId,
-    });
+    await notificationModel.notifyUser(
+      otherPartyId,
+      "TUTOR_BOOKING_RESCHEDULED",
+      {
+        title: "A session was rescheduled",
+        message: `${proposer} proposed a new time: ${data.requestedStartAt.toLocaleString()}. Please confirm or decline it.`,
+        bookingId,
+      },
+    );
 
     // A plain chat message in the same thread so there's a visible record
     // of the change — the existing booking-request card (if any) already
     // reflects the live status/time via its own lookup, this just
     // announces it. Sent as the proposer.
     try {
-      const conversation = await messageModel.conversations.findOrCreate(booking.tutor_id, booking.student_id);
+      const conversation = await messageModel.conversations.findOrCreate(
+        booking.tutor_id,
+        booking.student_id,
+      );
       await messageModel.messages.create(
         conversation.id,
         userId,
@@ -774,7 +914,12 @@ export const tutorService = {
           `View your bookings: ${bookingsUrl()}`,
         ].join("\n"),
       })
-      .catch((err) => logger.error({ err, bookingId }, "Failed to email about rescheduled booking"));
+      .catch((err) =>
+        logger.error(
+          { err, bookingId },
+          "Failed to email about rescheduled booking",
+        ),
+      );
 
     const full = await tutorModel.bookings.findById(bookingId);
     return full ? toApiBooking(full) : updated;
@@ -784,13 +929,22 @@ export const tutorService = {
   async getGoogleCalendarAuthUrl(userId: string) {
     const isVerified = await tutorModel.profiles.isVerified(userId);
     if (!isVerified) throw AppError.forbidden("You are not a verified tutor.");
-    const state = await tutorModel.oauthStates.create(userId, "google_calendar");
+    const state = await tutorModel.oauthStates.create(
+      userId,
+      "google_calendar",
+    );
     return googleCalendarService.getAuthUrl(state);
   },
 
   async handleGoogleCalendarCallback(state: string, code: string) {
-    const consumed = await tutorModel.oauthStates.consume(state, "google_calendar");
-    if (!consumed) throw AppError.badRequest("This connection link has expired. Please try again.");
+    const consumed = await tutorModel.oauthStates.consume(
+      state,
+      "google_calendar",
+    );
+    if (!consumed)
+      throw AppError.badRequest(
+        "This connection link has expired. Please try again.",
+      );
 
     const tokens = await googleCalendarService.exchangeCodeForTokens(code);
     if (!tokens.refresh_token) {
