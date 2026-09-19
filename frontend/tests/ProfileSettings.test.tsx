@@ -9,46 +9,46 @@ const supportMutate = vi.fn();
 
 vi.mock("../src/hooks/useProfile", () => {
   const profile = {
-      id: "user-1",
-      email: "student@example.com",
-      role: "USER",
-      emailVerified: true,
-      termsAcceptedAt: null,
-      displayName: "Nur Student",
-      photoPath: null,
-      phone: "+60123456789",
-      academicRole: "STUDENT",
-      university: { id: "university-1", name: "Universiti Teknologi MARA" },
-      fieldOfStudy: "Computer Science",
-      studyLevel: "DEGREE",
-      currentYear: 2,
-      currentSemester: 4,
-      createdAt: "2026-01-01T00:00:00.000Z",
+    id: "user-1",
+    email: "student@example.com",
+    role: "USER",
+    emailVerified: true,
+    termsAcceptedAt: null,
+    displayName: "Nur Student",
+    photoPath: null,
+    phone: "+60123456789",
+    academicRole: "STUDENT",
+    university: { id: "university-1", name: "Universiti Teknologi MARA" },
+    fieldOfStudy: "Computer Science",
+    studyLevel: "DEGREE",
+    currentYear: 2,
+    currentSemester: 4,
+    createdAt: "2026-01-01T00:00:00.000Z",
   };
   const stats = {
-      resourceCount: 3,
-      forumPostCount: 2,
-      forumCommentCount: 4,
-      tutorListingCount: 0,
-      freelanceListingCount: 1,
-      favoriteCount: 5,
+    resourceCount: 3,
+    forumPostCount: 2,
+    forumCommentCount: 4,
+    tutorListingCount: 0,
+    freelanceListingCount: 1,
+    favoriteCount: 5,
   };
 
   return {
-  useMyProfile: () => ({
-    data: profile,
-    isLoading: false,
-  }),
-  useMyStats: () => ({
-    data: stats,
-    isLoading: false,
-  }),
-  useUpdateProfile: () => ({
-    mutate: updateMutate,
-    isPending: false,
-    isError: false,
-    error: null,
-  }),
+    useMyProfile: () => ({
+      data: profile,
+      isLoading: false,
+    }),
+    useMyStats: () => ({
+      data: stats,
+      isLoading: false,
+    }),
+    useUpdateProfile: () => ({
+      mutate: updateMutate,
+      isPending: false,
+      isError: false,
+      error: null,
+    }),
   };
 });
 
@@ -97,26 +97,40 @@ describe("Profile & Settings hub", () => {
   it("shows only settings backed by existing functionality", () => {
     renderProfile();
 
-    expect(screen.getByRole("heading", { name: "Profile & Settings" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Profile & Settings" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Nur Student")).toBeInTheDocument();
     expect(screen.getByText("student@example.com")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Personal information/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Password & security/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Contact support/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /View profile information/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Password & security/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Contact support/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Delete account")).not.toBeInTheDocument();
-    expect(screen.queryByText("Notification preferences")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Notification preferences"),
+    ).not.toBeInTheDocument();
   });
 
   it("opens Contact Support inside Profile & Settings and returns to the hub", () => {
     renderProfile();
 
     fireEvent.click(screen.getByRole("button", { name: /Contact support/i }));
-    expect(screen.getByRole("heading", { name: "Contact support" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Contact support" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Subject/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Message/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Profile & Settings" }));
-    expect(screen.getByRole("heading", { name: "Profile & Settings" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Profile & Settings" }),
+    ).toBeInTheDocument();
   });
 
   it("submits the existing support payload", () => {
