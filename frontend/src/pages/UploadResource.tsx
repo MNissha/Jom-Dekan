@@ -403,7 +403,7 @@ export default function UploadResource() {
               <Sparkles className="h-4 w-4" aria-hidden="true" />
             </span>
             <div>
-              <h2 id="resource-category-heading" className="text-sm font-extrabold text-[#231C57]">
+              <h2 id="resource-category-heading" className="text-sm font-extrabold text-[#231C57] dark:text-brand-secondary">
                 Category<span className="text-red-500"> *</span>
               </h2>
               <p className="mt-0.5 text-xs text-slate-500">Choose the type that best describes this resource. It will appear on the resource card and in filters.</p>

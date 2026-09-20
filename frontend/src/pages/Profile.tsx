@@ -97,9 +97,9 @@ function SettingsRow({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-[76px] w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-[#FAF9FF] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 sm:px-6"
+      className="group flex min-h-[76px] w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-[#FAF9FF] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 sm:px-6 dark:hover:bg-[#30295D]"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFEEFB] text-[#4338CA] transition group-hover:bg-[#E3E0FA]">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFEEFB] text-[#4338CA] transition group-hover:bg-[#E3E0FA] dark:bg-primary-400/10 dark:text-primary-300 dark:group-hover:bg-primary-400/20">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
       <h2 id={headingId} className="mb-2.5 px-1 text-xs font-extrabold uppercase tracking-[0.14em] text-slate-500">
         {title}
       </h2>
-      <div className="divide-y divide-[#F1F0F8] overflow-hidden rounded-[22px] border border-[#ECEBF7] bg-white shadow-sm">
+      <div className="divide-y divide-[#F1F0F8] overflow-hidden rounded-[22px] border border-[#ECEBF7] bg-white shadow-sm dark:divide-[#332C63] dark:border-[#332C63] dark:bg-[#1B1836]">
         {children}
       </div>
     </section>
@@ -539,7 +539,7 @@ export default function Profile() {
               <GraduationCap className="h-6 w-6" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-lg font-extrabold text-[#231C57]">Made for student life</h2>
+              <h2 className="text-lg font-extrabold text-[#231C57] dark:text-brand-secondary">Made for student life</h2>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
                 JomDekan is a platform built for Malaysian university students to find and share academic
                 resources — past papers, notes, and study materials — searchable by university, programme,

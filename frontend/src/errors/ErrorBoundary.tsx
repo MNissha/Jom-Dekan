@@ -24,7 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-red-600">
+          <div className="rounded-xl border border-border bg-surface-card p-4 text-sm text-red-600 dark:text-red-400">
             Something went wrong while displaying this content.
           </div>
         )

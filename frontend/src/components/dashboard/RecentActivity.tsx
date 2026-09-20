@@ -9,26 +9,26 @@ const ACTIVITY_STYLE: Record<ActivityType, { icon: LucideIcon; iconClass: string
   RESOURCE_UPLOADED: {
     icon: UploadCloud,
     iconClass: "bg-[#EFEEFB] text-[#4338CA]",
-    hoverClass: "hover:bg-[#EFEEFB]/60",
-    textHoverClass: "group-hover:text-[#4338CA]",
+    hoverClass: "hover:bg-[#EFEEFB]/60 dark:hover:bg-primary-400/10",
+    textHoverClass: "group-hover:text-[#4338CA] dark:group-hover:text-primary-300",
   },
   RESOURCE_FAVORITED: {
     icon: Heart,
     iconClass: "bg-[#FDF3DA] text-[#8A6A00]",
-    hoverClass: "hover:bg-[#FDF3DA]/60",
-    textHoverClass: "group-hover:text-[#8A6A00]",
+    hoverClass: "hover:bg-[#FDF3DA]/60 dark:hover:bg-amber-400/10",
+    textHoverClass: "group-hover:text-[#8A6A00] dark:group-hover:text-amber-300",
   },
   FORUM_POST_CREATED: {
     icon: MessageSquare,
     iconClass: "bg-[#E4F1FB] text-[#1D5E8A]",
-    hoverClass: "hover:bg-[#E4F1FB]/60",
-    textHoverClass: "group-hover:text-[#1D5E8A]",
+    hoverClass: "hover:bg-[#E4F1FB]/60 dark:hover:bg-blue-400/10",
+    textHoverClass: "group-hover:text-[#1D5E8A] dark:group-hover:text-blue-300",
   },
   FORUM_COMMENT_CREATED: {
     icon: Reply,
     iconClass: "bg-[#EAF3EA] text-[#2A6B3F]",
-    hoverClass: "hover:bg-[#EAF3EA]/60",
-    textHoverClass: "group-hover:text-[#2A6B3F]",
+    hoverClass: "hover:bg-[#EAF3EA]/60 dark:hover:bg-emerald-400/10",
+    textHoverClass: "group-hover:text-[#2A6B3F] dark:group-hover:text-emerald-300",
   },
 };
 

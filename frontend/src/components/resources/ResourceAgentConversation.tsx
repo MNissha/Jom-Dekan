@@ -65,7 +65,7 @@ export const ResourceAgentConversation = forwardRef<HTMLDivElement, ResourceAgen
                 type="button"
                 onClick={() => onSelectSuggestion(suggestion)}
                 disabled={isAsking}
-                className="rounded-full border border-[#ECEBF7] bg-white px-3 py-1.5 text-xs font-semibold text-[#4338CA] transition motion-safe:duration-150 hover:bg-[#EFEEFB] disabled:opacity-60"
+                className="rounded-full border border-[#ECEBF7] bg-white px-3 py-1.5 text-xs font-semibold text-[#4338CA] transition motion-safe:duration-150 hover:bg-[#EFEEFB] disabled:opacity-60 dark:text-primary-300 dark:hover:bg-primary-400/10"
               >
                 {suggestion}
               </button>

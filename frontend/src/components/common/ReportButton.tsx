@@ -120,7 +120,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
-          <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
+          <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl dark:bg-[#1B1836] dark:text-slate-100">
             <div
               className="flex items-start justify-between gap-4 p-[22px] text-white"
               style={{ background: "radial-gradient(120% 160% at 88% 8%, #DC2626 0%, #7F1D1D 55%, #450A0A 100%)" }}
@@ -185,8 +185,8 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                           onClick={() => updateForm("category", c)}
                           className={`rounded-xl border px-3 py-2.5 text-left text-sm font-bold transition motion-safe:duration-150 ${
                             active
-                              ? "border-red-400 bg-red-50 text-red-700"
-                              : "border-[#E4E3F2] text-slate-600 hover:border-red-200"
+                              ? "border-red-400 bg-red-50 text-red-700 dark:bg-red-400/15 dark:text-red-200"
+                              : "border-[#E4E3F2] text-slate-600 hover:border-red-200 dark:border-[#494174] dark:text-slate-300 dark:hover:border-red-400/70 dark:hover:bg-red-400/10 dark:hover:text-slate-100"
                           }`}
                         >
                           {REPORT_CATEGORY_LABELS[c]}
@@ -208,7 +208,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                       <input
                         value={form.reporterName}
                         onChange={(e) => updateForm("reporterName", e.target.value)}
-                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm text-slate-700 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm text-slate-700 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100"
                       />
                     </label>
                     <label className="flex flex-col gap-1.5">
@@ -219,7 +219,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                         value={form.reporterPhone}
                         onChange={(e) => updateForm("reporterPhone", e.target.value)}
                         placeholder="+60 12-345 6789"
-                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm text-slate-700 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm text-slate-700 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400"
                       />
                     </label>
                     <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -230,7 +230,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                         type="email"
                         value={form.reporterEmail}
                         onChange={(e) => updateForm("reporterEmail", e.target.value)}
-                        className={`h-11 rounded-xl border px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                        className={`h-11 rounded-xl border px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-400 dark:bg-[#231E4A] dark:text-slate-100 ${
                           form.reporterEmail && !emailOk ? "border-red-300" : "border-[#E4E3F2] focus:border-red-400"
                         }`}
                       />
@@ -247,11 +247,11 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                     value={form.description}
                     onChange={(e) => updateForm("description", e.target.value)}
                     placeholder="Describe the issue in at least 20 characters…"
-                    className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+                    className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400"
                   />
                 </label>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#D8D4EC] bg-[#FBFBFE] p-4 transition hover:border-red-300 hover:bg-red-50/40">
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#D8D4EC] bg-[#FBFBFE] p-4 transition hover:border-red-300 hover:bg-red-50/40 dark:border-[#494174] dark:bg-[#231E4A] dark:hover:border-red-400/70 dark:hover:bg-red-400/10">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EFEEFB] text-[#4338CA]">
                     <ImagePlus className="h-5 w-5" aria-hidden="true" />
                   </span>
@@ -274,11 +274,11 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                   )}
                 </label>
 
-                <div className="flex flex-wrap justify-end gap-3 border-t border-[#F1F0FA] pt-4">
+                <div className="flex flex-wrap justify-end gap-3 border-t border-[#F1F0FA] pt-4 dark:border-[#332C63]">
                   <button
                     type="button"
                     onClick={close}
-                    className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-slate-300"
+                    className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-slate-300 dark:border-[#494174] dark:text-slate-200 dark:hover:border-slate-400 dark:hover:bg-white/5"
                   >
                     Cancel
                   </button>

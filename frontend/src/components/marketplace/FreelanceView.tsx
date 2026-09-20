@@ -34,7 +34,7 @@ const HOW_IT_WORKS = [
     n: "1",
     icon: PenLine,
     accent: "from-violet-500 to-indigo-600",
-    wash: "bg-violet-50",
+    wash: "bg-violet-50 dark:bg-violet-400/10",
     title: "Post your listing",
     body: "Job details, budget, deadline and contact details — about five minutes.",
   },
@@ -42,7 +42,7 @@ const HOW_IT_WORKS = [
     n: "2",
     icon: ShieldCheck,
     accent: "from-amber-400 to-orange-500",
-    wash: "bg-amber-50",
+    wash: "bg-amber-50 dark:bg-amber-400/10",
     title: "Accept the poster terms",
     body: "Including that JomDekan only lists your opportunity and isn't responsible for what happens afterward.",
   },
@@ -50,7 +50,7 @@ const HOW_IT_WORKS = [
     n: "3",
     icon: Rocket,
     accent: "from-teal-400 to-emerald-600",
-    wash: "bg-teal-50",
+    wash: "bg-teal-50 dark:bg-teal-400/10",
     title: "Your listing goes live",
     body: "It appears here for students to find and apply to. Admins can still close a listing that breaks the academic-integrity policy.",
   },
@@ -58,7 +58,7 @@ const HOW_IT_WORKS = [
     n: "4",
     icon: Handshake,
     accent: "from-rose-400 to-pink-600",
-    wash: "bg-rose-50",
+    wash: "bg-rose-50 dark:bg-rose-400/10",
     title: "Students apply directly to you",
     body: "You review applicants and agree on payment and delivery directly — JomDekan doesn't process payments or verify the work.",
   },
@@ -401,7 +401,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
       ) : (
         <>
       {howOpen && (
-        <section className="relative flex flex-col gap-5 overflow-hidden rounded-[24px] border border-[#DDD9F1] bg-white p-5 shadow-[0_14px_40px_rgba(67,56,202,0.08)] motion-safe:animate-[modalRise_240ms_ease-out] sm:p-6">
+        <section className="relative flex flex-col gap-5 overflow-hidden rounded-[24px] border border-[#DDD9F1] bg-white p-5 shadow-[0_14px_40px_rgba(67,56,202,0.08)] motion-safe:animate-[modalRise_240ms_ease-out] sm:p-6 dark:border-[#3B3564] dark:bg-[#1B1836]">
           <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-violet-200/35 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-amber-100/50 blur-3xl" />
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -414,7 +414,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
               type="button"
               onClick={() => setHowOpen(false)}
               aria-label="Close"
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E4E3F2] bg-white text-slate-500 shadow-sm transition motion-safe:duration-200 hover:rotate-90 hover:border-violet-200 hover:bg-violet-50 hover:text-[#4338CA]"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E4E3F2] bg-white text-slate-500 shadow-sm transition motion-safe:duration-200 hover:rotate-90 hover:border-violet-200 hover:bg-violet-50 hover:text-[#4338CA] dark:border-[#494174] dark:bg-[#231E4A] dark:hover:bg-[#30295D]"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -432,7 +432,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
               </div>
             ))}
           </div>
-          <div className="relative flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-violet-50 p-4 text-xs font-semibold leading-5 text-slate-700">
+          <div className="relative flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-violet-50 p-4 text-xs font-semibold leading-5 text-slate-700 dark:border-amber-300/30 dark:from-amber-400/10 dark:to-violet-400/10">
             <span className="rounded-xl bg-[#F5C21A] p-2 text-[#231C57] shadow-sm"><Info className="h-4 w-4" aria-hidden="true" /></span>
             <p>JomDekan only lists opportunities — we're not a party to any arrangement between a poster and a student, and aren't responsible for payment, delivery, or what happens afterward. Ghost-writing or completing graded work for someone is never allowed.</p>
           </div>
@@ -491,7 +491,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                   {!parsed.budget && <p className="mt-2 line-clamp-2 text-sm text-slate-600">{opp.description}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-4">
-                  {parsed.budget && <span className="text-lg font-extrabold text-[#2E2372]">{parsed.budget}</span>}
+                  {parsed.budget && <span className="text-lg font-extrabold text-[#2E2372] dark:text-brand-secondary">{parsed.budget}</span>}
                   <FavoriteButton targetType="opportunity" targetId={opp.id} />
                   <ReportButton targetType="opportunity" targetId={opp.id} />
                   {opp.owner_id !== currentUser?.id && (() => {
@@ -523,7 +523,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
       {/* Post-a-listing modal */}
       {postOpen && createPortal(
         <div role="dialog" aria-modal="true" aria-label="Post a freelance opportunity" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
-          <div className="w-full max-w-[640px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
+          <div className="w-full max-w-[640px] overflow-hidden rounded-[24px] bg-white shadow-2xl dark:bg-[#1B1836] dark:text-slate-100">
             <div
               className="flex items-start justify-between gap-4 p-[22px] text-white"
               style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
@@ -582,7 +582,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                       <select
                         value={form.mode}
                         onChange={(e) => updateForm("mode", e.target.value as OpportunityMode)}
-                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100"
                       >
                         {(["ONLINE", "PHYSICAL", "HYBRID"] as OpportunityMode[]).map((m) => (
                           <option key={m} value={m}>
@@ -602,7 +602,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                       placeholder="Deliverables, timeline, tools, and what a good submission looks like…"
                       value={form.scope}
                       onChange={(e) => updateForm("scope", e.target.value)}
-                      className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400"
                     />
                   </label>
                 </section>
@@ -673,7 +673,7 @@ export function FreelanceView({ initialDetailId = null }: { initialDetailId?: st
                         }
                       }}
                       placeholder="Add a skill that isn't listed above…"
-                      className="h-9 flex-1 rounded-full border border-[#E4E3F2] bg-[#FBFBFE] px-3.5 text-xs font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="h-9 flex-1 rounded-full border border-[#E4E3F2] bg-[#FBFBFE] px-3.5 text-xs font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400"
                     />
                     <button
                       type="button"
@@ -1021,7 +1021,7 @@ function Field({
         placeholder={hint}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`h-11 rounded-xl border px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+        className={`h-11 rounded-xl border px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400 ${
           invalid ? "border-red-300" : "border-[#E4E3F2] focus:border-primary-500"
         }`}
       />

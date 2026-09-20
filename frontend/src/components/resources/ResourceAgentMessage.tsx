@@ -50,7 +50,7 @@ function CitationChip({ citation }: { citation: AgentMessage["citations"][number
   const label = citation.pageNumber != null ? `Page ${citation.pageNumber}` : citation.sourceLabel;
 
   return (
-    <div className="rounded-lg border border-[#EFEEFB] bg-[#EFEEFB]">
+    <div className="rounded-lg border border-[#EFEEFB] bg-[#EFEEFB] dark:border-primary-400/20 dark:bg-primary-400/10">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}

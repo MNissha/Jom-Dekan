@@ -102,7 +102,7 @@ export default function Dashboard() {
             >
               <Link
                 to="/resources"
-                className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-[#231C57] transition motion-safe:duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                className="keep-bg-white rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-[#231C57] transition motion-safe:duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
                 Explore resources
               </Link>

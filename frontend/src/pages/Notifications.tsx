@@ -133,7 +133,7 @@ export default function Notifications() {
                 );
               })}
             </ul>
-            {visibleCount < filteredNotifications.length && <div className="mt-5 text-center"><button type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="rounded-full border border-primary-200 bg-white px-5 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Load more</button></div>}
+            {visibleCount < filteredNotifications.length && <div className="mt-5 text-center"><button type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="rounded-full border border-primary-200 bg-white px-5 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-primary-400/30 dark:text-primary-300 dark:hover:bg-primary-400/10">Load more</button></div>}
           </>
         )}
       </div>

@@ -21,12 +21,9 @@ function getInitialTheme(): Theme {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-/**
- * Scoped to the app shell (header/sidebar/page background) for now —
- * individual page content isn't dark-styled yet, so this only toggles
- * a `dark` class on <html> and persists the choice; extending dark:
- * variants to every page's own colors is a separate, larger task.
- */
+/** Applies the persisted theme to the complete document. Shared semantic
+ * tokens and compatibility mappings keep both current and legacy components
+ * readable while features migrate away from hard-coded palette utilities. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 

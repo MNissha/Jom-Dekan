@@ -94,7 +94,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="h-dvh-with-fallback flex w-full flex-col overflow-hidden bg-surface-page text-content-primary transition-colors motion-safe:duration-standard">
+    <div className="app-shell h-dvh-with-fallback flex w-full flex-col overflow-hidden bg-surface-page text-content-primary transition-colors motion-safe:duration-standard">
       <IdleTimeoutGuard />
       <DashboardHeader onMenuClick={handleMenuClick} />
 

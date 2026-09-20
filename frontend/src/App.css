@@ -183,6 +183,38 @@ body {
   min-height: var(--control-height);
 }
 
+/* Native form controls that a component never gave an explicit
+   background/text colour otherwise keep the browser's own white
+   control surface (Tailwind's Preflight resets `color` to inherit but
+   never touches `background-color`), so raw <input>/<textarea>/
+   <select> elements go invisible-text-on-invisible-white the moment
+   the inherited text colour flips light for dark mode. Low-specificity
+   element selector so any component's own background/text utility
+   class still wins over this default. */
+:where(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="image"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select,
+    textarea
+  ) {
+  background-color: rgb(var(--surface-card));
+  color: rgb(var(--text-primary));
+  border-color: rgb(var(--border-default));
+}
+
+:where(input, textarea)::placeholder {
+  color: rgb(var(--text-muted));
+  opacity: 1;
+}
+
+/* Native select popups are painted by the browser outside the component
+   tree. Some Windows browsers keep a light popup while inheriting the dark
+   document foreground, producing white-on-white options until hover. */
+.dark select option,
+.dark select optgroup {
+  background-color: rgb(var(--surface-raised));
+  color: rgb(var(--text-primary));
+}
+
 /* Shared password fields provide their own accessible visibility toggle. */
 .password-field-input::-ms-reveal,
 .password-field-input::-ms-clear {
@@ -421,8 +453,11 @@ body {
    cards should use .card-base (already theme-aware) or their own
    explicit dark: variant instead of relying on a blanket override. */
 .dark .bg-slate-50,
+.dark .bg-slate-100,
 .dark .bg-stone-50,
 .dark .bg-stone-100 { background-color: rgb(var(--surface-muted)); }
+.dark .bg-slate-200,
+.dark .bg-stone-200 { background-color: rgb(var(--surface-selected)); }
 .dark .text-slate-900,
 .dark .text-slate-800,
 .dark .text-slate-700,
@@ -432,10 +467,78 @@ body {
 .dark .text-slate-600,
 .dark .text-slate-500,
 .dark .text-slate-400,
-.dark .text-stone-600 { color: rgb(var(--text-muted)); }
+.dark .text-stone-600,
+.dark .text-stone-500,
+.dark .text-stone-400 { color: rgb(var(--text-muted)); }
 .dark .border-slate-100,
 .dark .border-slate-200,
-.dark .border-slate-300 { border-color: rgb(var(--border-default)); }
+.dark .border-slate-300,
+.dark .border-slate-400 { border-color: rgb(var(--border-default)); }
+
+/* `#332475` is a fixed dark-navy accent used only for section headings
+   and labels (AI summary section titles, resource card titles, etc.),
+   never as a background — safe to remap everywhere, not just the app
+   shell, since there is no self-contained-badge pairing to protect. */
+.dark .text-\[\#332475\] { color: rgb(var(--brand-secondary)); }
+.dark .group:hover .group-hover\:text-\[\#332475\] { color: rgb(var(--brand-secondary)); }
+
+/* `#4338CA` is a hardcoded literal of light-mode --brand-primary, used
+   throughout as plain accent text/links/icons directly against a card
+   or page background — remap it to the accessible dark brand value. */
+.dark .text-\[\#4338CA\] { color: rgb(var(--brand-primary)); }
+
+/* Authenticated app shell (dashboard, resources, tutoring, freelance,
+   profile, admin, notifications, forum, messages — every page rendered
+   inside DashboardLayout, marked with `.app-shell`) reuses the exact
+   same bg-white/near-white-hex card pattern as the public shell below,
+   but never got that shell's equivalent remap, so cards and modals in
+   the authenticated app pair a background that stays white with text
+   that this file already flips light (see the slate/stone rules
+   above) — light text on white. A handful of branded pill/chip buttons
+   here pair bg-white with a fixed accent text colour the same way the
+   public-shell buttons do; they opt out with `.keep-bg-white` instead
+   of being excluded from this selector. The near-white hex backgrounds
+   listed are confirmed single-purpose "off-white panel" surfaces
+   (never a self-contained pastel badge with its own fixed text, which
+   is why e.g. #EFEEFB is deliberately not in this list — it doubles as
+   a file-type badge background elsewhere and must keep its own
+   explicit dark: treatment). */
+.dark .app-shell .bg-white:not(.keep-bg-white) { background-color: rgb(var(--surface-card)); }
+.dark .app-shell .bg-\[\#FBFBFE\],
+.dark .app-shell .bg-\[\#FAF9FF\],
+.dark .app-shell .bg-\[\#FBFAFF\],
+.dark .app-shell .bg-\[\#F8F8FD\],
+.dark .app-shell .bg-\[\#F8F8FC\],
+.dark .app-shell .bg-\[\#F8F7FD\],
+.dark .app-shell .bg-\[\#F4F3FB\] { background-color: rgb(var(--surface-muted)); }
+
+/* Same authenticated-app scope: the recurring light-purple hex border
+   shades used throughout cards, dividers, inputs and modals read as
+   near-invisible hairlines against a dark surface. Remapping only
+   `border-*`/`divide-*` utilities (never `bg-*` or `text-*`) means this
+   is safe regardless of what else pairs with them. */
+.dark .app-shell .border-\[\#ECEBF7\],
+.dark .app-shell .border-\[\#E4E3F2\],
+.dark .app-shell .border-\[\#DDD9F1\],
+.dark .app-shell .border-\[\#E8E5F7\],
+.dark .app-shell .border-\[\#E6E2F5\],
+.dark .app-shell .border-\[\#E5E2F5\],
+.dark .app-shell .border-\[\#F1F0FA\],
+.dark .app-shell .border-\[\#F4F3FB\],
+.dark .app-shell .border-\[\#D8D4EC\],
+.dark .app-shell .border-\[\#DDDCEC\],
+.dark .app-shell .border-\[\#E4E0FA\],
+.dark .app-shell .border-\[\#DDE9F8\],
+.dark .app-shell .border-\[\#F0EEF8\],
+.dark .app-shell .border-\[\#DDD8F4\],
+.dark .app-shell .border-\[\#F1F0F8\],
+.dark .app-shell .border-\[\#DCD8F7\],
+.dark .app-shell .border-\[\#CFC9F5\] { border-color: rgb(var(--border-default)); }
+
+.dark .app-shell .divide-\[\#ECEBF7\] > :not([hidden]) ~ :not([hidden]),
+.dark .app-shell .divide-\[\#F4F3FB\] > :not([hidden]) ~ :not([hidden]),
+.dark .app-shell .divide-\[\#F1F0F8\] > :not([hidden]) ~ :not([hidden]),
+.dark .app-shell .divide-\[\#F0EEF8\] > :not([hidden]) ~ :not([hidden]) { border-color: rgb(var(--border-default)); }
 
 /* The public/marketing pages (landing, how-it-works, login, register,
    password reset — everything wrapped by MainLayout's .public-shell)
@@ -459,6 +562,100 @@ body {
    flagged" meaning legible instead of muddying it away entirely. */
 .dark .bg-red-50\/40 { background-color: rgb(239 68 68 / 0.12); }
 .dark .hover\:bg-red-50\/80:hover { background-color: rgb(239 68 68 / 0.2); }
+
+/* Same muddy-pastel-tint problem, same fix, for every other unread-row/
+   category tint used across notifications (dashboard, notification
+   centre, admin notifications, notification popover): a light-50 wash
+   at low opacity reads as a grey-brown smear on a dark background
+   instead of carrying its category colour. */
+.dark .app-shell .bg-amber-50\/45 { background-color: rgb(245 158 11 / 0.12); }
+.dark .app-shell .bg-emerald-50\/40 { background-color: rgb(16 185 129 / 0.12); }
+.dark .app-shell .bg-violet-50\/50 { background-color: rgb(139 92 246 / 0.12); }
+.dark .app-shell .bg-blue-50\/40 { background-color: rgb(59 130 246 / 0.12); }
+.dark .app-shell .bg-teal-50\/40 { background-color: rgb(20 184 166 / 0.12); }
+.dark .app-shell .bg-cyan-50\/40 { background-color: rgb(6 182 212 / 0.12); }
+.dark .app-shell .bg-indigo-50\/40 { background-color: rgb(99 102 241 / 0.12); }
+.dark .app-shell .bg-primary-50\/40,
+.dark .app-shell .bg-primary-50\/50,
+.dark .app-shell .bg-primary-50\/60,
+.dark .app-shell .bg-primary-50\/70 { background-color: rgb(var(--brand-primary) / 0.12); }
+
+/* Tailwind's numbered brand palette is intentionally tuned for light
+   surfaces. Components written before the semantic tokens therefore use
+   dark indigo foregrounds (`text-primary-700`, for example) that disappear
+   on the dark canvas. Keep those legacy utilities theme-aware in one place
+   until each feature naturally migrates to the semantic aliases. */
+.dark :where(.text-primary-500, .text-primary-600, .text-primary-700, .text-primary-800, .text-primary-900) {
+  color: rgb(var(--brand-primary));
+}
+.dark :where(.hover\:text-primary-600:hover, .hover\:text-primary-700:hover, .hover\:text-primary-800:hover) {
+  color: rgb(var(--brand-primary-hover));
+}
+.dark :where(.bg-primary-50, .bg-primary-100, .bg-primary-200) {
+  background-color: rgb(var(--brand-primary) / 0.14);
+}
+.dark :where(.hover\:bg-primary-50:hover, .hover\:bg-primary-100:hover, .hover\:bg-primary-200:hover) {
+  background-color: rgb(var(--brand-primary) / 0.22);
+}
+.dark :where(.border-primary-100, .border-primary-200, .border-primary-300) {
+  border-color: rgb(var(--brand-primary) / 0.55);
+}
+.dark :where(.ring-primary-100, .ring-primary-200) {
+  --tw-ring-color: rgb(var(--brand-primary) / 0.35);
+}
+
+/* Accessible dark equivalents for status colours. The 600/700/800 shades
+   work as text on white but miss AA on the product's indigo surfaces. The
+   corresponding soft backgrounds use translucent colour so hierarchy is
+   retained without introducing bright blocks into dark mode. */
+.dark :where(.text-red-500, .text-red-600, .text-red-700, .text-red-800) { color: rgb(var(--danger)); }
+.dark :where(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-green-600, .text-green-700, .text-green-800) { color: rgb(var(--success)); }
+.dark :where(.text-amber-600, .text-amber-700, .text-amber-800, .text-yellow-600, .text-yellow-700, .text-yellow-800) { color: rgb(var(--warning)); }
+.dark :where(.text-blue-600, .text-blue-700, .text-blue-800, .text-cyan-600, .text-cyan-700, .text-cyan-800) { color: rgb(var(--info)); }
+.dark :where(.text-teal-600, .text-teal-700, .text-teal-800) { color: rgb(var(--brand-teal)); }
+.dark :where(.text-violet-600, .text-violet-700, .text-violet-800, .text-indigo-600, .text-indigo-700, .text-indigo-800) { color: rgb(var(--brand-primary)); }
+
+.dark :where(.bg-red-50, .bg-red-100, .bg-red-200) { background-color: rgb(var(--danger) / 0.14); }
+.dark :where(.bg-emerald-50, .bg-emerald-100, .bg-emerald-200, .bg-green-50, .bg-green-100, .bg-green-200) { background-color: rgb(var(--success) / 0.14); }
+.dark :where(.bg-amber-50, .bg-amber-100, .bg-amber-200, .bg-yellow-50, .bg-yellow-100, .bg-yellow-200) { background-color: rgb(var(--warning) / 0.14); }
+.dark :where(.bg-blue-50, .bg-blue-100, .bg-blue-200, .bg-cyan-50, .bg-cyan-100, .bg-cyan-200) { background-color: rgb(var(--info) / 0.14); }
+.dark :where(.bg-teal-50, .bg-teal-100, .bg-teal-200) { background-color: rgb(var(--brand-teal) / 0.14); }
+.dark :where(.bg-violet-50, .bg-violet-100, .bg-violet-200, .bg-indigo-50, .bg-indigo-100, .bg-indigo-200) { background-color: rgb(var(--brand-primary) / 0.14); }
+
+/* Recurring bespoke pastel badges and dashboard icon tiles. Their original
+   foregrounds are deliberately preserved for light mode; in dark mode the
+   surface and foreground both move to the matching accessible semantic hue. */
+.dark .app-shell :where(.bg-\[\#EFEEFB\], .bg-\[\#E3E0FA\], .bg-\[\#E2DFFC\], .bg-\[\#F1F0FA\]) {
+  background-color: rgb(var(--brand-primary) / 0.14);
+}
+.dark .app-shell :where(.bg-\[\#FDF3DA\], .bg-\[\#F4E5B8\]) { background-color: rgb(var(--warning) / 0.14); }
+.dark .app-shell .bg-\[\#FEE2E2\] { background-color: rgb(var(--danger) / 0.14); }
+.dark .app-shell :where(.bg-\[\#EAF3EA\], .bg-\[\#E4F5EC\]) { background-color: rgb(var(--success) / 0.14); }
+.dark .app-shell .bg-\[\#E4F1FB\] { background-color: rgb(var(--info) / 0.14); }
+.dark .app-shell :where(.text-\[\#8A6A00\], .text-\[\#FFE9A6\]) { color: rgb(var(--warning)); }
+.dark .app-shell :where(.text-\[\#2A6B3F\], .text-\[\#1B7A55\]) { color: rgb(var(--success)); }
+.dark .app-shell .text-\[\#1D5E8A\] { color: rgb(var(--info)); }
+.dark .app-shell :where(.text-\[\#231C57\], .text-\[\#2E2372\]) { color: rgb(var(--text-primary)); }
+.dark .app-shell .text-\[\#8A88A5\] { color: rgb(var(--text-muted)); }
+
+/* White call-to-action pills intentionally remain light in dark mode. Their
+   original navy foreground must remain dark as well; otherwise the general
+   hard-coded-text migration above produces nearly white text on white. */
+.dark .app-shell .keep-bg-white { color: #231C57; }
+
+/* Slate 300 is frequently used for empty-state icons and placeholders. On a
+   dark background the light-mode value is too dim, while mapping it to the
+   regular muted token preserves a useful third level of hierarchy. */
+.dark :where(.text-slate-300, .text-stone-300) { color: rgb(var(--text-muted)); }
+
+/* Native autofill can otherwise reintroduce a bright field (and dark text)
+   after the user selects a saved value. Use a long inset transition so the
+   browser retains the themed control surface and readable caret. */
+.dark :where(input, textarea, select):-webkit-autofill {
+  -webkit-text-fill-color: rgb(var(--text-primary));
+  caret-color: rgb(var(--text-primary));
+  box-shadow: 0 0 0 1000px rgb(var(--surface-card)) inset;
+}
 
 @keyframes content-enter {
   from { opacity: 0; transform: translateY(8px); }

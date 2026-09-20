@@ -343,7 +343,7 @@ function ReadySummary({
             type="button"
             onClick={() => onDownload("pdf")}
             disabled={downloadPending}
-            className="flex items-center gap-1.5 rounded-full border border-[#ECEBF7] bg-white px-3 py-1.5 text-xs font-semibold text-[#4338CA] transition motion-safe:duration-150 hover:bg-[#EFEEFB] disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-full border border-[#ECEBF7] bg-white px-3 py-1.5 text-xs font-semibold text-[#4338CA] transition motion-safe:duration-150 hover:bg-[#EFEEFB] disabled:opacity-60 dark:text-primary-300 dark:hover:bg-primary-400/10"
           >
             <Download className="h-3.5 w-3.5" aria-hidden="true" />
             {downloadPending && downloadFormat === "pdf" ? "Downloading…" : "Download PDF"}
@@ -352,7 +352,7 @@ function ReadySummary({
             type="button"
             onClick={() => onDownload("docx")}
             disabled={downloadPending}
-            className="flex items-center gap-1.5 rounded-full border border-[#ECEBF7] bg-white px-3 py-1.5 text-xs font-semibold text-[#4338CA] transition motion-safe:duration-150 hover:bg-[#EFEEFB] disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-full border border-[#ECEBF7] bg-white px-3 py-1.5 text-xs font-semibold text-[#4338CA] transition motion-safe:duration-150 hover:bg-[#EFEEFB] disabled:opacity-60 dark:text-primary-300 dark:hover:bg-primary-400/10"
           >
             <Download className="h-3.5 w-3.5" aria-hidden="true" />
             {downloadPending && downloadFormat === "docx" ? "Downloading…" : "Download Word"}

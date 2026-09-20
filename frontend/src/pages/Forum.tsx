@@ -250,7 +250,7 @@ export default function Forum() {
           and forum feel like one consistent app rather than two styles. */}
       {isCreating && createPortal(
         <div role="dialog" aria-modal="true" aria-label="New discussion post" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8">
-          <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl">
+          <div className="w-full max-w-[560px] overflow-hidden rounded-[24px] bg-white shadow-2xl dark:bg-[#1B1836] dark:text-slate-100">
             <div
               className="flex items-start justify-between gap-4 p-[22px] text-white"
               style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
@@ -285,7 +285,7 @@ export default function Forum() {
                   placeholder="What's your question or topic?"
                   required
                   minLength={2}
-                  className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400"
                 />
               </label>
               <label className="flex flex-col gap-1.5">
@@ -298,15 +298,15 @@ export default function Forum() {
                   placeholder="Give enough context for others to help…"
                   required
                   rows={5}
-                  className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#231E4A] dark:text-slate-100 dark:placeholder:text-slate-400"
                 />
               </label>
 
-              <div className="flex flex-wrap justify-end gap-3 border-t border-[#F1F0FA] pt-4">
+              <div className="flex flex-wrap justify-end gap-3 border-t border-[#F1F0FA] pt-4 dark:border-[#332C63]">
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
-                  className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700"
+                  className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700 dark:border-[#494174] dark:text-slate-200 dark:hover:border-primary-400 dark:hover:bg-white/5 dark:hover:text-primary-300"
                 >
                   Cancel
                 </button>

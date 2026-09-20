@@ -309,22 +309,22 @@ export default function AdminNotifications() {
             </div>
           ) : (
             <>
-              <ul className="space-y-2 bg-slate-50/50 p-3 sm:p-4">
+              <ul className="space-y-2 bg-slate-50/50 p-3 sm:p-4 dark:bg-[#15132B]">
                 {visibleNotifications.map((notification) => {
                   const isUnread = !notification.read_at;
                   return (
-                    <li key={notification.id} className={`flex items-start gap-3 rounded-xl border p-4 transition motion-safe:duration-150 ${isUnread ? "border-primary-200 bg-primary-50/70 shadow-sm" : "border-slate-200 bg-white"}`}>
+                    <li key={notification.id} className={`flex items-start gap-3 rounded-xl border p-4 transition motion-safe:duration-150 ${isUnread ? "border-primary-200 bg-primary-50/70 shadow-sm dark:border-primary-400/40 dark:bg-primary-400/10" : "border-slate-200 bg-white dark:border-[#332C63] dark:bg-[#1B1836]"}`}>
                       <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${isUnread ? "bg-primary-600 ring-4 ring-primary-100" : "bg-slate-200"}`} aria-hidden="true" />
                       <button type="button" onClick={() => openNotification(notification)} className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={`${notificationTitle(notification)}${isUnread ? ", unread" : ""}`}>
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 ring-1 ring-primary-100">{notificationCategoryLabel(notification.type)}</span>
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 ring-1 ring-primary-100 dark:bg-[#231E4A] dark:text-primary-300 dark:ring-primary-400/30">{notificationCategoryLabel(notification.type)}</span>
                           {isUnread && <span className="rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Unread</span>}
                         </span>
-                        <span className={`mt-2 block text-sm ${isUnread ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}>{notificationTitle(notification)}</span>
-                        <span className="mt-1 block text-sm leading-5 text-slate-600">{notificationMessage(notification)}</span>
-                        <span className="mt-2 block text-xs text-slate-400">{new Date(notification.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
+                        <span className={`mt-2 block text-sm ${isUnread ? "font-bold text-slate-900 dark:text-slate-100" : "font-medium text-slate-700 dark:text-slate-200"}`}>{notificationTitle(notification)}</span>
+                        <span className="mt-1 block text-sm leading-5 text-slate-600 dark:text-slate-300">{notificationMessage(notification)}</span>
+                        <span className="mt-2 block text-xs text-slate-400 dark:text-slate-400">{new Date(notification.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
                       </button>
-                      {isUnread && <button type="button" onClick={() => void markAsRead(notification.id).catch((error) => console.error("Failed to mark notification as read", error))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Mark as read</button>}
+                      {isUnread && <button type="button" onClick={() => void markAsRead(notification.id).catch((error) => console.error("Failed to mark notification as read", error))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-primary-300 dark:hover:bg-primary-400/15">Mark as read</button>}
                     </li>
                   );
                 })}

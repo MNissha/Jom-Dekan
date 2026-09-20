@@ -356,7 +356,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
             </header>
 
             <div className="dialog-body flex-1 space-y-5 p-6">
-              <div className="rounded-2xl border border-[#ECEBF7] bg-[#F8F8FD] p-4">
+              <div className="rounded-2xl border border-[#ECEBF7] bg-[#F8F8FD] p-4 dark:border-[#3B3564] dark:bg-[#1F1B40]">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-[#4338CA]" />
                   {targetLink(selected) ? (
@@ -373,11 +373,11 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
 
               {selected.target_type === "forum_comment" && (
                 <section className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-[#ECEBF7] bg-white p-4">
+                  <div className="rounded-2xl border border-[#ECEBF7] bg-white p-4 dark:border-[#3B3564] dark:bg-[#1F1B40]">
                     <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">Reported comment</p>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.target_description ?? "Comment unavailable"}</p>
                   </div>
-                  <div className="rounded-2xl border border-[#ECEBF7] bg-white p-4">
+                  <div className="rounded-2xl border border-[#ECEBF7] bg-white p-4 dark:border-[#3B3564] dark:bg-[#1F1B40]">
                     <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">Thread context</p>
                     <h3 className="mt-2 font-bold text-slate-900">{selected.parent_title ?? "Discussion unavailable"}</h3>
                     <p className="mt-1 line-clamp-3 text-sm text-slate-600">{selected.parent_description}</p>
@@ -387,7 +387,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               )}
 
               {selected.target_type === "forum_post" && (
-                <section className="rounded-2xl border border-[#E4E0FA] bg-gradient-to-br from-white to-[#F8F7FF] p-4">
+                <section className="rounded-2xl border border-[#E4E0FA] bg-gradient-to-br from-white to-[#F8F7FF] p-4 dark:border-primary-400/20 dark:from-[#231E4A] dark:to-[#1F1B40]">
                   <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">Reported discussion thread</p>
                   <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Discussion unavailable"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Thread content unavailable."}</p>
@@ -396,16 +396,16 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               )}
 
               {selected.target_type === "resource" && (
-                <section className="rounded-2xl border border-[#DDE9F8] bg-gradient-to-br from-white to-[#F2F7FF] p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Reported academic resource</p>
+                <section className="rounded-2xl border border-[#DDE9F8] bg-gradient-to-br from-white to-[#F2F7FF] p-4 dark:border-blue-400/20 dark:from-[#1B2A4A] dark:to-[#1B2440]">
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Reported academic resource</p>
                   <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Resource unavailable"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Resource description unavailable."}</p>
-                  <Link to={`/resources/${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100">View full resource</Link>
+                  <Link to={`/resources/${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-400/10 dark:text-blue-300 dark:hover:bg-blue-400/20">View full resource</Link>
                 </section>
               )}
 
               {selected.target_type === "opportunity" && (
-                <section className="rounded-2xl border border-[#E4E0FA] bg-gradient-to-br from-white to-[#F8F7FF] p-4">
+                <section className="rounded-2xl border border-[#E4E0FA] bg-gradient-to-br from-white to-[#F8F7FF] p-4 dark:border-primary-400/20 dark:from-[#231E4A] dark:to-[#1F1B40]">
                   <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">{selected.listing_type === "TUTORING" ? "Reported tutoring profile" : "Reported freelance opportunity"}</p>
                   <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Listing unavailable"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Listing details unavailable."}</p>
@@ -447,12 +447,12 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
 
               <section>
                 <h3 className="text-sm font-bold text-slate-900">Decision and response</h3>
-                <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl bg-[#F4F3FB] p-1">
-                  <button type="button" onClick={() => chooseDecision("approve")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${decision === "approve" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>Resolve issue</button>
-                  <button type="button" onClick={() => chooseDecision("reject")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${decision === "reject" ? "bg-white text-red-600 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>Reject report</button>
+                  <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl bg-[#F4F3FB] p-1 dark:bg-[#1B1836]">
+                  <button type="button" onClick={() => chooseDecision("approve")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${decision === "approve" ? "bg-white text-emerald-700 shadow-sm dark:bg-[#30295D] dark:text-emerald-300" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}>Resolve issue</button>
+                  <button type="button" onClick={() => chooseDecision("reject")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${decision === "reject" ? "bg-white text-red-600 shadow-sm dark:bg-[#30295D] dark:text-red-300" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}>Reject report</button>
                 </div>
                 <label className="mt-3 block text-sm font-semibold text-slate-700">Standard response
-                  <select value={selectedTemplate.decision} onChange={(event) => chooseTemplate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#DDDCEC] bg-white px-3 py-2.5 outline-none transition focus:border-[#4338CA] focus:ring-2 focus:ring-[#4338CA]/15">
+                  <select value={selectedTemplate.decision} onChange={(event) => chooseTemplate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#DDDCEC] bg-white px-3 py-2.5 outline-none transition focus:border-[#4338CA] focus:ring-2 focus:ring-[#4338CA]/15 dark:border-[#494174] dark:bg-[#1B1836] dark:text-slate-100 dark:focus:border-primary-400">
                     {templates.filter((template) => template.outcome === decision && (selected.target_type !== "forum_comment" || template.decision !== "LISTING_SUSPENSION") && (selected.target_type !== "user" || template.decision !== "LISTING_SUSPENSION")).map((template) => <option key={template.decision} value={template.decision}>{selected.target_type === "forum_comment" && template.decision === "CONTENT_REMOVAL" ? "Remove Comment" : selected.target_type === "forum_comment" && template.decision === "CONTENT_RESTRICTION" ? "Restrict Comment" : template.label}</option>)}
                   </select>
                 </label>
