@@ -8,6 +8,8 @@ import { auditLogModel } from "../models/auditLogModel";
 import { AppError } from "../types/errors";
 import { logger } from "../utils/logger";
 import { env } from "../config/config/env";
+import { detectImageMimeType } from "../utils/fileSniffer";
+import { scanUploadOrThrow } from "./malwareScanner";
 
 // Mirrors the frontend's own target-link logic (AdminModerationQueue.tsx)
 // so the admin notification email can deep-link straight to the reported
@@ -90,6 +92,33 @@ export const reportService = {
       listingType = await assertTargetExists(input.targetType, input.targetId, ctx);
     }
 
+    // Multer's fileFilter only checked the browser-declared Content-Type
+    // (screenshotUpload in reportRoutes.ts) — never trust that alone.
+    // Re-derive the real type from the bytes and use *that* everywhere
+    // downstream (including the mimeType this report is stored/served
+    // with), so a relabeled file can never be served back with a
+    // spoofed Content-Type.
+    let evidence = input.evidence;
+    if (evidence) {
+      const detected = detectImageMimeType(evidence.data);
+      if (!detected) {
+        throw AppError.badRequest(
+          "The uploaded screenshot does not match any supported image type (JPEG, PNG, WebP).",
+        );
+      }
+      await scanUploadOrThrow(
+        { buffer: evidence.data, filename: evidence.filename, mimeType: detected },
+        {
+          requestId: ctx.requestId,
+          actorUserId: ctx.actorUserId,
+          actorRole: ctx.actorRole,
+          targetType: "report_evidence",
+          targetId: input.targetId,
+        },
+      );
+      evidence = { ...evidence, mimeType: detected };
+    }
+
     let report;
     try {
       report = await reportModel.create({
@@ -101,7 +130,7 @@ export const reportService = {
         reporterPhone: input.reporterPhone,
         reporterEmail: input.reporterEmail,
         description: input.description,
-        evidence: input.evidence,
+        evidence,
         parentId: input.parentId,
       });
     } catch (error) {

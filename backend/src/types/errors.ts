@@ -58,4 +58,9 @@ export class AppError extends Error {
   static internal(message = 'An unexpected error occurred.'): AppError {
     return new AppError(500, 'INTERNAL_ERROR', message);
   }
+
+  /** A required backing service (e.g. the malware scanner) is unreachable — the caller should retry shortly. */
+  static serviceUnavailable(message = 'This action is temporarily unavailable. Please try again shortly.'): AppError {
+    return new AppError(503, 'SERVICE_UNAVAILABLE', message);
+  }
 }

@@ -101,6 +101,24 @@ docker-compose.yml   Local Postgres + Redis
 | Frontend lint / typecheck / test / build | `npm --prefix frontend run lint\|typecheck\|test\|build` |
 | Frontend E2E (Playwright) | `npm --prefix frontend run test:e2e` |
 
+## Security highlights
+
+- **Rate limiting**: four independent policies (registration/sensitive
+  auth, login, token refresh, general API), in-memory by default and
+  Redis-backed automatically once `REDIS_URL` is set — for consistent
+  limits across multiple backend instances. Per-account login lockout
+  is a separate, stronger layer underneath.
+- **File uploads**: every upload path (resource files, report
+  screenshots, tutor resumes, opportunity CVs/portfolios) is validated
+  by content (magic bytes, never the browser-declared `Content-Type`)
+  and malware-scanned before it's persisted or made visible. The
+  malware scanner is provider-neutral — a clearly-labelled dev stub by
+  default (no real protection, refused in production when scanning is
+  required), swappable for a real ClamAV deployment via one env var.
+
+Full detail, including what's optional/production-only and known
+limitations: **[SECURITY.md](SECURITY.md)**.
+
 ## Status
 
 Milestone 0 (foundation) and the core of Milestone 1 (password

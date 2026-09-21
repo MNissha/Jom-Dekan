@@ -6,6 +6,8 @@ import { tutorService } from "../services/tutorService";
 import { logger } from "../utils/logger";
 import { env } from "../config/config/env";
 import { AppError } from "../types/errors";
+import { detectOpportunityFileMimeType } from "../utils/fileSniffer";
+import { scanUploadOrThrow } from "../services/malwareScanner";
 
 function marketplaceUrl(): string {
   return `${env.corsOrigins[0]}/marketplace`;
@@ -49,6 +51,7 @@ export class OpportunityService {
       cv?: OpportunityApplicationFile;
       portfolio?: OpportunityApplicationFile;
     },
+    ctx: { requestId?: string; actorRole: "USER" | "ADMIN" },
   ) {
     const opportunity = await OpportunityModel.findById(opportunityId);
     if (!opportunity) throw AppError.notFound("Listing not found.");
@@ -59,14 +62,28 @@ export class OpportunityService {
       throw AppError.badRequest("You cannot apply to your own listing.");
     }
 
+    // Multer's fileFilter only checked the browser-declared Content-Type
+    // (applicationUpload in opportunityRoutes.ts) — never trust that
+    // alone. Re-derive the real type from the bytes for each attached
+    // file and use that everywhere downstream, then scan before the
+    // application (and its files) are ever persisted.
+    const cv = await verifyAndScanApplicationFile(input.cv, "cv", opportunityId, applicantId, ctx);
+    const portfolio = await verifyAndScanApplicationFile(
+      input.portfolio,
+      "portfolio",
+      opportunityId,
+      applicantId,
+      ctx,
+    );
+
     const application = await OpportunityModel.createApplication(
       opportunityId,
       applicantId,
       input.coverMessage,
       {
-        cv: input.cv,
+        cv,
         cvUrl: input.cvUrl,
-        portfolio: input.portfolio,
+        portfolio,
         portfolioUrl: input.portfolioUrl,
       },
     );
@@ -265,6 +282,40 @@ function fileFromField(files: Record<string, Express.Multer.File[]> | undefined,
   return { filename: file.originalname, mimeType: file.mimetype, data: file.buffer };
 }
 
+/**
+ * Content-sniffs and malware-scans one attached application file
+ * (cv/portfolio), returning it with its mimeType replaced by the
+ * content-detected value — so a relabeled file can never be persisted
+ * (and later served back) under a spoofed Content-Type. Throws before
+ * anything is persisted, so there is nothing to clean up on rejection.
+ */
+async function verifyAndScanApplicationFile(
+  file: OpportunityApplicationFile | undefined,
+  fieldName: "cv" | "portfolio",
+  opportunityId: string,
+  applicantId: string,
+  ctx: { requestId?: string; actorRole: "USER" | "ADMIN" },
+): Promise<OpportunityApplicationFile | undefined> {
+  if (!file) return undefined;
+  const detected = detectOpportunityFileMimeType(file.data);
+  if (!detected) {
+    throw AppError.badRequest(
+      `The uploaded ${fieldName === "cv" ? "CV" : "portfolio file"} does not match any supported file type (PDF, Word, JPEG, PNG).`,
+    );
+  }
+  await scanUploadOrThrow(
+    { buffer: file.data, filename: file.filename, mimeType: detected },
+    {
+      requestId: ctx.requestId,
+      actorUserId: applicantId,
+      actorRole: ctx.actorRole,
+      targetType: `opportunity_application_${fieldName}`,
+      targetId: opportunityId,
+    },
+  );
+  return { ...file, mimeType: detected };
+}
+
 export const applyToOpportunity = async (
   req: Request,
   res: Response,
@@ -276,13 +327,18 @@ export const applyToOpportunity = async (
     const { coverMessage, cvUrl, portfolioUrl } = req.body;
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 
-    const data = await OpportunityService.apply(id, applicantId, {
-      coverMessage,
-      cvUrl: cvUrl || undefined,
-      portfolioUrl: portfolioUrl || undefined,
-      cv: fileFromField(files, "cv"),
-      portfolio: fileFromField(files, "portfolio"),
-    });
+    const data = await OpportunityService.apply(
+      id,
+      applicantId,
+      {
+        coverMessage,
+        cvUrl: cvUrl || undefined,
+        portfolioUrl: portfolioUrl || undefined,
+        cv: fileFromField(files, "cv"),
+        portfolio: fileFromField(files, "portfolio"),
+      },
+      { requestId: req.requestId, actorRole: req.user!.role },
+    );
     return res
       .status(201)
       .json({ message: "Application submitted successfully", data });

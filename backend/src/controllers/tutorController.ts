@@ -24,7 +24,11 @@ export const tutorController = {
       if (!req.file) {
         return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "No file was uploaded." } });
       }
-      const data = await tutorService.receiveResumeUpload(req.storageToken.key, req.file.buffer);
+      const data = await tutorService.receiveResumeUpload(req.storageToken.key, req.file.buffer, {
+        actorUserId: req.user!.id,
+        actorRole: req.user!.role,
+        requestId: req.requestId,
+      });
       res.status(200).json({ data });
     } catch (error) {
       next(error);

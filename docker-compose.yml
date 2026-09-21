@@ -29,6 +29,26 @@ services:
       timeout: 5s
       retries: 10
 
+  # Real malware scanning (backend MALWARE_SCAN_PROVIDER=clamav). Opt-in
+  # only — not part of the default `docker compose up` stack, so no
+  # developer is forced to download/run it just to work on the app.
+  # Enable with: docker compose --profile security up -d clamav
+  # then set MALWARE_SCAN_PROVIDER=clamav (and CLAMAV_HOST=clamav) in
+  # your .env and restart the backend. No `ports:` mapping — reachable
+  # only from other containers on this compose network, never the host.
+  clamav:
+    image: clamav/clamav:1.3
+    restart: unless-stopped
+    profiles: ['security']
+    healthcheck:
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    volumes:
+      - jomdekan_clamav_data:/var/lib/clamav
+
   backend:
     build:
       context: .
@@ -101,6 +121,21 @@ services:
       # env.ts's own default regardless. See env.ts for why 2000 and not
       # the old 600 (the schema's own worst case needs closer to 1500).
       AI_AGENT_MAX_OUTPUT_TOKENS: ${AI_AGENT_MAX_OUTPUT_TOKENS:-2000}
+      # Rate limiting: "auto" (default) uses this Redis service above
+      # since REDIS_URL is always set here — no extra configuration
+      # needed to exercise the Redis-backed store in this stack.
+      RATE_LIMIT_STORE: ${RATE_LIMIT_STORE:-auto}
+      RATE_LIMIT_REDIS_REQUIRED: ${RATE_LIMIT_REDIS_REQUIRED:-}
+      RATE_LIMIT_KEY_PREFIX: ${RATE_LIMIT_KEY_PREFIX:-jomdekan:rate-limit:}
+      # Malware scanning: stays on the honest dev stub unless you both
+      # (a) start the clamav service — `docker compose --profile
+      # security up -d clamav` — and (b) set MALWARE_SCAN_PROVIDER=clamav
+      # in your .env. See SECURITY.md.
+      MALWARE_SCAN_PROVIDER: ${MALWARE_SCAN_PROVIDER:-stub}
+      MALWARE_SCAN_REQUIRED: ${MALWARE_SCAN_REQUIRED:-}
+      CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      MALWARE_SCAN_TIMEOUT_MS: ${MALWARE_SCAN_TIMEOUT_MS:-15000}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
     volumes:
@@ -133,5 +168,6 @@ services:
 volumes:
   jomdekan_postgres_data:
   jomdekan_resource_files:
+  jomdekan_clamav_data:
   backend_node_modules:
   frontend_node_modules:

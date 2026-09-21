@@ -98,6 +98,31 @@ const envSchema = z.object({
 
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   RATE_LIMIT_MAX_AUTH: z.coerce.number().int().positive().default(20),
+  // "auto" (default) uses Redis when REDIS_URL is set and falls back to
+  // the in-memory store when it isn't — this is what makes local dev
+  // (no REDIS_URL) and the Docker Compose stack (REDIS_URL always set)
+  // both work with zero extra configuration. "memory"/"redis" force a
+  // specific store regardless of REDIS_URL. See rateLimitStore.ts.
+  RATE_LIMIT_STORE: z.enum(["memory", "redis", "auto"]).default("auto"),
+  // Left as an optional raw string (not booleanString(...)) because its
+  // *default* depends on NODE_ENV, not a fixed value — resolved below
+  // once NODE_ENV is known. true = a production instance that can't
+  // reach Redis for rate limiting must fail fast at startup rather than
+  // silently degrading to a single-instance in-memory store.
+  RATE_LIMIT_REDIS_REQUIRED: z.string().optional(),
+  RATE_LIMIT_KEY_PREFIX: z.string().min(1).default("jomdekan:rate-limit:"),
+
+  // --- Malware scanning (uploaded files) -----------------------------
+  // "stub" never provides real protection — see
+  // src/services/malwareScanner/stubScanner.ts. It's the only allowed
+  // provider in test, and the only one that requires no external
+  // infrastructure for local development.
+  MALWARE_SCAN_PROVIDER: z.enum(["stub", "clamav"]).default("stub"),
+  // Same NODE_ENV-dependent-default reasoning as RATE_LIMIT_REDIS_REQUIRED.
+  MALWARE_SCAN_REQUIRED: z.string().optional(),
+  CLAMAV_HOST: z.string().default("clamav"),
+  CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
+  MALWARE_SCAN_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 
   // --- AI resource summaries -------------------------------------------
   // Never exposed to the frontend, never logged, never read from a
@@ -175,6 +200,25 @@ const envSchema = z.object({
       code: "custom",
       path: ["SENDGRID_API_KEY"],
       message: "SENDGRID_API_KEY is required when EMAIL_PROVIDER=sendgrid",
+    });
+  }
+
+  // Same NODE_ENV-dependent default used below when assembling `env` —
+  // duplicated here (not read back from it) because this runs before
+  // that object exists.
+  const malwareScanRequired =
+    data.MALWARE_SCAN_REQUIRED === undefined || data.MALWARE_SCAN_REQUIRED === ""
+      ? data.NODE_ENV === "production"
+      : data.MALWARE_SCAN_REQUIRED.trim().toLowerCase() === "true";
+  if (data.NODE_ENV === "production" && data.MALWARE_SCAN_PROVIDER === "stub" && malwareScanRequired) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["MALWARE_SCAN_PROVIDER"],
+      message:
+        "MALWARE_SCAN_PROVIDER=stub provides no real malware protection and is not allowed in " +
+        "production while scanning is required (MALWARE_SCAN_REQUIRED=true, the production default). " +
+        "Set MALWARE_SCAN_PROVIDER=clamav, or explicitly set MALWARE_SCAN_REQUIRED=false to accept " +
+        "unscanned uploads (not recommended).",
     });
   }
 });
@@ -267,6 +311,30 @@ export const env = {
   rateLimit: {
     windowMs: raw.RATE_LIMIT_WINDOW_MS,
     maxAuth: raw.RATE_LIMIT_MAX_AUTH,
+    store: raw.RATE_LIMIT_STORE,
+    // Defaults to "required" in production (fail fast if Redis-backed
+    // limiting is wanted but unreachable) and "not required" elsewhere.
+    // Explicitly setting this is how an operator permits a production
+    // instance to run with single-instance in-memory limiting instead —
+    // see rateLimitStore.ts.
+    redisRequired:
+      raw.RATE_LIMIT_REDIS_REQUIRED === undefined || raw.RATE_LIMIT_REDIS_REQUIRED === ""
+        ? raw.NODE_ENV === "production"
+        : raw.RATE_LIMIT_REDIS_REQUIRED.trim().toLowerCase() === "true",
+    keyPrefix: raw.RATE_LIMIT_KEY_PREFIX,
+  },
+
+  malwareScan: {
+    provider: raw.MALWARE_SCAN_PROVIDER,
+    required:
+      raw.MALWARE_SCAN_REQUIRED === undefined || raw.MALWARE_SCAN_REQUIRED === ""
+        ? raw.NODE_ENV === "production"
+        : raw.MALWARE_SCAN_REQUIRED.trim().toLowerCase() === "true",
+    clamav: {
+      host: raw.CLAMAV_HOST,
+      port: raw.CLAMAV_PORT,
+    },
+    timeoutMs: raw.MALWARE_SCAN_TIMEOUT_MS,
   },
 
   aiSummary: {

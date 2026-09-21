@@ -1,5 +1,6 @@
 import { mkdirSync } from "fs";
-import { readFile, unlink, writeFile } from "fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "fs/promises";
+import { dirname, join } from "path";
 import jwt from "jsonwebtoken";
 import { env } from "./env";
 import {
@@ -94,15 +95,17 @@ class LocalFsStorageAdapter implements StorageAdapter {
   }
 
   async putObject(key: string, body: Buffer): Promise<void> {
-    await writeFile(`${env.storage.localRoot}/${key}`, body);
+    const objectPath = join(env.storage.localRoot, key);
+    await mkdir(dirname(objectPath), { recursive: true });
+    await writeFile(objectPath, body);
   }
 
   async getObject(key: string): Promise<Buffer> {
-    return readFile(`${env.storage.localRoot}/${key}`);
+    return readFile(join(env.storage.localRoot, key));
   }
 
   async deleteObject(key: string): Promise<void> {
-    await unlink(`${env.storage.localRoot}/${key}`).catch(() => undefined);
+    await unlink(join(env.storage.localRoot, key)).catch(() => undefined);
   }
 
   async createSignedDownloadUrl(

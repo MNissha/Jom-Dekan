@@ -353,6 +353,52 @@ they bound a user's or a session's total question volume, which still
 applies exactly the same way regardless of which file a given question
 targets).
 
+## File upload security pipeline & malware scanning
+
+Every upload path — resource files, report screenshot evidence, tutor
+resumes, opportunity CV/portfolio attachments — goes through the same
+sequence before anything is persisted or reachable:
+
+```
+Client upload
+  -> authentication
+  -> request-size limit (Multer)
+  -> content-based MIME detection (magic bytes, never file.mimetype)
+  -> declared vs. detected MIME comparison
+  -> allowed-format validation
+  -> malware scan
+  -> persistence / READY transition
+```
+
+MIME/content checking and malware scanning answer different questions:
+the former confirms the bytes really are the claimed *format* (magic
+bytes, not the browser's `Content-Type` header, which is trivially
+spoofed); the latter is the only step that looks at whether those bytes
+carry a malicious payload. Both run on every path.
+
+Malware scanning goes through a provider-neutral interface
+(`backend/src/services/malwareScanner/`, mirroring `StorageAdapter`'s
+shape in `storage.ts`): a `stub` provider (default; the *only* provider
+`npm test` runs against) that deliberately provides no real protection
+and only recognizes the industry-standard EICAR test string
+deterministically for test coverage, and a `clamav` adapter that speaks
+clamd's INSTREAM protocol directly over a raw TCP socket — not a
+third-party wrapper or the `clamscan` CLI, so there's no filename
+reaching a shell and no temp file. `MALWARE_SCAN_REQUIRED` (defaults to
+`true` in production) controls fail-closed (503, nothing reaches READY)
+vs. fail-open (logged and accepted) behavior when the scanner itself is
+unreachable, as distinct from a confirmed infection (always rejected,
+generic message to the caller, full detail in the audit log). Full
+detail, including the exact per-path protection table and known
+limitations (report/opportunity files are Postgres `bytea`, not yet on
+the same `StorageAdapter` pending-state lifecycle resource files use):
+**`SECURITY.md`**.
+
+Rate limiting (`backend/src/config/middleware/rateLimitMiddleware.ts`)
+follows the same "in-memory by default, Redis when configured, fail
+fast in production before silently downgrading" shape — see
+`SECURITY.md` → "Rate limiting" and `rateLimitStore.ts`.
+
 ## What's deferred
 
 Milestones 2–8 (taxonomy CRUD, resources/files, search, forum,

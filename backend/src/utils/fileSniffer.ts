@@ -75,3 +75,43 @@ export function detectFileType(buffer: Buffer): AllowedMimeType | null {
 export function isAllowedMimeType(value: string): value is AllowedMimeType {
   return (ALLOWED_MIME_TYPES as readonly string[]).includes(value);
 }
+
+// --- Additional signatures for upload paths outside the resource
+// allowlist above (report screenshots, opportunity CV/portfolio) —
+// kept separate from ALLOWED_MIME_TYPES/detectFileType/isAllowedMimeType
+// so resource uploads' behavior is entirely unchanged by these.
+
+const WEBP_RIFF = [0x52, 0x49, 0x46, 0x46]; // "RIFF"
+// Legacy pre-2007 Office binary format (.doc/.xls/.ppt) — an OLE
+// Compound File; opportunity applications' CV field has always accepted
+// application/msword alongside pdf/docx/images (see opportunityRoutes.ts).
+const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+
+export type ImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp';
+
+/** Report screenshot evidence only ever needs to be an image — jpeg/png (shared with detectFileType) plus webp, which resources don't accept. */
+export function detectImageMimeType(buffer: Buffer): ImageMimeType | null {
+  const detected = detectFileType(buffer);
+  if (detected === 'image/jpeg' || detected === 'image/png') return detected;
+  if (matches(buffer, WEBP_RIFF) && buffer.length >= 12 && buffer.toString('ascii', 8, 12) === 'WEBP') {
+    return 'image/webp';
+  }
+  return null;
+}
+
+export type OpportunityFileMimeType = AllowedMimeType | 'application/msword';
+
+/** Opportunity CV/portfolio uploads: same shape as the resource allowlist (pdf/docx/jpeg/png), plus legacy .doc. */
+export function detectOpportunityFileMimeType(buffer: Buffer): OpportunityFileMimeType | null {
+  const detected = detectFileType(buffer);
+  if (
+    detected === 'application/pdf' ||
+    detected === 'image/jpeg' ||
+    detected === 'image/png' ||
+    detected === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    return detected;
+  }
+  if (matches(buffer, OLE_SIGNATURE)) return 'application/msword';
+  return null;
+}

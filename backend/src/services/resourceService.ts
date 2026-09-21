@@ -12,6 +12,7 @@ import { auditLogModel } from "../models/auditLogModel";
 import { favoriteModel } from "../models/favoriteModel";
 import { getStorageAdapter } from "../config/config/storage";
 import { detectFileType, isAllowedMimeType } from "../utils/fileSniffer";
+import { scanUpload } from "./malwareScanner";
 import {
   resolveStoragePath,
   sanitizeFilenameForHeader,
@@ -165,16 +166,6 @@ async function resolveRequestedTaxonomy(
   }
 
   return { universityId, facultyId, programmeId };
-}
-
-/**
- * Stub seam for a future real antivirus/content-scan integration.
- * Always resolves 'clean' today — this is deliberately named and
- * isolated so a real scanner is a one-function swap, not a rewrite of
- * the confirm flow around it.
- */
-async function scanStub(_buffer: Buffer): Promise<"clean" | "flagged"> {
-  return "clean";
 }
 
 // Caps how many files a multi-file upload can pile onto a single
@@ -425,7 +416,34 @@ export const resourceService = {
     }
 
     const buffer = await getStorageAdapter().getObject(file.storage_key);
-    const scanResult = await scanStub(buffer);
+    const scan = await scanUpload(
+      { buffer, filename: file.original_filename, mimeType: file.detected_mime_type ?? file.declared_mime_type },
+      {
+        requestId: ctx.requestId,
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        targetType: "resource_file",
+        targetId: fileId,
+      },
+    );
+
+    // A required scanner that's unreachable must not silently pass the
+    // file through as either READY or FAILED — leave it UPLOADED (not
+    // consumed) so confirming again later, once scanning is available,
+    // can still succeed. This is the one branch that throws instead of
+    // resolving to a resource state, matching every other upload path's
+    // "required scanner unavailable -> 503" behavior.
+    if (scan.outcome === "unavailable" && env.malwareScan.required) {
+      throw AppError.serviceUnavailable();
+    }
+    const scanResult = scan.outcome === "infected" ? "flagged" : "clean";
+
+    if (scanResult === "flagged") {
+      // Never leave infected bytes in storage — the DB row transitions
+      // to FAILED below regardless, but the object itself is removed
+      // wherever the storage adapter actually persisted it.
+      await getStorageAdapter().deleteObject(file.storage_key).catch(() => undefined);
+    }
 
     const updatedFile =
       scanResult === "clean"

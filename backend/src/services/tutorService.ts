@@ -20,6 +20,7 @@ import { env } from "../config/config/env";
 import { AppError } from "../types/errors";
 import { getStorageAdapter, signUploadToken } from "../config/config/storage";
 import { detectFileType } from "../utils/fileSniffer";
+import { scanUploadOrThrow } from "./malwareScanner";
 
 // Resumes are a document, not one of resources' image/office types —
 // scoped to just PDF/DOCX regardless of what resources otherwise allow.
@@ -158,7 +159,11 @@ export const tutorService = {
   },
 
   /** Receives the resume's bytes for a pending upload token. */
-  async receiveResumeUpload(storageKey: string, buffer: Buffer) {
+  async receiveResumeUpload(
+    storageKey: string,
+    buffer: Buffer,
+    ctx: { actorUserId: string; actorRole: "USER" | "ADMIN"; requestId?: string },
+  ) {
     const detected = detectFileType(buffer);
     if (
       !detected ||
@@ -168,6 +173,18 @@ export const tutorService = {
         "The uploaded file must be a real PDF or Word document.",
       );
     }
+    // Scan before this ever reaches storage — nothing has been
+    // persisted yet, so a rejection here leaves no cleanup behind.
+    await scanUploadOrThrow(
+      { buffer, filename: storageKey, mimeType: detected },
+      {
+        requestId: ctx.requestId,
+        actorUserId: ctx.actorUserId,
+        actorRole: ctx.actorRole,
+        targetType: "tutor_resume",
+        targetId: ctx.actorUserId,
+      },
+    );
     await getStorageAdapter().putObject(storageKey, buffer, detected);
     return { key: storageKey, mimeType: detected };
   },

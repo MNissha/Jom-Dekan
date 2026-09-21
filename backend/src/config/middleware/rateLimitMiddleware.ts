@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { env } from '../config/env';
 import { AppError } from '../../types/errors';
+import { resolveRateLimitStore } from './rateLimitStore';
 import type { Request, Response } from 'express';
 
 function rateLimitedResponse(_req: Request, res: Response): void {
@@ -17,6 +18,7 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitedResponse,
+  store: resolveRateLimitStore('auth'),
 });
 
 /**
@@ -31,6 +33,7 @@ export const loginRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitedResponse,
+  store: resolveRateLimitStore('login'),
 });
 
 /**
@@ -45,6 +48,7 @@ export const refreshRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitedResponse,
+  store: resolveRateLimitStore('refresh'),
 });
 
 /** General-purpose, more permissive limiter for the rest of the API. */
@@ -54,4 +58,5 @@ export const defaultRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitedResponse,
+  store: resolveRateLimitStore('default'),
 });

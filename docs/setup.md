@@ -191,7 +191,57 @@ directly; the integration suite
 at the module boundary, so `npm test` never spends real API credit
 even with a real `OPENAI_API_KEY` configured.
 
-## 8. Running tests and builds
+## 8. Rate limiting and malware scanning (optional)
+
+Both default to working with zero extra configuration — this section is
+only for tuning them or turning on the real (non-Docker-Compose-default)
+backends. Full explanation of the security reasoning: **`SECURITY.md`**.
+
+**Rate limiting** picks its store automatically: in-memory if
+`REDIS_URL` is empty, Redis-backed if it's set (the Docker Compose
+stack always sets it, so `docker compose up` already exercises the
+Redis-backed path with no extra steps).
+
+```bash
+# backend/.env
+RATE_LIMIT_STORE=auto              # auto (default) | memory | redis
+RATE_LIMIT_REDIS_REQUIRED=         # blank = true in production, false elsewhere
+RATE_LIMIT_KEY_PREFIX=jomdekan:rate-limit:
+```
+
+`npm test` always uses the in-memory store regardless of these values —
+a test run never depends on a real Redis connection.
+
+**Malware scanning** defaults to a dev-only stub that provides **no
+real protection** — see `SECURITY.md` before relying on it for
+anything. It deterministically flags the industry-standard [EICAR test
+string](https://www.eicar.org/download-anti-malware-testfile/) as
+infected, which is how `backend/tests/unit/malwareScanner.test.ts` and
+`backend/tests/integration/malwareScan.test.ts` exercise the "rejected"
+path for every upload route without any real malware ever touching this
+repo.
+
+To scan against a real ClamAV instance instead:
+
+```bash
+docker compose --profile security up -d clamav   # not part of the default stack
+```
+
+```bash
+# backend/.env
+MALWARE_SCAN_PROVIDER=clamav
+CLAMAV_HOST=clamav          # matches the compose service name
+CLAMAV_PORT=3310
+MALWARE_SCAN_TIMEOUT_MS=15000
+MALWARE_SCAN_REQUIRED=      # blank = true in production, false elsewhere
+```
+
+Restart the backend after changing `MALWARE_SCAN_PROVIDER` (it's read
+once at process startup). The ClamAV container has no `ports:` mapping
+to the host — it's reachable only from other containers on the compose
+network, never from your browser or host machine directly.
+
+## 9. Running tests and builds
 
 Backend:
 
@@ -224,12 +274,12 @@ npx playwright install --with-deps chromium   # first time only
 npm run test:e2e
 ```
 
-## 9. Opening this project in VS Code
+## 10. Opening this project in VS Code
 
 See the root `README.md`'s "Open in VS Code" section for editor setup,
 recommended extensions, and a two-terminal launch routine.
 
-## 10. Common problems
+## 11. Common problems
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
