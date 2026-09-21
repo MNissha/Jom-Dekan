@@ -2,6 +2,7 @@ import { pool } from "../config/config/db";
 
 export type TutorApplicationStatus = "pending" | "approved" | "rejected";
 export type TutorBookingStatus = "pending" | "accepted" | "declined";
+export type TutorSessionMode = "ONLINE" | "ON_CAMPUS" | "HYBRID";
 
 export interface TutorApplicationRow {
   id: string;
@@ -16,6 +17,9 @@ export interface TutorApplicationRow {
   resume_mime_type: string | null;
   resume_size_bytes: number | null;
   portfolio_url: string | null;
+  mode: TutorSessionMode;
+  location_address: string | null;
+  online_platform: string | null;
   status: TutorApplicationStatus;
   reviewed_by: string | null;
   reviewed_at: Date | null;
@@ -42,6 +46,9 @@ export interface TutorProfileRow {
   resume_mime_type: string | null;
   resume_size_bytes: number | null;
   portfolio_url: string | null;
+  mode: TutorSessionMode;
+  location_address: string | null;
+  online_platform: string | null;
   is_active: boolean;
   verified_at: Date;
   google_calendar_connected: boolean;
@@ -63,6 +70,11 @@ export interface TutorBookingRow {
   status: TutorBookingStatus;
   reschedule_proposed_by: string | null;
   google_calendar_event_id: string | null;
+  // Captured on the request form itself, not resolved from the
+  // student's account — profile phone is optional and often blank, so
+  // this is the only way to guarantee the tutor has a way to reach them.
+  contact_email: string;
+  contact_phone: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -70,6 +82,7 @@ export interface TutorBookingRow {
 export interface TutorBookingWithContext extends TutorBookingRow {
   tutor_email: string;
   tutor_name: string | null;
+  tutor_phone: string | null;
   student_email: string;
   student_name: string | null;
   student_phone: string | null;
@@ -95,13 +108,17 @@ export const tutorModel = {
         resumeMimeType: string;
         resumeSizeBytes: number;
         portfolioUrl?: string;
+        mode: TutorSessionMode;
+        locationAddress?: string;
+        onlinePlatform?: string;
       },
     ): Promise<TutorApplicationRow> {
       const result = await pool.query<TutorApplicationRow>(
         `INSERT INTO tutor_applications
            (user_id, bio, subjects, experience, hourly_rate, open_to_other_universities,
-            resume_storage_key, resume_original_filename, resume_mime_type, resume_size_bytes, portfolio_url)
-         VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11)
+            resume_storage_key, resume_original_filename, resume_mime_type, resume_size_bytes, portfolio_url,
+            mode, location_address, online_platform)
+         VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING *`,
         [
           userId,
@@ -115,6 +132,9 @@ export const tutorModel = {
           data.resumeMimeType,
           data.resumeSizeBytes,
           data.portfolioUrl ?? null,
+          data.mode,
+          data.locationAddress ?? null,
+          data.onlinePlatform ?? null,
         ],
       );
       return result.rows[0];
@@ -220,6 +240,9 @@ export const tutorModel = {
         resumeMimeType?: string | null;
         resumeSizeBytes?: number | null;
         portfolioUrl?: string | null;
+        mode: TutorSessionMode;
+        locationAddress?: string | null;
+        onlinePlatform?: string | null;
         sourceApplicationId: string | null;
       },
     ): Promise<TutorProfileRow> {
@@ -227,8 +250,8 @@ export const tutorModel = {
         `INSERT INTO tutor_profiles
            (user_id, bio, subjects, experience, hourly_rate, open_to_other_universities,
             resume_storage_key, resume_original_filename, resume_mime_type, resume_size_bytes,
-            portfolio_url, source_application_id)
-         VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            portfolio_url, mode, location_address, online_platform, source_application_id)
+         VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (user_id) DO UPDATE SET
            bio = EXCLUDED.bio, subjects = EXCLUDED.subjects, experience = EXCLUDED.experience,
            hourly_rate = EXCLUDED.hourly_rate, open_to_other_universities = EXCLUDED.open_to_other_universities,
@@ -237,6 +260,7 @@ export const tutorModel = {
            resume_mime_type = EXCLUDED.resume_mime_type,
            resume_size_bytes = EXCLUDED.resume_size_bytes,
            portfolio_url = EXCLUDED.portfolio_url,
+           mode = EXCLUDED.mode, location_address = EXCLUDED.location_address, online_platform = EXCLUDED.online_platform,
            is_active = true, verified_at = now(),
            source_application_id = EXCLUDED.source_application_id
          RETURNING *`,
@@ -252,6 +276,9 @@ export const tutorModel = {
           data.resumeMimeType ?? null,
           data.resumeSizeBytes ?? null,
           data.portfolioUrl ?? null,
+          data.mode,
+          data.locationAddress ?? null,
+          data.onlinePlatform ?? null,
           data.sourceApplicationId,
         ],
       );
@@ -288,6 +315,9 @@ export const tutorModel = {
         resumeMimeType?: string;
         resumeSizeBytes?: number;
         portfolioUrl?: string | null;
+        mode?: TutorSessionMode;
+        locationAddress?: string | null;
+        onlinePlatform?: string | null;
       },
     ): Promise<TutorProfileRow | null> {
       const result = await pool.query<TutorProfileRow>(
@@ -302,7 +332,10 @@ export const tutorModel = {
            resume_original_filename = COALESCE($9, resume_original_filename),
            resume_mime_type = COALESCE($10, resume_mime_type),
            resume_size_bytes = COALESCE($11, resume_size_bytes),
-           portfolio_url = COALESCE($12, portfolio_url)
+           portfolio_url = COALESCE($12, portfolio_url),
+           mode = COALESCE($13, mode),
+           location_address = COALESCE($14, location_address),
+           online_platform = COALESCE($15, online_platform)
          WHERE user_id = $1
          RETURNING *`,
         [
@@ -318,6 +351,9 @@ export const tutorModel = {
           data.resumeMimeType ?? null,
           data.resumeSizeBytes ?? null,
           data.portfolioUrl ?? null,
+          data.mode ?? null,
+          data.locationAddress ?? null,
+          data.onlinePlatform ?? null,
         ],
       );
       return result.rows[0] ?? null;
@@ -354,11 +390,18 @@ export const tutorModel = {
     async create(
       studentId: string,
       tutorId: string,
-      data: { subjectId?: string | null; requestedStartAt: Date; durationMinutes: number; message?: string },
+      data: {
+        subjectId?: string | null;
+        requestedStartAt: Date;
+        durationMinutes: number;
+        message?: string;
+        contactEmail: string;
+        contactPhone: string;
+      },
     ): Promise<TutorBookingRow> {
       const result = await pool.query<TutorBookingRow>(
-        `INSERT INTO tutor_bookings (tutor_id, student_id, subject_id, requested_start_at, duration_minutes, message)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO tutor_bookings (tutor_id, student_id, subject_id, requested_start_at, duration_minutes, message, contact_email, contact_phone)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
         [
           tutorId,
@@ -367,6 +410,8 @@ export const tutorModel = {
           data.requestedStartAt,
           data.durationMinutes,
           data.message ?? null,
+          data.contactEmail,
+          data.contactPhone,
         ],
       );
       return result.rows[0];
@@ -375,7 +420,7 @@ export const tutorModel = {
     async findById(id: string): Promise<TutorBookingWithContext | null> {
       const result = await pool.query<TutorBookingWithContext>(
         `SELECT b.*,
-                tu.email AS tutor_email, tup.display_name AS tutor_name,
+                tu.email AS tutor_email, tup.display_name AS tutor_name, tup.phone AS tutor_phone,
                 su.email AS student_email, sup.display_name AS student_name, sup.phone AS student_phone,
                 s.name AS subject_name
          FROM tutor_bookings b
@@ -393,7 +438,7 @@ export const tutorModel = {
     async listForTutor(tutorId: string): Promise<TutorBookingWithContext[]> {
       const result = await pool.query<TutorBookingWithContext>(
         `SELECT b.*,
-                tu.email AS tutor_email, tup.display_name AS tutor_name,
+                tu.email AS tutor_email, tup.display_name AS tutor_name, tup.phone AS tutor_phone,
                 su.email AS student_email, sup.display_name AS student_name, sup.phone AS student_phone,
                 s.name AS subject_name
          FROM tutor_bookings b
@@ -412,7 +457,7 @@ export const tutorModel = {
     async listForStudent(studentId: string): Promise<TutorBookingWithContext[]> {
       const result = await pool.query<TutorBookingWithContext>(
         `SELECT b.*,
-                tu.email AS tutor_email, tup.display_name AS tutor_name,
+                tu.email AS tutor_email, tup.display_name AS tutor_name, tup.phone AS tutor_phone,
                 su.email AS student_email, sup.display_name AS student_name, sup.phone AS student_phone,
                 s.name AS subject_name
          FROM tutor_bookings b

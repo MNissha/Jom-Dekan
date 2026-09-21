@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tutorService } from "../service/tutorService";
 import { useCurrentUser } from "./useAuth";
+import type { TutorSessionMode } from "../types/tutor";
 
 const MY_APPLICATION_KEY = ["tutor", "me", "application"] as const;
 const MY_BOOKINGS_TUTOR_KEY = ["tutor", "me", "bookings", "asTutor"] as const;
@@ -103,7 +104,14 @@ export function useRequestBooking() {
       data,
     }: {
       tutorUserId: string;
-      data: { subjectId: string; requestedStartAt: string; durationMinutes: number; message?: string };
+      data: {
+        subjectId: string;
+        requestedStartAt: string;
+        durationMinutes: number;
+        message?: string;
+        contactEmail: string;
+        contactPhone: string;
+      };
     }) => tutorService.requestBooking(tutorUserId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MY_BOOKINGS_STUDENT_KEY });
@@ -205,7 +213,15 @@ export function useAdminGrantTutorTag() {
       data,
     }: {
       userId: string;
-      data: { bio: string; subjects: string[]; experience: string; hourlyRate?: number };
+      data: {
+        bio: string;
+        subjects: string[];
+        experience: string;
+        hourlyRate?: number;
+        mode: TutorSessionMode;
+        locationAddress?: string;
+        onlinePlatform?: string;
+      };
     }) => tutorService.adminGrantTutorTag(userId, data),
     onSuccess: (_data, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "tutorApplications"] });
@@ -222,7 +238,15 @@ export function useAdminUpdateTutorTag() {
       data,
     }: {
       userId: string;
-      data: { bio?: string; subjects?: string[]; hourlyRate?: number | null; isActive?: boolean };
+      data: {
+        bio?: string;
+        subjects?: string[];
+        hourlyRate?: number | null;
+        isActive?: boolean;
+        mode?: TutorSessionMode;
+        locationAddress?: string;
+        onlinePlatform?: string;
+      };
     }) => tutorService.adminUpdateTutorTag(userId, data),
     onSuccess: (_data, { userId }) => queryClient.invalidateQueries({ queryKey: ["tutor", "profile", userId] }),
   });

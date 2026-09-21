@@ -4,6 +4,7 @@ import axios from "axios";
 import { Calendar, Check, X } from "lucide-react";
 import { useRequestBooking } from "../../hooks/useTutor";
 import { useSubjects } from "../../hooks/useTaxonomy";
+import { useMyProfile } from "../../hooks/useProfile";
 
 const DURATION_OPTIONS = [30, 60, 90, 120];
 
@@ -28,6 +29,7 @@ export function BookSessionButton({
 }) {
   const { data: allSubjects } = useSubjects();
   const specialties = (allSubjects ?? []).filter((s) => specialtySubjectIds.includes(s.id));
+  const { data: profile } = useMyProfile();
   const requestBooking = useRequestBooking();
   const [isOpen, setIsOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -36,12 +38,16 @@ export function BookSessionButton({
   const [time, setTime] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [message, setMessage] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
 
   function open(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     setSubmitted(false);
     requestBooking.reset();
+    setContactEmail(profile?.email ?? "");
+    setContactPhone(profile?.phone ?? "");
     setIsOpen(true);
   }
 
@@ -49,9 +55,13 @@ export function BookSessionButton({
     setIsOpen(false);
   }
 
+  const emailOk = /.+@.+\..+/.test(contactEmail);
+  const phoneOk = contactPhone.trim().length >= 5;
+  const ready = Boolean(date && time && subjectId && emailOk && phoneOk);
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!date || !time || !subjectId) return;
+    if (!ready) return;
     requestBooking.mutate(
       {
         tutorUserId,
@@ -60,6 +70,8 @@ export function BookSessionButton({
           requestedStartAt: new Date(`${date}T${time}`).toISOString(),
           durationMinutes,
           message: message.trim() || undefined,
+          contactEmail: contactEmail.trim(),
+          contactPhone: contactPhone.trim(),
         },
       },
       { onSuccess: () => setSubmitted(true) },
@@ -68,7 +80,12 @@ export function BookSessionButton({
 
   const serverError =
     requestBooking.isError && axios.isAxiosError(requestBooking.error)
-      ? (requestBooking.error.response?.data as { error?: { message?: string } })?.error?.message
+      ? (() => {
+          const error = requestBooking.error.response?.data as {
+            error?: { message?: string; details?: Array<{ field?: string; message: string }> };
+          };
+          return error.error?.details?.[0]?.message ?? error.error?.message;
+        })()
       : null;
 
   return (
@@ -195,6 +212,38 @@ export function BookSessionButton({
                   <p className="text-xs text-slate-400">
                     The tutor will confirm this time — you&apos;ll be notified once they accept or decline.
                   </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-xs font-bold text-slate-500">
+                        Your email<span className="text-red-500"> *</span>
+                      </span>
+                      <input
+                        type="email"
+                        required
+                        value={contactEmail}
+                        onChange={(e) => setContactEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className={`h-11 rounded-xl border px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                          contactEmail && !emailOk ? "border-red-300" : "border-[#E4E3F2] focus:border-primary-500"
+                        }`}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-xs font-bold text-slate-500">
+                        Your phone number<span className="text-red-500"> *</span>
+                      </span>
+                      <input
+                        required
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
+                        placeholder="+60 12-345 6789"
+                        className="h-11 rounded-xl border border-[#E4E3F2] px-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Shared with the tutor so they can reach you about this session.
+                  </p>
                   <label className="flex flex-col gap-1.5">
                     <span className="text-xs font-bold text-slate-500">Message (optional)</span>
                     <textarea
@@ -211,7 +260,7 @@ export function BookSessionButton({
                     </button>
                     <button
                       type="submit"
-                      disabled={!date || !time || !subjectId || requestBooking.isPending}
+                      disabled={!ready || requestBooking.isPending}
                       className="cursor-pointer rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {requestBooking.isPending ? "Sending…" : "Send request"}

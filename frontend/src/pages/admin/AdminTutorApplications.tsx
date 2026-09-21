@@ -14,7 +14,7 @@ import {
   useTutorProfile,
 } from "../../hooks/useTutor";
 import { useSubjects } from "../../hooks/useTaxonomy";
-import type { TutorApplicationStatus } from "../../types/tutor";
+import type { TutorApplicationStatus, TutorSessionMode } from "../../types/tutor";
 
 type Section = "applications" | "listings";
 
@@ -23,6 +23,12 @@ const TABS: { value: TutorApplicationStatus; label: string }[] = [
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
 ];
+
+const MODE_LABEL: Record<TutorSessionMode, string> = {
+  ONLINE: "Online",
+  ON_CAMPUS: "On campus",
+  HYBRID: "Hybrid",
+};
 
 function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => void }) {
   const { data: application, isLoading } = useAdminTutorApplication(id);
@@ -104,6 +110,22 @@ function ApplicationDetailModal({ id, onClose }: { id: string; onClose: () => vo
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Applied</span>
                 <p className="text-slate-700">{new Date(application.createdAt).toLocaleDateString()}</p>
               </div>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Session mode</span>
+                <p className="text-slate-700">{MODE_LABEL[application.mode]}</p>
+              </div>
+              {application.locationAddress && (
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Location address</span>
+                  <p className="text-slate-700">{application.locationAddress}</p>
+                </div>
+              )}
+              {application.onlinePlatform && (
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Online platform</span>
+                  <p className="text-slate-700">{application.onlinePlatform}</p>
+                </div>
+              )}
               <div>
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Open to other universities</span>
                 <p className="text-slate-700">{application.openToOtherUniversities ? "Yes" : "No"}</p>

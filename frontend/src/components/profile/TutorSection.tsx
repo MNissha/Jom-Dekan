@@ -27,7 +27,7 @@ import {
 } from "../../hooks/useTutor";
 import { useMyProfile, useUpdateProfile } from "../../hooks/useProfile";
 import { tutorService } from "../../service/tutorService";
-import type { TutorProfile } from "../../types/tutor";
+import type { TutorProfile, TutorSessionMode } from "../../types/tutor";
 import type { Subject } from "../../types/taxonomy";
 import { buttonClassName, controlClassName } from "../common/controlStyles";
 
@@ -36,6 +36,122 @@ const RESUME_ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 const RESUME_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
+const MODE_OPTIONS: { value: TutorSessionMode; label: string }[] = [
+  { value: "ONLINE", label: "Online" },
+  { value: "ON_CAMPUS", label: "On campus" },
+  { value: "HYBRID", label: "Hybrid" },
+];
+const needsAddress = (mode: TutorSessionMode) => mode === "ON_CAMPUS" || mode === "HYBRID";
+const needsPlatform = (mode: TutorSessionMode) => mode === "ONLINE" || mode === "HYBRID";
+
+const PLATFORM_PRESETS = [
+  "Zoom",
+  "Google Meet",
+  "Microsoft Teams",
+  "Skype",
+  "Discord",
+  "WhatsApp Video Call",
+  "WeChat",
+  "Telegram",
+  "FaceTime",
+  "Google Hangouts",
+];
+const OTHER_PLATFORM = "__OTHER__";
+
+/** Renders the online-platform picker (preset dropdown + "Other" free-text
+ * fallback) and, when relevant for the mode, the on-campus address field.
+ * Shared between the apply form and the verified-tutor dashboard so both
+ * stay in sync. */
+function SessionModeFields({
+  mode,
+  onModeChange,
+  locationAddress,
+  onLocationAddressChange,
+  platformPreset,
+  onPlatformPresetChange,
+  customPlatform,
+  onCustomPlatformChange,
+}: {
+  mode: TutorSessionMode;
+  onModeChange: (mode: TutorSessionMode) => void;
+  locationAddress: string;
+  onLocationAddressChange: (value: string) => void;
+  platformPreset: string;
+  onPlatformPresetChange: (value: string) => void;
+  customPlatform: string;
+  onCustomPlatformChange: (value: string) => void;
+}) {
+  return (
+    <>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Session mode</span>
+        <select
+          required
+          value={mode}
+          onChange={(e) => onModeChange(e.target.value as TutorSessionMode)}
+          className={INPUT_CLASS}
+        >
+          {MODE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {needsPlatform(mode) && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            Online platform<span className="normal-case text-red-500"> *</span>
+          </span>
+          <select
+            required
+            value={platformPreset}
+            onChange={(e) => onPlatformPresetChange(e.target.value)}
+            className={INPUT_CLASS}
+          >
+            <option value="" disabled>
+              Select the platform you&apos;ll use…
+            </option>
+            {PLATFORM_PRESETS.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform}
+              </option>
+            ))}
+            <option value={OTHER_PLATFORM}>Other</option>
+          </select>
+          {platformPreset === OTHER_PLATFORM && (
+            <input
+              type="text"
+              required
+              value={customPlatform}
+              onChange={(e) => onCustomPlatformChange(e.target.value)}
+              placeholder="Name the platform you'll use"
+              className={INPUT_CLASS}
+            />
+          )}
+        </div>
+      )}
+
+      {needsAddress(mode) && (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
+            Location address<span className="normal-case text-red-500"> *</span>
+          </span>
+          <input
+            type="text"
+            required
+            value={locationAddress}
+            onChange={(e) => onLocationAddressChange(e.target.value)}
+            placeholder="Where you'll hold on-campus sessions"
+            className={INPUT_CLASS}
+          />
+        </label>
+      )}
+    </>
+  );
+}
 
 const CARD_CLASS = "mt-6 rounded-[22px] border border-[#ECEBF7] bg-white p-5 shadow-sm sm:p-6";
 const INPUT_CLASS = controlClassName(false);
@@ -60,6 +176,10 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
   const [resumeUploadProgress, setResumeUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [mode, setMode] = useState<TutorSessionMode>("ONLINE");
+  const [locationAddress, setLocationAddress] = useState("");
+  const [platformPreset, setPlatformPreset] = useState("");
+  const [customPlatform, setCustomPlatform] = useState("");
 
   // Phone comes from the account's own profile — pre-filled once it
   // loads, editable here, and saved back to the profile on submit so
@@ -99,6 +219,15 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
       setFormError("A contact phone number is required.");
       return;
     }
+    if (needsAddress(mode) && !locationAddress.trim()) {
+      setFormError("Enter the location address for on-campus sessions.");
+      return;
+    }
+    const onlinePlatform = platformPreset === OTHER_PLATFORM ? customPlatform.trim() : platformPreset;
+    if (needsPlatform(mode) && !onlinePlatform) {
+      setFormError("Select or enter the platform you'll use for online sessions.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -125,6 +254,9 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
         resumeMimeType: resumeFile.type,
         resumeSizeBytes: resumeFile.size,
         portfolioUrl: portfolioUrl.trim() || undefined,
+        mode,
+        locationAddress: needsAddress(mode) ? locationAddress.trim() : undefined,
+        onlinePlatform: needsPlatform(mode) ? onlinePlatform : undefined,
       });
     } catch {
       setFormError("Something went wrong submitting your application. Please try again.");
@@ -205,6 +337,17 @@ function ApplyForm({ isReapply }: { isReapply?: boolean }) {
             />
           </label>
         </div>
+
+        <SessionModeFields
+          mode={mode}
+          onModeChange={setMode}
+          locationAddress={locationAddress}
+          onLocationAddressChange={setLocationAddress}
+          platformPreset={platformPreset}
+          onPlatformPresetChange={setPlatformPreset}
+          customPlatform={customPlatform}
+          onCustomPlatformChange={setCustomPlatform}
+        />
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
@@ -471,14 +614,37 @@ function TutorDashboard({ profile }: { profile: TutorProfile | null }) {
   const [openToOtherUniversities, setOpenToOtherUniversities] = useState(
     profile?.openToOtherUniversities ?? false,
   );
+  const [mode, setMode] = useState<TutorSessionMode>(profile?.mode ?? "ONLINE");
+  const [locationAddress, setLocationAddress] = useState(profile?.locationAddress ?? "");
+  const [platformPreset, setPlatformPreset] = useState(() => {
+    if (!profile?.onlinePlatform) return "";
+    return PLATFORM_PRESETS.includes(profile.onlinePlatform) ? profile.onlinePlatform : OTHER_PLATFORM;
+  });
+  const [customPlatform, setCustomPlatform] = useState(() =>
+    profile?.onlinePlatform && !PLATFORM_PRESETS.includes(profile.onlinePlatform) ? profile.onlinePlatform : "",
+  );
+  const [modeError, setModeError] = useState<string | null>(null);
 
   function handleSave(event: FormEvent) {
     event.preventDefault();
+    setModeError(null);
+    if (needsAddress(mode) && !locationAddress.trim()) {
+      setModeError("Enter the location address for on-campus sessions.");
+      return;
+    }
+    const onlinePlatform = platformPreset === OTHER_PLATFORM ? customPlatform.trim() : platformPreset;
+    if (needsPlatform(mode) && !onlinePlatform) {
+      setModeError("Select or enter the platform you'll use for online sessions.");
+      return;
+    }
     updateProfile.mutate({
       bio,
       hourlyRate: hourlyRate ? Number(hourlyRate) : null,
       isActive,
       openToOtherUniversities,
+      mode,
+      locationAddress: needsAddress(mode) ? locationAddress.trim() : undefined,
+      onlinePlatform: needsPlatform(mode) ? onlinePlatform : undefined,
     });
   }
 
@@ -505,6 +671,17 @@ function TutorDashboard({ profile }: { profile: TutorProfile | null }) {
               onChange={(e) => setHourlyRate(e.target.value)}
             />
           </label>
+          <SessionModeFields
+            mode={mode}
+            onModeChange={setMode}
+            locationAddress={locationAddress}
+            onLocationAddressChange={setLocationAddress}
+            platformPreset={platformPreset}
+            onPlatformPresetChange={setPlatformPreset}
+            customPlatform={customPlatform}
+            onCustomPlatformChange={setCustomPlatform}
+          />
+          {modeError && <p className="text-sm font-medium text-red-600">{modeError}</p>}
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <input
               type="checkbox"

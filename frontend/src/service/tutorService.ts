@@ -1,5 +1,5 @@
 import axiosInstance from "../api/axiosInstance";
-import type { MyTutorStatus, TutorApplication, TutorBooking, TutorProfile, TutorStudent } from "../types/tutor";
+import type { MyTutorStatus, TutorApplication, TutorBooking, TutorProfile, TutorSessionMode, TutorStudent } from "../types/tutor";
 
 export const tutorService = {
   async getResumeUploadIntent(data: { fileName: string; contentType: string; sizeBytes: number }) {
@@ -41,6 +41,9 @@ export const tutorService = {
     resumeMimeType: string;
     resumeSizeBytes: number;
     portfolioUrl?: string;
+    mode: TutorSessionMode;
+    locationAddress?: string;
+    onlinePlatform?: string;
   }) {
     const { data: res } = await axiosInstance.post("/tutors/apply", data);
     return res.data as TutorApplication;
@@ -64,13 +67,23 @@ export const tutorService = {
     resumeMimeType?: string;
     resumeSizeBytes?: number;
     portfolioUrl?: string;
+    mode?: TutorSessionMode;
+    locationAddress?: string;
+    onlinePlatform?: string;
   }) {
     const { data: res } = await axiosInstance.patch("/tutors/me", data);
     return res.data as TutorProfile;
   },
   async requestBooking(
     tutorUserId: string,
-    data: { subjectId: string; requestedStartAt: string; durationMinutes: number; message?: string },
+    data: {
+      subjectId: string;
+      requestedStartAt: string;
+      durationMinutes: number;
+      message?: string;
+      contactEmail: string;
+      contactPhone: string;
+    },
   ) {
     const { data: res } = await axiosInstance.post(`/tutors/${tutorUserId}/bookings`, data);
     return res.data as TutorBooking;
@@ -131,6 +144,9 @@ export const tutorService = {
       experience: string;
       hourlyRate?: number;
       openToOtherUniversities?: boolean;
+      mode: TutorSessionMode;
+      locationAddress?: string;
+      onlinePlatform?: string;
     },
   ) {
     const { data: res } = await axiosInstance.post(`/admin/tutors/${userId}`, data);
@@ -144,6 +160,9 @@ export const tutorService = {
       hourlyRate?: number | null;
       isActive?: boolean;
       openToOtherUniversities?: boolean;
+      mode?: TutorSessionMode;
+      locationAddress?: string;
+      onlinePlatform?: string;
     },
   ) {
     const { data: res } = await axiosInstance.patch(`/admin/tutors/${userId}`, data);

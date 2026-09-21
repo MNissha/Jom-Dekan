@@ -9,7 +9,7 @@ import type {
 } from "../../types/moderation";
 import { AdminPageShell } from "../../layouts/AdminPageShell";
 import { moderationService } from "../../service/moderationService";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 type ReportSection = "resources" | "discussions" | "tutoring" | "freelance" | "users";
 type DiscussionFilter = "all" | "threads" | "comments";
@@ -44,26 +44,6 @@ function reportSection(item: ModerationQueueItem): ReportSection | null {
   if (item.target_type === "user") return "users";
   if (item.target_type !== "opportunity") return null;
   return item.listing_type === "TUTORING" ? "tutoring" : "freelance";
-}
-
-// Where the reported title should link to. forum_comment reports link to
-// the parent thread (a comment has no page of its own); opportunities have
-// no per-listing route yet, so they link to the right marketplace tab.
-function targetLink(item: ModerationQueueItem): string | null {
-  switch (item.target_type) {
-    case "resource":
-      return `/resources/${item.entity_id}`;
-    case "forum_post":
-      return `/forum/${item.entity_id}`;
-    case "forum_comment":
-      return item.parent_id ? `/forum/${item.parent_id}` : null;
-    case "opportunity":
-      return item.listing_type === "TUTORING" ? "/marketplace?type=TUTORING" : "/marketplace";
-    case "user":
-      return `/admin/users/${item.entity_id}`;
-    default:
-      return null;
-  }
 }
 
 const readable = (value: string | null) =>
@@ -322,13 +302,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                   <tr key={item.id} className="border-b bg-red-50/40 text-sm transition motion-safe:duration-150 last:border-0 hover:bg-red-50/80">
                     <td className="p-4 font-medium text-stone-800">
                       <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" aria-label="Pending response" />
-                      {targetLink(item) ? (
-                        <Link to={targetLink(item)!} target="_blank" rel="noreferrer" className="hover:underline" title="Open the reported page">
-                          {item.target_title ?? "Unavailable item"}
-                        </Link>
-                      ) : (
-                        item.target_title ?? "Unavailable item"
-                      )}
+                      {item.target_title ?? "Unavailable item"}
                       <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase text-red-700">Pending</span>
                     </td>
                     {section === "discussions" && <td className="p-4"><span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase text-violet-700">{item.target_type === "forum_comment" ? "Comment" : "Thread"}</span></td>}
@@ -359,13 +333,7 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
               <div className="rounded-2xl border border-[#ECEBF7] bg-[#F8F8FD] p-4 dark:border-[#3B3564] dark:bg-[#1F1B40]">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-[#4338CA]" />
-                  {targetLink(selected) ? (
-                    <Link to={targetLink(selected)!} target="_blank" rel="noreferrer" className="font-bold text-slate-900 hover:underline" title="Open the reported page">
-                      {selected.target_title ?? "Reported item"}
-                    </Link>
-                  ) : (
-                    <h3 className="font-bold text-slate-900">{selected.target_title ?? "Reported item"}</h3>
-                  )}
+                  <h3 className="font-bold text-slate-900">{selected.target_title ?? "Reported item"}</h3>
                 </div>
                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{readable(selected.category)}</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.details}</p>
@@ -380,8 +348,8 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                   <div className="rounded-2xl border border-[#ECEBF7] bg-white p-4 dark:border-[#3B3564] dark:bg-[#1F1B40]">
                     <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">Thread context</p>
                     <h3 className="mt-2 font-bold text-slate-900">{selected.parent_title ?? "Discussion unavailable"}</h3>
-                    <p className="mt-1 line-clamp-3 text-sm text-slate-600">{selected.parent_description}</p>
-                    {selected.parent_id && <Link to={`/forum/${selected.parent_id}`} target="_blank" className="mt-3 inline-flex text-sm font-semibold text-[#4338CA] hover:underline">View full discussion</Link>}
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.parent_description ?? "Thread content unavailable."}</p>
+                    {selected.parent_id && <p className="mt-3 break-all text-xs text-slate-400">Thread ID: {selected.parent_id}</p>}
                   </div>
                 </section>
               )}
@@ -391,7 +359,6 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                   <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">Reported discussion thread</p>
                   <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Discussion unavailable"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Thread content unavailable."}</p>
-                  <Link to={`/forum/${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-[#EFEEFB] px-3 py-2 text-sm font-bold text-[#4338CA] transition hover:bg-[#E2DFFC]">View full discussion</Link>
                 </section>
               )}
 
@@ -400,7 +367,6 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                   <p className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Reported academic resource</p>
                   <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Resource unavailable"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Resource description unavailable."}</p>
-                  <Link to={`/resources/${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-400/10 dark:text-blue-300 dark:hover:bg-blue-400/20">View full resource</Link>
                 </section>
               )}
 
@@ -409,8 +375,16 @@ export function AdminModerationQueue({ embedded = false }: { embedded?: boolean 
                   <p className="text-xs font-bold uppercase tracking-wide text-[#4338CA]">{selected.listing_type === "TUTORING" ? "Reported tutoring profile" : "Reported freelance opportunity"}</p>
                   <h3 className="mt-2 font-bold text-slate-900">{selected.target_title ?? "Listing unavailable"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selected.target_description ?? "Listing details unavailable."}</p>
-                  <Link to={`/marketplace?type=${selected.listing_type === "TUTORING" ? "TUTORING" : "FREELANCE"}&listing=${selected.entity_id}`} target="_blank" className="mt-3 inline-flex rounded-lg bg-[#EFEEFB] px-3 py-2 text-sm font-bold text-[#4338CA] transition hover:bg-[#E2DFFC]">{selected.listing_type === "TUTORING" ? "View full tutor profile" : "View full freelance listing"}</Link>
                 </section>
+              )}
+
+              {selected.target_type !== "user" && (
+                <dl className="grid gap-2 rounded-2xl border border-[#ECEBF7] p-4 text-sm sm:grid-cols-2 dark:border-[#3B3564] dark:bg-[#1B1836]">
+                  <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Exact content type</dt><dd className="mt-1 font-semibold text-slate-700">{selected.target_type === "opportunity" ? readable(selected.listing_type) : readable(selected.target_type)}</dd></div>
+                  <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content ID</dt><dd className="mt-1 break-all font-mono text-xs text-slate-700">{selected.entity_id}</dd></div>
+                  <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Owner / author ID</dt><dd className="mt-1 break-all font-mono text-xs text-slate-700">{selected.target_owner_id ?? "Unavailable"}</dd></div>
+                  <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Report submitted</dt><dd className="mt-1 font-semibold text-slate-700">{new Date(selected.created_at).toLocaleString()}</dd></div>
+                </dl>
               )}
 
               <dl className="grid gap-2 rounded-2xl border border-[#ECEBF7] p-4 text-sm sm:grid-cols-3">

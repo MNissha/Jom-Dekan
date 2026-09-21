@@ -1,5 +1,6 @@
 export type TutorApplicationStatus = "pending" | "approved" | "rejected";
 export type TutorBookingStatus = "pending" | "accepted" | "declined";
+export type TutorSessionMode = "ONLINE" | "ON_CAMPUS" | "HYBRID";
 
 export interface TutorApplication {
   id: string;
@@ -11,6 +12,9 @@ export interface TutorApplication {
   openToOtherUniversities: boolean;
   resumeFilename: string | null;
   portfolioUrl: string | null;
+  mode: TutorSessionMode;
+  locationAddress: string | null;
+  onlinePlatform: string | null;
   status: TutorApplicationStatus;
   rejectionReason: string | null;
   createdAt: string;
@@ -29,6 +33,9 @@ export interface TutorProfile {
   openToOtherUniversities: boolean;
   resumeFilename: string | null;
   portfolioUrl: string | null;
+  mode: TutorSessionMode;
+  locationAddress: string | null;
+  onlinePlatform: string | null;
   isActive: boolean;
   verifiedAt: string;
   googleCalendarConnected: boolean;

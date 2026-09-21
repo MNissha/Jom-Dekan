@@ -2,11 +2,33 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, X, Check, Wifi, MapPin, Shuffle, CalendarClock, Phone, Mail, Link as LinkIcon, GraduationCap, ClipboardPen, ShieldCheck, Rocket, MessagesSquare, Info } from "lucide-react";
+import {
+  UserPlus,
+  X,
+  Check,
+  Wifi,
+  MapPin,
+  Shuffle,
+  CalendarClock,
+  Phone,
+  Mail,
+  Link as LinkIcon,
+  GraduationCap,
+  ClipboardPen,
+  ShieldCheck,
+  Rocket,
+  MessagesSquare,
+  Info,
+} from "lucide-react";
 import { useOpportunities } from "../../hooks/useOpportunities";
 import { useToast } from "../../context/ToastContext";
 import { useCurrentUser } from "../../hooks/useAuth";
-import { useMyBookingsAsStudent, useMyTutorStatus, useTutorProfile, useUpdateTutorProfile } from "../../hooks/useTutor";
+import {
+  useMyBookingsAsStudent,
+  useMyTutorStatus,
+  useTutorProfile,
+  useUpdateTutorProfile,
+} from "../../hooks/useTutor";
 import { EmptyState } from "../common/EmptyState";
 import { FavoriteButton } from "../common/FavoriteButton";
 import { ReportButton } from "../common/ReportButton";
@@ -38,20 +60,21 @@ function TutorCardAction({
   if (currentUserId && opportunity.owner_id === currentUserId) return null;
   if (tutorProfile && tutorProfile.isActive) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {tutorProfile.openToOtherUniversities && (
           <span
-            title="Open to students from other universities/programmes"
-            className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700"
+            title="Accepts students from any university or programme"
+            aria-label="Accepts students from any university or programme"
+            className="whitespace-nowrap rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700"
           >
-            Cross-uni OK
+            Open to all
           </span>
         )}
         <BookSessionButton
           tutorUserId={opportunity.owner_id}
           specialtySubjectIds={tutorProfile.subjects}
           label="Book a session"
-          triggerClassName="flex h-9 items-center gap-2 rounded-full bg-primary-600 px-4 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
+          triggerClassName="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-primary-600 px-4 text-xs font-bold text-white transition motion-safe:duration-150 hover:-translate-y-0.5 hover:bg-primary-700"
         />
       </div>
     );
@@ -100,7 +123,9 @@ function parseTutorListing(description: string): ParsedTutorListing {
       continue;
     }
     if (!inPitch) {
-      const match = line.match(/^(Subjects|Rate|Year\/Level|Qualification|Availability|Contact|Portfolio):\s*(.*)$/);
+      const match = line.match(
+        /^(Subjects|Rate|Year\/Level|Qualification|Availability|Contact|Portfolio):\s*(.*)$/,
+      );
       if (match) {
         const [, key, value] = match;
         if (key === "Subjects") result.subjects = value;
@@ -136,7 +161,13 @@ const MODE_LABEL: Record<OpportunityMode, string> = {
   HYBRID: "Hybrid",
 };
 
-const AVAILABILITY_OPTIONS = ["Weekday evenings", "Weekends", "Before 12 PM", "After 9 PM", "Exam weeks only"];
+const AVAILABILITY_OPTIONS = [
+  "Weekday evenings",
+  "Weekends",
+  "Before 12 PM",
+  "After 9 PM",
+  "Exam weeks only",
+];
 
 const HOW_IT_WORKS = [
   {
@@ -227,20 +258,31 @@ const EMPTY_FORM: ApplyForm = {
   pitch: "",
 };
 
-export function TutoringView({ initialDetailId = null }: { initialDetailId?: string | null }) {
+export function TutoringView({
+  initialDetailId = null,
+}: {
+  initialDetailId?: string | null;
+}) {
   const toast = useToast();
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
-  const { opportunities, isLoading, createOpportunity, applyToOpportunity } = useOpportunities();
+  const { opportunities, isLoading, createOpportunity, applyToOpportunity } =
+    useOpportunities();
   const { data: tutorStatus } = useMyTutorStatus();
   const updateTutorProfile = useUpdateTutorProfile();
   const { data: myBookings } = useMyBookingsAsStudent();
   // Declined requests aren't a "booked session" — don't clutter this panel with them.
-  const upcomingBookings = useMemo(() => (myBookings ?? []).filter((b) => b.status !== "declined"), [myBookings]);
+  const upcomingBookings = useMemo(
+    () => (myBookings ?? []).filter((b) => b.status !== "declined"),
+    [myBookings],
+  );
   const showSkeleton = useMinimumLoading(isLoading, 600);
 
   const tutors = useMemo(
-    () => (opportunities as Opportunity[]).filter((o) => o.listing_type === "TUTORING" && o.status === "active"),
+    () =>
+      (opportunities as Opportunity[]).filter(
+        (o) => o.listing_type === "TUTORING" && o.status === "active",
+      ),
     [opportunities],
   );
 
@@ -252,7 +294,9 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   const [form, setForm] = useState<ApplyForm>(EMPTY_FORM);
   const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
   const [openToOtherUniversities, setOpenToOtherUniversities] = useState(false);
-  const [availability, setAvailability] = useState<Record<string, boolean>>({ "Weekday evenings": true });
+  const [availability, setAvailability] = useState<Record<string, boolean>>({
+    "Weekday evenings": true,
+  });
   const [terms, setTerms] = useState<Record<TermKey, boolean>>({
     guidance: false,
     accuracy: false,
@@ -264,7 +308,9 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
 
   const [selectedOpp, setSelectedOpp] = useState<string | null>(null);
   const [coverMessage, setCoverMessage] = useState("");
-  const [detailOppId, setDetailOppId] = useState<string | null>(initialDetailId);
+  const [detailOppId, setDetailOppId] = useState<string | null>(
+    initialDetailId,
+  );
   const detailOpp = tutors.find((t) => t.id === detailOppId) ?? null;
 
   function updateForm<K extends keyof ApplyForm>(key: K, value: ApplyForm[K]) {
@@ -275,7 +321,9 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
     setApplyOpen(true);
     setApplyDone(false);
     setApplyStep(1);
-    setOpenToOtherUniversities(tutorStatus?.profile?.openToOtherUniversities ?? false);
+    setOpenToOtherUniversities(
+      tutorStatus?.profile?.openToOtherUniversities ?? false,
+    );
   }
   function closeApply() {
     setApplyOpen(false);
@@ -324,14 +372,18 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
     const availabilityList = Object.entries(availability)
       .filter(([, on]) => on)
       .map(([label]) => label);
-    const subjectsText = selectedSubjects.map((s) => (s.code ? `${s.code} — ${s.name}` : s.name)).join(", ");
+    const subjectsText = selectedSubjects
+      .map((s) => (s.code ? `${s.code} — ${s.name}` : s.name))
+      .join(", ");
 
     const description = [
       `Subjects: ${subjectsText}`,
       `Rate: RM ${form.rate}/hr`,
       `Year/Level: ${form.level}`,
       `Qualification: ${form.qualification} (${form.grade})`,
-      availabilityList.length ? `Availability: ${availabilityList.join(", ")}` : null,
+      availabilityList.length
+        ? `Availability: ${availabilityList.join(", ")}`
+        : null,
       `Contact: ${form.phone} · ${form.email}`,
       `Portfolio: ${form.portfolio}`,
       form.pitch.trim() ? `\n${form.pitch.trim()}` : null,
@@ -340,7 +392,10 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
       .join("\n");
 
     try {
-      if (openToOtherUniversities !== (tutorStatus?.profile?.openToOtherUniversities ?? false)) {
+      if (
+        openToOtherUniversities !==
+        (tutorStatus?.profile?.openToOtherUniversities ?? false)
+      ) {
         await updateTutorProfile.mutateAsync({ openToOtherUniversities });
       }
       await createOpportunity({
@@ -354,10 +409,17 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
       setForm(EMPTY_FORM);
       setSelectedSubjects([]);
       setAvailability({ "Weekday evenings": true });
-      setTerms({ guidance: false, accuracy: false, conduct: false, independent: false, liability: false });
+      setTerms({
+        guidance: false,
+        accuracy: false,
+        conduct: false,
+        independent: false,
+        liability: false,
+      });
     } catch (err) {
       const message = axios.isAxiosError(err)
-        ? (err.response?.data as { error?: { message?: string } })?.error?.message
+        ? (err.response?.data as { error?: { message?: string } })?.error
+            ?.message
         : undefined;
       toast.error(message || "Failed to submit your tutor listing");
     } finally {
@@ -374,7 +436,8 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
       setCoverMessage("");
     } catch (err) {
       const message = axios.isAxiosError(err)
-        ? (err.response?.data as { error?: { message?: string } })?.error?.message
+        ? (err.response?.data as { error?: { message?: string } })?.error
+            ?.message
         : undefined;
       toast.error(message || "Failed to submit application");
     }
@@ -383,15 +446,22 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Tutoring</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Verified senior students and lecturers. Mentoring and guidance only.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+          Tutoring
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Verified senior students and lecturers. Mentoring and guidance only.
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-[#ECEBF7] bg-white p-5">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[16.5px] font-bold text-slate-900">Earn by tutoring your juniors</h2>
+          <h2 className="text-[16.5px] font-bold text-slate-900">
+            Earn by tutoring your juniors
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Set your own rate and hours. JomDekan doesn&apos;t process payment or guarantee sessions — you arrange that directly with your student.
+            Set your own rate and hours. JomDekan doesn&apos;t process payment
+            or guarantee sessions — you arrange that directly with your student.
           </p>
         </div>
         <div className="flex flex-wrap gap-2.5">
@@ -421,8 +491,12 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
           <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-amber-100/50 blur-3xl" />
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="relative">
-              <h2 className="text-xl font-bold text-slate-900">How tutoring on JomDekan works</h2>
-              <p className="mt-1 text-sm text-slate-500">Four steps from application to your first student.</p>
+              <h2 className="text-xl font-bold text-slate-900">
+                How tutoring on JomDekan works
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Four steps from application to your first student.
+              </p>
             </div>
             <button
               type="button"
@@ -435,20 +509,43 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {HOW_IT_WORKS.map((s, index) => (
-              <div key={s.n} className={`group relative overflow-hidden rounded-2xl border border-[#E8E5F7] ${s.wash} p-5 transition motion-safe:duration-300 motion-safe:animate-[notificationRise_320ms_ease-out_both] hover:-translate-y-1 hover:border-violet-200 hover:shadow-lg`} style={{ animationDelay: `${index * 80}ms` }}>
-                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${s.accent}`} />
+              <div
+                key={s.n}
+                className={`group relative overflow-hidden rounded-2xl border border-[#E8E5F7] ${s.wash} p-5 transition motion-safe:duration-300 motion-safe:animate-[notificationRise_320ms_ease-out_both] hover:-translate-y-1 hover:border-violet-200 hover:shadow-lg`}
+                style={{ animationDelay: `${index * 80}ms` }}
+              >
+                <div
+                  className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${s.accent}`}
+                />
                 <div className="flex items-start justify-between gap-3">
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.accent} text-white shadow-md transition motion-safe:duration-300 group-hover:rotate-3 group-hover:scale-110`}><s.icon className="h-5 w-5" aria-hidden="true" /></span>
-                  <span className="text-3xl font-black text-slate-900/10 transition group-hover:text-[#4338CA]/20">0{s.n}</span>
+                  <span
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${s.accent} text-white shadow-md transition motion-safe:duration-300 group-hover:rotate-3 group-hover:scale-110`}
+                  >
+                    <s.icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="text-3xl font-black text-slate-900/10 transition group-hover:text-[#4338CA]/20">
+                    0{s.n}
+                  </span>
                 </div>
-                <p className="mt-4 text-sm font-bold text-slate-800 transition group-hover:text-[#332475]">{s.title}</p>
-                <p className="mt-1.5 text-xs leading-5 text-slate-600">{s.body}</p>
+                <p className="mt-4 text-sm font-bold text-slate-800 transition group-hover:text-[#332475]">
+                  {s.title}
+                </p>
+                <p className="mt-1.5 text-xs leading-5 text-slate-600">
+                  {s.body}
+                </p>
               </div>
             ))}
           </div>
           <div className="relative flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-violet-50 p-4 text-xs font-semibold leading-5 text-slate-700 dark:border-amber-300/30 dark:from-amber-400/10 dark:to-violet-400/10">
-            <span className="rounded-xl bg-[#F5C21A] p-2 text-[#231C57] shadow-sm"><Info className="h-4 w-4" aria-hidden="true" /></span>
-            <p>JomDekan only connects tutors and students — we're not a party to your arrangement and aren't responsible for payment, scheduling, or what happens in a session. Contract cheating or completing graded work for a student is never allowed.</p>
+            <span className="rounded-xl bg-[#F5C21A] p-2 text-[#231C57] shadow-sm">
+              <Info className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <p>
+              JomDekan only connects tutors and students — we're not a party to
+              your arrangement and aren't responsible for payment, scheduling,
+              or what happens in a session. Contract cheating or completing
+              graded work for a student is never allowed.
+            </p>
           </div>
         </section>
       )}
@@ -462,7 +559,11 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
               ))}
             </div>
           ) : tutors.length === 0 ? (
-            <EmptyState icon={UserPlus} title="No tutors listed yet" description="Be the first to apply — your listing will show up here for other students to find.">
+            <EmptyState
+              icon={UserPlus}
+              title="No tutors listed yet"
+              description="Be the first to apply — your listing will show up here for other students to find."
+            >
               <button
                 type="button"
                 onClick={handleApplyToTutorClick}
@@ -484,7 +585,10 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                   .toUpperCase();
                 const parsed = parseTutorListing(opp.description);
                 const subjectTags = parsed.subjects
-                  ? parsed.subjects.split(",").map((s) => s.trim()).filter(Boolean)
+                  ? parsed.subjects
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean)
                   : [];
                 return (
                   <article
@@ -498,7 +602,10 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                         setDetailOppId(opp.id);
                       }
                     }}
-                    className={cardClassName("tutor", "flex cursor-pointer flex-col gap-3 text-left")}
+                    className={cardClassName(
+                      "tutor",
+                      "flex cursor-pointer flex-col gap-3 text-left",
+                    )}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -508,35 +615,61 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                         <div className="min-w-0">
                           <p className="truncate text-[15.5px] font-bold text-slate-900">
                             {opp.owner_name ? (
-                              <UserLink userId={opp.owner_id} name={opp.owner_name} className="font-bold text-slate-900 hover:text-primary-700 hover:underline" />
+                              <UserLink
+                                userId={opp.owner_id}
+                                name={opp.owner_name}
+                                className="font-bold text-slate-900 hover:text-primary-700 hover:underline"
+                              />
                             ) : (
                               "A JomDekan student"
                             )}
                           </p>
-                          {opp.subject_name && <p className="truncate text-xs font-semibold text-primary-600">{opp.subject_name}</p>}
+                          {opp.subject_name && (
+                            <p className="truncate text-xs font-semibold text-primary-600">
+                              {opp.subject_name}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <FavoriteButton targetType="opportunity" targetId={opp.id} />
-                        <ReportButton targetType="opportunity" targetId={opp.id} />
+                        <FavoriteButton
+                          targetType="opportunity"
+                          targetId={opp.id}
+                        />
+                        <ReportButton
+                          targetType="opportunity"
+                          targetId={opp.id}
+                        />
                       </div>
                     </div>
                     {subjectTags.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {subjectTags.map((s) => (
-                          <span key={s} className="rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700">
+                          <span
+                            key={s}
+                            className="rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700"
+                          >
                             {s}
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <p className="line-clamp-2 text-sm text-slate-600">{opp.description}</p>
+                      <p className="line-clamp-2 text-sm text-slate-600">
+                        {opp.description}
+                      </p>
                     )}
-                    <div className="flex items-center justify-between gap-3 border-t border-[#F4F3FB] pt-3">
-                      <div className="flex flex-col gap-1">
-                        {parsed.rate && <span className="text-sm font-extrabold text-slate-900">{parsed.rate}</span>}
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                          <ModeIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#F4F3FB] pt-3">
+                      <div className="flex min-w-fit shrink-0 flex-col gap-1">
+                        {parsed.rate && (
+                          <span className="text-sm font-extrabold text-slate-900">
+                            {parsed.rate}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-slate-500">
+                          <ModeIcon
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
                           {MODE_LABEL[opp.mode]}
                         </span>
                       </div>
@@ -554,20 +687,31 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
         </div>
 
         <div className="min-w-0 flex-1 basis-[300px] self-start rounded-[22px] border border-[#ECEBF7] bg-white p-5">
-          <h2 className="text-[16.5px] font-bold text-slate-900">Your booked sessions</h2>
+          <h2 className="text-[16.5px] font-bold text-slate-900">
+            Your booked sessions
+          </h2>
           {upcomingBookings.length === 0 ? (
             <div className="mt-4 flex flex-col items-start gap-2">
-              <CalendarClock className="h-6 w-6 text-slate-300" aria-hidden="true" />
+              <CalendarClock
+                className="h-6 w-6 text-slate-300"
+                aria-hidden="true"
+              />
               <p className="text-sm text-slate-500">
-                No sessions booked yet. Book a tutor above, or apply to tutor yourself.
+                No sessions booked yet. Book a tutor above, or apply to tutor
+                yourself.
               </p>
             </div>
           ) : (
             <ul className="mt-4 space-y-3">
               {upcomingBookings.slice(0, 5).map((booking) => (
-                <li key={booking.id} className="rounded-xl border border-[#ECEBF7] p-3">
+                <li
+                  key={booking.id}
+                  className="rounded-xl border border-[#ECEBF7] p-3"
+                >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-slate-800">{booking.tutorName ?? "A tutor"}</p>
+                    <p className="truncate text-sm font-semibold text-slate-800">
+                      {booking.tutorName ?? "A tutor"}
+                    </p>
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
                         booking.status === "accepted"
@@ -582,7 +726,10 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     {booking.subjectName ?? "Session"} ·{" "}
-                    {new Date(booking.requestedStartAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(booking.requestedStartAt).toLocaleString([], {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </p>
                 </li>
               ))}
@@ -599,328 +746,43 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
           descendants — without the portal this modal would size/center
           itself against the whole (taller-than-viewport) page instead of
           the viewport, and scroll along with the page underneath it. */}
-      {applyOpen && createPortal(
-        <div className="overlay-root">
-          <div className="overlay-backdrop" aria-hidden="true" />
-          <div role="dialog" aria-modal="true" aria-label="Tutor application" className="dialog-surface max-w-[640px]">
-            <div
-              className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
-              style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
-            >
-              <div className="min-w-0">
-                <span className="inline-block rounded-full bg-[rgba(245,194,26,.2)] px-2.5 py-1 text-[11px] font-bold tracking-wide text-[#FFE9A6]">
-                  {applyDone ? "DONE" : `STEP ${applyStep} OF 2`}
-                </span>
-                <h2 className="mt-2 text-xl font-extrabold">
-                  {applyDone ? "Listing submitted" : "Apply to tutor on JomDekan"}
-                </h2>
-                <p className="mt-1 text-sm font-medium text-[#C6C2EC]">
-                  {applyDone
-                    ? "Your listing is live in the marketplace for students to find."
-                    : applyStep === 2
-                      ? "Review and accept the tutor terms to publish your listing."
-                      : "Tell us what you can teach and how students can reach you."}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeApply}
-                aria-label="Close"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white hover:bg-white/20"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-
-            {applyDone ? (
-              <div className="dialog-body flex flex-col items-center gap-3 p-10 text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E4F5EC] text-[#1B7A55]">
-                  <Check className="h-7 w-7" aria-hidden="true" />
-                </span>
-                <p className="max-w-sm text-sm text-slate-500">
-                  Students can now find and message you from the tutoring page. You can close your listing any time from
-                  the marketplace.
-                </p>
-                <button type="button" onClick={closeApply} className="mt-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-700">
-                  Back to tutoring
-                </button>
-              </div>
-            ) : applyStep === 1 ? (
-              <div className="dialog-body flex flex-col gap-5 p-[22px]">
-                <section className="flex flex-col gap-3">
-                  <h3 className="text-xs font-bold tracking-wide text-primary-700">TEACHING DETAILS</h3>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-bold text-slate-500">
-                      Subjects you can teach<span className="text-red-500"> *</span>
-                    </span>
-                    <SubjectMultiSelect selected={selectedSubjects} onChange={setSelectedSubjects} />
-                  </div>
-                  <label className="flex items-start gap-2.5 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={openToOtherUniversities}
-                      onChange={(e) => setOpenToOtherUniversities(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span>
-                      <span className="font-medium">Open to students from other universities or programmes</span>
-                      <span className="block text-xs text-slate-500">
-                        For the subjects above, let students outside your own university/programme book you too.
-                      </span>
-                    </span>
-                  </label>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Hourly rate (RM)" required hint="e.g. 25" type="number" inputMode="decimal" min="0.01" step="0.01" invalid={!!form.rate && !rateOk} value={form.rate} onChange={(v) => /^\d*(\.\d{0,2})?$/.test(v) && updateForm("rate", v)} />
-                    <Field label="Year / level" required hint="e.g. 3" type="number" inputMode="numeric" min="1" step="1" invalid={!!form.level && !levelOk} value={form.level} onChange={(v) => /^\d*$/.test(v) && updateForm("level", v)} />
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-xs font-bold text-slate-500">
-                        Preferred mode<span className="text-red-500"> *</span>
-                      </span>
-                      <select
-                        value={form.mode}
-                        onChange={(e) => updateForm("mode", e.target.value as OpportunityMode)}
-                        className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#1B1836] dark:text-slate-100"
-                      >
-                        {(["ONLINE", "PHYSICAL", "HYBRID"] as OpportunityMode[]).map((m) => (
-                          <option key={m} value={m} className="bg-white text-slate-700 dark:bg-[#1B1836] dark:text-slate-100">
-                            {MODE_LABEL[m]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </section>
-
-                <section className="flex flex-col gap-3">
-                  <h3 className="text-xs font-bold tracking-wide text-primary-700">
-                    CONTACT DETAILS <span className="font-semibold text-slate-400">· all required</span>
-                  </h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Phone number" required hint="e.g. 60123456789" note="Numbers only · WhatsApp-capable number" inputMode="numeric" invalid={!!form.phone && !phoneOk} value={form.phone} onChange={(v) => /^\d*$/.test(v) && updateForm("phone", v)} />
-                    <Field
-                      label="Email address"
-                      required
-                      hint="name@student.uitm.edu.my"
-                      note="Student email preferred"
-                      invalid={!!form.email && !emailOk}
-                      value={form.email}
-                      onChange={(v) => updateForm("email", v)}
-                    />
-                    <Field
-                      label="Portfolio / profile link"
-                      required
-                      hint="https://…"
-                      note="Website, LinkedIn, GitHub or Notion"
-                      value={form.portfolio}
-                      onChange={(v) => updateForm("portfolio", v)}
-                    />
-                  </div>
-                </section>
-
-                <section className="flex flex-col gap-3">
-                  <h3 className="text-xs font-bold tracking-wide text-primary-700">QUALIFICATIONS</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Highest qualification" required hint="e.g. Diploma in Computer Science" value={form.qualification} onChange={(v) => updateForm("qualification", v)} />
-                    <Field label="CGPA / subject grade" required hint="e.g. 3.72 or A for CSC510" value={form.grade} onChange={(v) => updateForm("grade", v)} />
-                  </div>
-                </section>
-
-                <section className="flex flex-col gap-2">
-                  <h3 className="text-xs font-bold tracking-wide text-primary-700">AVAILABILITY</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {AVAILABILITY_OPTIONS.map((label) => {
-                      const on = !!availability[label];
-                      return (
-                        <button
-                          key={label}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() => setAvailability((a) => ({ ...a, [label]: !a[label] }))}
-                          className={`h-9 rounded-full border px-3.5 text-xs font-bold transition motion-safe:duration-150 ${
-                            on ? "border-primary-500 bg-primary-50 text-primary-700" : "border-[#E4E3F2] text-slate-600 hover:border-primary-300"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-500">Why you&apos;d be a good tutor</span>
-                  <textarea
-                    rows={3}
-                    placeholder="Grades in the subject, past mentoring, lab demonstrator roles…"
-                    value={form.pitch}
-                    onChange={(e) => updateForm("pitch", e.target.value)}
-                    className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#1B1836] dark:text-slate-100 dark:placeholder:text-slate-400"
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="dialog-body flex flex-col gap-4 p-[22px]">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Tutor terms &amp; conditions</h3>
-                  <p className="mt-1 text-sm text-slate-500">Tick each item to publish your listing.</p>
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  {TERMS.map((t) => {
-                    const on = terms[t.key];
-                    return (
-                      <button
-                        key={t.key}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setTerms((s) => ({ ...s, [t.key]: !s[t.key] }))}
-                        className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition motion-safe:duration-150 ${
-                          on ? "border-primary-200 bg-primary-50/60" : "border-[#ECEBF7] bg-white hover:border-primary-100"
-                        }`}
-                      >
-                        <span
-                          className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 ${
-                            on ? "border-primary-600 bg-primary-600 text-white" : "border-slate-300 text-transparent"
-                          }`}
-                        >
-                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                        </span>
-                        <span>
-                          <span className="block text-sm font-bold text-slate-900">{t.title}</span>
-                          <span className="mt-0.5 block text-xs text-slate-500">{t.body}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs font-semibold text-slate-400">
-                  By registering you confirm your details are accurate and consent to JomDekan reviewing your listing.
-                </p>
-              </div>
-            )}
-
-            {!applyDone && (
-              <div className="dialog-footer flex flex-wrap justify-between gap-3 p-[22px]">
-                {applyStep === 1 ? (
-                  <>
-                    <button type="button" onClick={closeApply} className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700">
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => step1Ready && setApplyStep(2)}
-                      disabled={!step1Ready}
-                      title={step1Ready ? undefined : "Fill in every required field, including a valid email"}
-                      className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
-                        step1Ready ? "cursor-pointer bg-primary-600 text-white hover:bg-primary-700" : "cursor-not-allowed bg-slate-200 text-slate-400"
-                      }`}
-                    >
-                      Continue to terms
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={() => setApplyStep(1)} className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700">
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={!termsReady || submitting}
-                      title={termsReady ? undefined : "Accept all five terms to register"}
-                      className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
-                        termsReady && !submitting ? "cursor-pointer bg-[#F5C21A] text-[#231C57] hover:bg-[#FFD24D]" : "cursor-not-allowed bg-slate-200 text-slate-400"
-                      }`}
-                    >
-                      {submitting ? "Submitting…" : "Register as tutor"}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body,
-      )}
-
-      {/* Apply / inquire to an existing tutor listing — reuses the same
-          real applyToOpportunity mutation the generic marketplace uses. */}
-      {selectedOpp && createPortal(
-        <div role="dialog" aria-modal="true" aria-label="Submit application" className="overlay-root">
-          <div className="overlay-backdrop" aria-hidden="true" />
-          <div className="dialog-surface max-w-md">
-            <div className="dialog-body flex flex-col gap-4 p-6">
-              <h3 className="text-lg font-bold text-slate-900">Submit application</h3>
-              <form id="apply-to-listing-form" onSubmit={handleApplyToTutor} className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Cover message / approach</label>
-                  <textarea
-                    rows={4}
-                    value={coverMessage}
-                    onChange={(e) => setCoverMessage(e.target.value)}
-                    placeholder="Explain what you need help with…"
-                    className="w-full rounded-xl border border-slate-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  />
-                </div>
-              </form>
-            </div>
-            <div className="dialog-footer flex justify-end gap-2 p-6">
-              <button type="button" onClick={() => setSelectedOpp(null)} className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
-                Cancel
-              </button>
-              <button type="submit" form="apply-to-listing-form" className="rounded-full bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700">
-                Send application
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )}
-
-      {/* Tutor detail view — opened by clicking a card. Shows the real
-          contact info the tutor submitted (currently buried in the
-          description text and shown nowhere else), so a student can
-          actually reach them directly, plus a way into the existing
-          apply/inquire flow. */}
-      {detailOpp && (() => {
-        const parsed = parseTutorListing(detailOpp.description);
-        const ModeIcon = MODE_ICON[detailOpp.mode];
-        const subjectTags = parsed.subjects
-          ? parsed.subjects.split(",").map((s) => s.trim()).filter(Boolean)
-          : [];
-        const initials = (detailOpp.owner_name || "JD")
-          .split(" ")
-          .map((p) => p[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase();
-
-        return createPortal(
+      {applyOpen &&
+        createPortal(
           <div className="overlay-root">
             <div className="overlay-backdrop" aria-hidden="true" />
-            <div role="dialog" aria-modal="true" aria-label="Tutor details" className="dialog-surface max-w-[560px]">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Tutor application"
+              className="dialog-surface max-w-[640px]"
+            >
               <div
                 className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
-                style={{ background: "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)" }}
+                style={{
+                  background:
+                    "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)",
+                }}
               >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-bold text-white">
-                    {initials}
+                <div className="min-w-0">
+                  <span className="inline-block rounded-full bg-[rgba(245,194,26,.2)] px-2.5 py-1 text-[11px] font-bold tracking-wide text-[#FFE9A6]">
+                    {applyDone ? "DONE" : `STEP ${applyStep} OF 2`}
                   </span>
-                  <div className="min-w-0">
-                    <h2 className="truncate text-lg font-extrabold">
-                      {detailOpp.owner_name ? (
-                        <UserLink userId={detailOpp.owner_id} name={detailOpp.owner_name} className="text-white hover:underline" />
-                      ) : (
-                        "A JomDekan student"
-                      )}
-                    </h2>
-                    {detailOpp.subject_name && <p className="truncate text-sm font-medium text-[#C6C2EC]">{detailOpp.subject_name}</p>}
-                  </div>
+                  <h2 className="mt-2 text-xl font-extrabold">
+                    {applyDone
+                      ? "Listing submitted"
+                      : "Apply to tutor on JomDekan"}
+                  </h2>
+                  <p className="mt-1 text-sm font-medium text-[#C6C2EC]">
+                    {applyDone
+                      ? "Your listing is live in the marketplace for students to find."
+                      : applyStep === 2
+                        ? "Review and accept the tutor terms to publish your listing."
+                        : "Tell us what you can teach and how students can reach you."}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDetailOppId(null)}
+                  onClick={closeApply}
                   aria-label="Close"
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white hover:bg-white/20"
                 >
@@ -928,124 +790,643 @@ export function TutoringView({ initialDetailId = null }: { initialDetailId?: str
                 </button>
               </div>
 
-              <div className="dialog-body flex flex-col gap-5 p-[22px]">
-                <div className="flex flex-wrap gap-4">
-                  {parsed.rate && (
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Rate</p>
-                      <p className="text-sm font-extrabold text-slate-900">{parsed.rate}</p>
+              {applyDone ? (
+                <div className="dialog-body flex flex-col items-center gap-3 p-10 text-center">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E4F5EC] text-[#1B7A55]">
+                    <Check className="h-7 w-7" aria-hidden="true" />
+                  </span>
+                  <p className="max-w-sm text-sm text-slate-500">
+                    Students can now find and message you from the tutoring
+                    page. You can close your listing any time from the
+                    marketplace.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={closeApply}
+                    className="mt-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-700"
+                  >
+                    Back to tutoring
+                  </button>
+                </div>
+              ) : applyStep === 1 ? (
+                <div className="dialog-body flex flex-col gap-5 p-[22px]">
+                  <section className="flex flex-col gap-3">
+                    <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                      TEACHING DETAILS
+                    </h3>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-bold text-slate-500">
+                        Subjects you can teach
+                        <span className="text-red-500"> *</span>
+                      </span>
+                      <SubjectMultiSelect
+                        selected={selectedSubjects}
+                        onChange={setSelectedSubjects}
+                      />
                     </div>
-                  )}
+                    <label className="flex items-start gap-2.5 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={openToOtherUniversities}
+                        onChange={(e) =>
+                          setOpenToOtherUniversities(e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span>
+                        <span className="font-medium">
+                          Open to students from other universities or programmes
+                        </span>
+                        <span className="block text-xs text-slate-500">
+                          For the subjects above, let students outside your own
+                          university/programme book you too.
+                        </span>
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <Field
+                        label="Hourly rate (RM)"
+                        required
+                        hint="e.g. 25"
+                        type="number"
+                        inputMode="decimal"
+                        min="0.01"
+                        step="0.01"
+                        invalid={!!form.rate && !rateOk}
+                        value={form.rate}
+                        onChange={(v) =>
+                          /^\d*(\.\d{0,2})?$/.test(v) && updateForm("rate", v)
+                        }
+                      />
+                      <Field
+                        label="Year / level"
+                        required
+                        hint="e.g. 3"
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        step="1"
+                        invalid={!!form.level && !levelOk}
+                        value={form.level}
+                        onChange={(v) =>
+                          /^\d*$/.test(v) && updateForm("level", v)
+                        }
+                      />
+                      <label className="flex flex-col gap-1.5">
+                        <span className="text-xs font-bold text-slate-500">
+                          Preferred mode<span className="text-red-500"> *</span>
+                        </span>
+                        <select
+                          value={form.mode}
+                          onChange={(e) =>
+                            updateForm(
+                              "mode",
+                              e.target.value as OpportunityMode,
+                            )
+                          }
+                          className="h-11 rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] px-3 text-sm font-semibold text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#1B1836] dark:text-slate-100"
+                        >
+                          {(
+                            [
+                              "ONLINE",
+                              "PHYSICAL",
+                              "HYBRID",
+                            ] as OpportunityMode[]
+                          ).map((m) => (
+                            <option
+                              key={m}
+                              value={m}
+                              className="bg-white text-slate-700 dark:bg-[#1B1836] dark:text-slate-100"
+                            >
+                              {MODE_LABEL[m]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className="flex flex-col gap-3">
+                    <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                      CONTACT DETAILS{" "}
+                      <span className="font-semibold text-slate-400">
+                        · all required
+                      </span>
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <Field
+                        label="Phone number"
+                        required
+                        hint="e.g. 60123456789"
+                        note="Numbers only · WhatsApp-capable number"
+                        inputMode="numeric"
+                        invalid={!!form.phone && !phoneOk}
+                        value={form.phone}
+                        onChange={(v) =>
+                          /^\d*$/.test(v) && updateForm("phone", v)
+                        }
+                      />
+                      <Field
+                        label="Email address"
+                        required
+                        hint="name@student.uitm.edu.my"
+                        note="Student email preferred"
+                        invalid={!!form.email && !emailOk}
+                        value={form.email}
+                        onChange={(v) => updateForm("email", v)}
+                      />
+                      <Field
+                        label="Portfolio / profile link"
+                        required
+                        hint="https://…"
+                        note="Website, LinkedIn, GitHub or Notion"
+                        value={form.portfolio}
+                        onChange={(v) => updateForm("portfolio", v)}
+                      />
+                    </div>
+                  </section>
+
+                  <section className="flex flex-col gap-3">
+                    <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                      QUALIFICATIONS
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <Field
+                        label="Highest qualification"
+                        required
+                        hint="e.g. Diploma in Computer Science"
+                        value={form.qualification}
+                        onChange={(v) => updateForm("qualification", v)}
+                      />
+                      <Field
+                        label="CGPA / subject grade"
+                        required
+                        hint="e.g. 3.72 or A for CSC510"
+                        value={form.grade}
+                        onChange={(v) => updateForm("grade", v)}
+                      />
+                    </div>
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                      AVAILABILITY
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {AVAILABILITY_OPTIONS.map((label) => {
+                        const on = !!availability[label];
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              setAvailability((a) => ({
+                                ...a,
+                                [label]: !a[label],
+                              }))
+                            }
+                            className={`h-9 rounded-full border px-3.5 text-xs font-bold transition motion-safe:duration-150 ${
+                              on
+                                ? "border-primary-500 bg-primary-50 text-primary-700"
+                                : "border-[#E4E3F2] text-slate-600 hover:border-primary-300"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-bold text-slate-500">
+                      Why you&apos;d be a good tutor
+                    </span>
+                    <textarea
+                      rows={3}
+                      placeholder="Grades in the subject, past mentoring, lab demonstrator roles…"
+                      value={form.pitch}
+                      onChange={(e) => updateForm("pitch", e.target.value)}
+                      className="resize-y rounded-xl border border-[#E4E3F2] bg-[#FBFBFE] p-3 text-sm text-slate-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-[#494174] dark:bg-[#1B1836] dark:text-slate-100 dark:placeholder:text-slate-400"
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="dialog-body flex flex-col gap-4 p-[22px]">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Mode</p>
-                    <p className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
-                      <ModeIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      {MODE_LABEL[detailOpp.mode]}
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Tutor terms &amp; conditions
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Tick each item to publish your listing.
                     </p>
                   </div>
-                  {parsed.level && (
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Year / level</p>
-                      <p className="text-sm font-bold text-slate-700">{parsed.level}</p>
-                    </div>
+                  <div className="flex flex-col gap-2.5">
+                    {TERMS.map((t) => {
+                      const on = terms[t.key];
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            setTerms((s) => ({ ...s, [t.key]: !s[t.key] }))
+                          }
+                          className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition motion-safe:duration-150 ${
+                            on
+                              ? "border-primary-200 bg-primary-50/60"
+                              : "border-[#ECEBF7] bg-white hover:border-primary-100"
+                          }`}
+                        >
+                          <span
+                            className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 ${
+                              on
+                                ? "border-primary-600 bg-primary-600 text-white"
+                                : "border-slate-300 text-transparent"
+                            }`}
+                          >
+                            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                          </span>
+                          <span>
+                            <span className="block text-sm font-bold text-slate-900">
+                              {t.title}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-slate-500">
+                              {t.body}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs font-semibold text-slate-400">
+                    By registering you confirm your details are accurate and
+                    consent to JomDekan reviewing your listing.
+                  </p>
+                </div>
+              )}
+
+              {!applyDone && (
+                <div className="dialog-footer flex flex-wrap justify-between gap-3 p-[22px]">
+                  {applyStep === 1 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={closeApply}
+                        className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => step1Ready && setApplyStep(2)}
+                        disabled={!step1Ready}
+                        title={
+                          step1Ready
+                            ? undefined
+                            : "Fill in every required field, including a valid email"
+                        }
+                        className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
+                          step1Ready
+                            ? "cursor-pointer bg-primary-600 text-white hover:bg-primary-700"
+                            : "cursor-not-allowed bg-slate-200 text-slate-400"
+                        }`}
+                      >
+                        Continue to terms
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setApplyStep(1)}
+                        className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!termsReady || submitting}
+                        title={
+                          termsReady
+                            ? undefined
+                            : "Accept all five terms to register"
+                        }
+                        className={`rounded-xl px-5 py-3 text-sm font-bold transition motion-safe:duration-150 ${
+                          termsReady && !submitting
+                            ? "cursor-pointer bg-[#F5C21A] text-[#231C57] hover:bg-[#FFD24D]"
+                            : "cursor-not-allowed bg-slate-200 text-slate-400"
+                        }`}
+                      >
+                        {submitting ? "Submitting…" : "Register as tutor"}
+                      </button>
+                    </>
                   )}
                 </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
 
-                {subjectTags.length > 0 && (
-                  <section>
-                    <h3 className="text-xs font-bold tracking-wide text-primary-700">SUBJECTS TAUGHT</h3>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {subjectTags.map((s) => (
-                        <span key={s} className="rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {parsed.qualification && (
-                  <section className="flex items-start gap-3 rounded-xl border border-[#ECEBF7] p-3.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F0FA] text-primary-700">
-                      <GraduationCap className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800">Qualification</p>
-                      <p className="text-xs text-slate-500">{parsed.qualification}</p>
-                    </div>
-                  </section>
-                )}
-
-                {parsed.availability && (
-                  <section>
-                    <h3 className="text-xs font-bold tracking-wide text-primary-700">AVAILABILITY</h3>
-                    <p className="mt-1.5 text-sm text-slate-600">{parsed.availability}</p>
-                  </section>
-                )}
-
-                {parsed.pitch && (
-                  <section>
-                    <h3 className="text-xs font-bold tracking-wide text-primary-700">WHY THIS TUTOR</h3>
-                    <p className="mt-1.5 whitespace-pre-line text-sm text-slate-600">{parsed.pitch}</p>
-                  </section>
-                )}
-
-                {!parsed.subjects && !parsed.rate && (
-                  <p className="whitespace-pre-line text-sm text-slate-600">{detailOpp.description}</p>
-                )}
-
-                {(parsed.phone || parsed.email || parsed.portfolio) && (
-                  <section className="flex flex-col gap-2 rounded-xl bg-[#F8F8FD] p-4">
-                    <h3 className="text-xs font-bold tracking-wide text-primary-700">CONTACT</h3>
-                    {parsed.phone && (
-                      <a href={`tel:${parsed.phone.replace(/\s+/g, "")}`} className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-primary-700">
-                        <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        {parsed.phone}
-                      </a>
-                    )}
-                    {parsed.email && (
-                      <a href={`mailto:${parsed.email}`} className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-primary-700">
-                        <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        {parsed.email}
-                      </a>
-                    )}
-                    {parsed.portfolio && (
-                      <a
-                        href={parsed.portfolio.startsWith("http") ? parsed.portfolio : `https://${parsed.portfolio}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 truncate text-sm font-semibold text-slate-700 hover:text-primary-700"
-                      >
-                        <LinkIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span className="truncate">{parsed.portfolio}</span>
-                      </a>
-                    )}
-                  </section>
-                )}
+      {/* Apply / inquire to an existing tutor listing — reuses the same
+          real applyToOpportunity mutation the generic marketplace uses. */}
+      {selectedOpp &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Submit application"
+            className="overlay-root"
+          >
+            <div className="overlay-backdrop" aria-hidden="true" />
+            <div className="dialog-surface max-w-md">
+              <div className="dialog-body flex flex-col gap-4 p-6">
+                <h3 className="text-lg font-bold text-slate-900">
+                  Submit application
+                </h3>
+                <form
+                  id="apply-to-listing-form"
+                  onSubmit={handleApplyToTutor}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">
+                      Cover message / approach
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={coverMessage}
+                      onChange={(e) => setCoverMessage(e.target.value)}
+                      placeholder="Explain what you need help with…"
+                      className="w-full rounded-xl border border-slate-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      required
+                    />
+                  </div>
+                </form>
               </div>
-
-              <div className="dialog-footer flex justify-end gap-3 p-[22px]">
+              <div className="dialog-footer flex justify-end gap-2 p-6">
                 <button
                   type="button"
-                  onClick={() => setDetailOppId(null)}
-                  className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700"
+                  onClick={() => setSelectedOpp(null)}
+                  className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
                 >
-                  Close
+                  Cancel
                 </button>
-                <TutorCardAction
-                  opportunity={detailOpp}
-                  currentUserId={currentUser?.id}
-                  onLegacyApply={() => {
-                    setSelectedOpp(detailOpp.id);
-                    setDetailOppId(null);
-                  }}
-                />
+                <button
+                  type="submit"
+                  form="apply-to-listing-form"
+                  className="rounded-full bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700"
+                >
+                  Send application
+                </button>
               </div>
             </div>
           </div>,
           document.body,
-        );
-      })()}
+        )}
+
+      {/* Tutor detail view — opened by clicking a card. Shows the real
+          contact info the tutor submitted (currently buried in the
+          description text and shown nowhere else), so a student can
+          actually reach them directly, plus a way into the existing
+          apply/inquire flow. */}
+      {detailOpp &&
+        (() => {
+          const parsed = parseTutorListing(detailOpp.description);
+          const ModeIcon = MODE_ICON[detailOpp.mode];
+          const subjectTags = parsed.subjects
+            ? parsed.subjects
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+          const initials = (detailOpp.owner_name || "JD")
+            .split(" ")
+            .map((p) => p[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+
+          return createPortal(
+            <div className="overlay-root">
+              <div className="overlay-backdrop" aria-hidden="true" />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Tutor details"
+                className="dialog-surface max-w-[560px]"
+              >
+                <div
+                  className="dialog-header flex items-start justify-between gap-4 p-[22px] text-white"
+                  style={{
+                    background:
+                      "radial-gradient(120% 160% at 88% 8%, #4A3FD1 0%, #2E2372 55%, #231C57 100%)",
+                  }}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-sm font-bold text-white">
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-lg font-extrabold">
+                        {detailOpp.owner_name ? (
+                          <UserLink
+                            userId={detailOpp.owner_id}
+                            name={detailOpp.owner_name}
+                            className="text-white hover:underline"
+                          />
+                        ) : (
+                          "A JomDekan student"
+                        )}
+                      </h2>
+                      {detailOpp.subject_name && (
+                        <p className="truncate text-sm font-medium text-[#C6C2EC]">
+                          {detailOpp.subject_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDetailOppId(null)}
+                    aria-label="Close"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white hover:bg-white/20"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div className="dialog-body flex flex-col gap-5 p-[22px]">
+                  <div className="flex flex-wrap gap-4">
+                    {parsed.rate && (
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                          Rate
+                        </p>
+                        <p className="text-sm font-extrabold text-slate-900">
+                          {parsed.rate}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        Mode
+                      </p>
+                      <p className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                        <ModeIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                        {MODE_LABEL[detailOpp.mode]}
+                      </p>
+                    </div>
+                    {parsed.level && (
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                          Year / level
+                        </p>
+                        <p className="text-sm font-bold text-slate-700">
+                          {parsed.level}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {subjectTags.length > 0 && (
+                    <section>
+                      <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                        SUBJECTS TAUGHT
+                      </h3>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {subjectTags.map((s) => (
+                          <span
+                            key={s}
+                            className="rounded-full bg-[#F1F0FA] px-2.5 py-1 text-[11px] font-bold text-primary-700"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {parsed.qualification && (
+                    <section className="flex items-start gap-3 rounded-xl border border-[#ECEBF7] p-3.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F0FA] text-primary-700">
+                        <GraduationCap className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800">
+                          Qualification
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {parsed.qualification}
+                        </p>
+                      </div>
+                    </section>
+                  )}
+
+                  {parsed.availability && (
+                    <section>
+                      <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                        AVAILABILITY
+                      </h3>
+                      <p className="mt-1.5 text-sm text-slate-600">
+                        {parsed.availability}
+                      </p>
+                    </section>
+                  )}
+
+                  {parsed.pitch && (
+                    <section>
+                      <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                        WHY THIS TUTOR
+                      </h3>
+                      <p className="mt-1.5 whitespace-pre-line text-sm text-slate-600">
+                        {parsed.pitch}
+                      </p>
+                    </section>
+                  )}
+
+                  {!parsed.subjects && !parsed.rate && (
+                    <p className="whitespace-pre-line text-sm text-slate-600">
+                      {detailOpp.description}
+                    </p>
+                  )}
+
+                  {(parsed.phone || parsed.email || parsed.portfolio) && (
+                    <section className="flex flex-col gap-2 rounded-xl bg-[#F8F8FD] p-4">
+                      <h3 className="text-xs font-bold tracking-wide text-primary-700">
+                        CONTACT
+                      </h3>
+                      {parsed.phone && (
+                        <a
+                          href={`tel:${parsed.phone.replace(/\s+/g, "")}`}
+                          className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-primary-700"
+                        >
+                          <Phone
+                            className="h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                          {parsed.phone}
+                        </a>
+                      )}
+                      {parsed.email && (
+                        <a
+                          href={`mailto:${parsed.email}`}
+                          className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-primary-700"
+                        >
+                          <Mail
+                            className="h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                          {parsed.email}
+                        </a>
+                      )}
+                      {parsed.portfolio && (
+                        <a
+                          href={
+                            parsed.portfolio.startsWith("http")
+                              ? parsed.portfolio
+                              : `https://${parsed.portfolio}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 truncate text-sm font-semibold text-slate-700 hover:text-primary-700"
+                        >
+                          <LinkIcon
+                            className="h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{parsed.portfolio}</span>
+                        </a>
+                      )}
+                    </section>
+                  )}
+                </div>
+
+                <div className="dialog-footer flex justify-end gap-3 p-[22px]">
+                  <button
+                    type="button"
+                    onClick={() => setDetailOppId(null)}
+                    className="rounded-xl border border-[#E4E3F2] px-5 py-3 text-sm font-bold text-slate-700 hover:border-primary-300 hover:text-primary-700"
+                  >
+                    Close
+                  </button>
+                  <TutorCardAction
+                    opportunity={detailOpp}
+                    currentUserId={currentUser?.id}
+                    onLegacyApply={() => {
+                      setSelectedOpp(detailOpp.id);
+                      setDetailOppId(null);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>,
+            document.body,
+          );
+        })()}
     </div>
   );
 }
@@ -1090,10 +1471,14 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`h-11 rounded-xl border px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-          invalid ? "border-red-300" : "border-[#E4E3F2] focus:border-primary-500"
+          invalid
+            ? "border-red-300"
+            : "border-[#E4E3F2] focus:border-primary-500"
         }`}
       />
-      {note && <span className="text-[11px] font-semibold text-slate-400">{note}</span>}
+      {note && (
+        <span className="text-[11px] font-semibold text-slate-400">{note}</span>
+      )}
     </label>
   );
 }

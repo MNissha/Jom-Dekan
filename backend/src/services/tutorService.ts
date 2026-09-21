@@ -6,6 +6,7 @@ import {
   type TutorBookingStatus,
   type TutorBookingWithContext,
   type TutorProfileRow,
+  type TutorSessionMode,
 } from "../models/tutorModel";
 import { userModel } from "../models/userModel";
 import { notificationModel } from "../models/notificationModel";
@@ -38,6 +39,16 @@ function bookingsUrl(): string {
   return `${env.corsOrigins[0]}/profile?section=bookings`;
 }
 
+function messagesUrl(): string {
+  return `${env.corsOrigins[0]}/messages`;
+}
+
+// Appended to booking emails that hand one party the other's contact
+// details, so the platform's role/liability is clear right where that
+// contact info is shared.
+const BOOKING_PLATFORM_DISCLAIMER =
+  "JomDekan only connects tutors and students — we're not a party to your arrangement and aren't responsible for payment, scheduling, or what happens in a session. Contract cheating or completing graded work for a student is never allowed.";
+
 function toApiApplication(
   row: TutorApplicationRow | TutorApplicationWithApplicant,
 ) {
@@ -52,6 +63,9 @@ function toApiApplication(
     openToOtherUniversities: row.open_to_other_universities,
     resumeFilename: row.resume_original_filename,
     portfolioUrl: row.portfolio_url,
+    mode: row.mode,
+    locationAddress: row.location_address,
+    onlinePlatform: row.online_platform,
     status: row.status,
     rejectionReason: row.rejection_reason,
     createdAt: row.created_at,
@@ -76,6 +90,9 @@ function toApiProfile(row: TutorProfileRow) {
     openToOtherUniversities: row.open_to_other_universities,
     resumeFilename: row.resume_original_filename,
     portfolioUrl: row.portfolio_url,
+    mode: row.mode,
+    locationAddress: row.location_address,
+    onlinePlatform: row.online_platform,
     isActive: row.is_active,
     verifiedAt: row.verified_at,
     googleCalendarConnected: row.google_calendar_connected,
@@ -91,8 +108,11 @@ function toApiBooking(row: TutorBookingWithContext) {
     tutorEmail: row.tutor_email,
     studentId: row.student_id,
     studentName: row.student_name,
-    studentEmail: row.student_email,
-    studentPhone: row.student_phone,
+    // The contact info the student entered on the booking form itself,
+    // not their account email/phone — see contact_email/contact_phone
+    // on TutorBookingRow.
+    studentEmail: row.contact_email,
+    studentPhone: row.contact_phone,
     subjectId: row.subject_id,
     subjectName: row.subject_name,
     requestedStartAt: row.requested_start_at,
@@ -202,6 +222,9 @@ export const tutorService = {
       resumeMimeType: string;
       resumeSizeBytes: number;
       portfolioUrl?: string;
+      mode: TutorSessionMode;
+      locationAddress?: string;
+      onlinePlatform?: string;
     },
   ) {
     const application = await tutorModel.applications.create(userId, data);
@@ -252,6 +275,9 @@ export const tutorService = {
       resumeMimeType?: string;
       resumeSizeBytes?: number;
       portfolioUrl?: string | null;
+      mode?: TutorSessionMode;
+      locationAddress?: string | null;
+      onlinePlatform?: string | null;
     },
   ) {
     const profile = await tutorModel.profiles.findByUserId(userId);
@@ -370,6 +396,9 @@ export const tutorService = {
         resumeMimeType: application.resume_mime_type,
         resumeSizeBytes: application.resume_size_bytes,
         portfolioUrl: application.portfolio_url,
+        mode: application.mode,
+        locationAddress: application.location_address,
+        onlinePlatform: application.online_platform,
         sourceApplicationId: application.id,
       });
     }
@@ -463,6 +492,9 @@ export const tutorService = {
       resumeMimeType?: string;
       resumeSizeBytes?: number;
       portfolioUrl?: string;
+      mode: TutorSessionMode;
+      locationAddress?: string;
+      onlinePlatform?: string;
     },
   ) {
     const user = await userModel.findById(userId);
@@ -524,6 +556,9 @@ export const tutorService = {
       resumeMimeType?: string;
       resumeSizeBytes?: number;
       portfolioUrl?: string;
+      mode?: TutorSessionMode;
+      locationAddress?: string | null;
+      onlinePlatform?: string | null;
     },
   ) {
     const profile = await tutorModel.profiles.findByUserId(userId);
@@ -588,6 +623,8 @@ export const tutorService = {
       requestedStartAt: Date;
       durationMinutes: number;
       message?: string;
+      contactEmail: string;
+      contactPhone: string;
     },
   ) {
     if (studentId === tutorUserId)
@@ -645,8 +682,8 @@ export const tutorService = {
             durationMinutes: data.durationMinutes,
             note: data.message ?? null,
             studentName: full?.student_name ?? null,
-            studentEmail: full?.student_email ?? null,
-            studentPhone: full?.student_phone ?? null,
+            studentEmail: full?.contact_email ?? data.contactEmail,
+            studentPhone: full?.contact_phone ?? data.contactPhone,
           },
         },
       );
@@ -665,15 +702,16 @@ export const tutorService = {
         to: full?.tutor_email ?? "",
         subject: "New tutoring session request",
         text: [
-          `${full?.student_name ?? "A student"} (${full?.student_email ?? "unknown"}) requested a tutoring session.`,
+          `${full?.student_name ?? "A student"} requested a tutoring session.`,
           `Subject: ${full?.subject_name ?? "Not specified"}`,
           `Proposed time: ${data.requestedStartAt.toLocaleString()} (${data.durationMinutes} minutes)`,
-          ...(full?.student_phone
-            ? [`Contact phone: ${full.student_phone}`]
-            : []),
+          `Contact email: ${full?.contact_email ?? data.contactEmail}`,
+          `Contact phone: ${full?.contact_phone ?? data.contactPhone}`,
           ...(data.message ? ["", "Message:", data.message] : []),
           "",
           `Accept or decline this request: ${bookingsUrl()}`,
+          "",
+          BOOKING_PLATFORM_DISCLAIMER,
         ].join("\n"),
       })
       .catch((err) =>
@@ -775,6 +813,19 @@ export const tutorService = {
       },
     );
 
+    // Only the original request's acceptance introduces a new contact —
+    // a decline has nothing to follow up on, and a reschedule confirmation
+    // is between parties who already have each other's details.
+    const followUpLines =
+      status === "accepted" && !isRescheduleDecision
+        ? [
+            `You can continue the conversation using JomDekan's messaging feature: ${messagesUrl()}`,
+            `Or contact ${decisionMakerName} directly for further information: ${booking.tutor_email}${booking.tutor_phone ? ` / ${booking.tutor_phone}` : ""}.`,
+            "",
+            BOOKING_PLATFORM_DISCLAIMER,
+          ]
+        : [];
+
     // Not awaited — a real email provider's round-trip must never delay
     // this response; the in-app notification above already reflects the
     // decision immediately, and the email is genuinely best-effort.
@@ -784,9 +835,11 @@ export const tutorService = {
         subject: isRescheduleDecision
           ? `Your proposed tutoring time was ${decisionVerb}`
           : `Your tutoring session request was ${status}`,
-        text: [decisionMessage, `View your bookings: ${bookingsUrl()}`].join(
-          "\n",
-        ),
+        text: [
+          decisionMessage,
+          ...followUpLines,
+          `View your bookings: ${bookingsUrl()}`,
+        ].join("\n"),
       })
       .catch((err) =>
         logger.error(
